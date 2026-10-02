@@ -1,7 +1,6 @@
 // Central API Client with Token Management, Refresh Handling, & Normalized Error Responses
 
-const DEFAULT_BACKEND_URL = 'https://rainbow-packaging-1.onrender.com/api/v1';
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || (typeof window !== 'undefined' && window.location.hostname.includes('netlify.app') ? DEFAULT_BACKEND_URL : '/api/v1');
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 // Token storage helpers
 export const getAccessToken = () => localStorage.getItem('rp_access_token');
