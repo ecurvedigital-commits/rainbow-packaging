@@ -1,0 +1,829 @@
+{
+  "totalEndpoints": 43,
+  "health": {
+    "success": true,
+    "data": {
+      "status": "ok",
+      "db": "connected",
+      "uptime_seconds": 23
+    }
+  },
+  "authResults": {
+    "admin_login_ok": true,
+    "supervisor_login_ok": true,
+    "operator_login_ok": true,
+    "bad_password_status": 401,
+    "missing_fields_status": 422,
+    "nonexistent_user_status": 401,
+    "me_admin_role": "ADMIN",
+    "me_supervisor_role": "SUPERVISOR",
+    "me_operator_role": "OPERATOR"
+  },
+  "paginationResults": [
+    {
+      "endpoint": "Reels List",
+      "path": "/reels",
+      "defaultLimit": 25,
+      "maxLimitStatus": 200,
+      "overLimitStatus": 422,
+      "invalidPageStatus": 422,
+      "invalidLimitStatus": 422,
+      "beyondPageEmpty": true,
+      "timeMs": 111.03
+    },
+    {
+      "endpoint": "Reels Search",
+      "path": "/reels/search?q=TEST",
+      "defaultLimit": 2,
+      "maxLimitStatus": 422,
+      "overLimitStatus": 422,
+      "invalidPageStatus": 422,
+      "invalidLimitStatus": 422,
+      "beyondPageEmpty": true,
+      "timeMs": 116.94
+    },
+    {
+      "endpoint": "Reel Journey",
+      "path": "/reels/6aba41855d0cac0f1de1f9fe/journey",
+      "defaultLimit": 25,
+      "maxLimitStatus": 200,
+      "overLimitStatus": 422,
+      "invalidPageStatus": 422,
+      "invalidLimitStatus": 422,
+      "beyondPageEmpty": true,
+      "timeMs": 245.57
+    },
+    {
+      "endpoint": "Users List",
+      "path": "/users",
+      "defaultLimit": 25,
+      "maxLimitStatus": 200,
+      "overLimitStatus": 422,
+      "invalidPageStatus": 422,
+      "invalidLimitStatus": 422,
+      "beyondPageEmpty": true,
+      "timeMs": 130.58
+    },
+    {
+      "endpoint": "Approvals Pending",
+      "path": "/approvals/pending",
+      "defaultLimit": 25,
+      "maxLimitStatus": 200,
+      "overLimitStatus": 422,
+      "invalidPageStatus": 422,
+      "invalidLimitStatus": 422,
+      "beyondPageEmpty": true,
+      "timeMs": 107.2
+    },
+    {
+      "endpoint": "Approvals Mine",
+      "path": "/approvals/mine",
+      "defaultLimit": 25,
+      "maxLimitStatus": 200,
+      "overLimitStatus": 422,
+      "invalidPageStatus": 422,
+      "invalidLimitStatus": 422,
+      "beyondPageEmpty": true,
+      "timeMs": 106.98
+    },
+    {
+      "endpoint": "Notifications",
+      "path": "/notifications",
+      "defaultLimit": 25,
+      "maxLimitStatus": 200,
+      "overLimitStatus": 422,
+      "invalidPageStatus": 422,
+      "invalidLimitStatus": 422,
+      "beyondPageEmpty": true,
+      "timeMs": 115.32
+    },
+    {
+      "endpoint": "Audit Events",
+      "path": "/audit/events",
+      "defaultLimit": 25,
+      "maxLimitStatus": 200,
+      "overLimitStatus": 422,
+      "invalidPageStatus": 422,
+      "invalidLimitStatus": 422,
+      "beyondPageEmpty": true,
+      "timeMs": 106.96
+    },
+    {
+      "endpoint": "Digest Logs",
+      "path": "/digest/logs",
+      "defaultLimit": 25,
+      "maxLimitStatus": 200,
+      "overLimitStatus": 422,
+      "invalidPageStatus": 422,
+      "invalidLimitStatus": 422,
+      "beyondPageEmpty": true,
+      "timeMs": 98.49
+    },
+    {
+      "endpoint": "Dashboard Aging",
+      "path": "/dashboard/aging",
+      "defaultLimit": 25,
+      "maxLimitStatus": 200,
+      "overLimitStatus": 422,
+      "invalidPageStatus": 422,
+      "invalidLimitStatus": 422,
+      "beyondPageEmpty": true,
+      "timeMs": 193.93
+    }
+  ],
+  "authMatrix": [
+    {
+      "method": "GET",
+      "endpoint": "/health",
+      "authRequired": false,
+      "allowedRoles": [
+        "PUBLIC"
+      ],
+      "noTokenStatus": 200,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "POST",
+      "endpoint": "/auth/login",
+      "authRequired": false,
+      "allowedRoles": [
+        "PUBLIC"
+      ],
+      "noTokenStatus": 422,
+      "adminStatus": 422,
+      "supervisorStatus": 422,
+      "operatorStatus": 422,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "POST",
+      "endpoint": "/auth/refresh",
+      "authRequired": false,
+      "allowedRoles": [
+        "PUBLIC"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 401,
+      "supervisorStatus": 401,
+      "operatorStatus": 401,
+      "adminAllowed": false,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/auth/logout",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "POST",
+      "endpoint": "/auth/logout-all",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/auth/me",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "POST",
+      "endpoint": "/auth/change-password",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 422,
+      "supervisorStatus": 422,
+      "operatorStatus": 422,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "POST",
+      "endpoint": "/users",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 422,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/users",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/users/:id",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 404,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "PATCH",
+      "endpoint": "/users/:id",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 404,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "PATCH",
+      "endpoint": "/users/:id/status",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 422,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/users/:id/reset-password",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 404,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/users/:id/unlock",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 404,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/reels/search",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 422,
+      "supervisorStatus": 422,
+      "operatorStatus": 422,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/reels",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/reels/:id",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/reels/:id/journey",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "POST",
+      "endpoint": "/reels",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 422,
+      "supervisorStatus": 403,
+      "operatorStatus": 422,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": true
+    },
+    {
+      "method": "POST",
+      "endpoint": "/reels/:id/usage",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 422,
+      "supervisorStatus": 403,
+      "operatorStatus": 422,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": true
+    },
+    {
+      "method": "PATCH",
+      "endpoint": "/reels/:id",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/reels/:id/void",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 422,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/approvals/pending",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/approvals/mine",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 403,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": true
+    },
+    {
+      "method": "POST",
+      "endpoint": "/approvals/:eventId/confirm",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 409,
+      "supervisorStatus": 409,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/approvals/:eventId/decline",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 409,
+      "supervisorStatus": 409,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/notifications/unread-count",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "PATCH",
+      "endpoint": "/notifications/read-all",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/notifications",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "PATCH",
+      "endpoint": "/notifications/:id/read",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 404,
+      "supervisorStatus": 404,
+      "operatorStatus": 404,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/dashboard/summary",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/dashboard/status-board",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/dashboard/breakdown",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 422,
+      "supervisorStatus": 422,
+      "operatorStatus": 422,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/dashboard/aging",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/field-definitions",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN",
+        "SUPERVISOR",
+        "OPERATOR"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 200,
+      "operatorStatus": 200,
+      "adminAllowed": true,
+      "supervisorAllowed": true,
+      "operatorAllowed": true
+    },
+    {
+      "method": "POST",
+      "endpoint": "/field-definitions",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 422,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "PATCH",
+      "endpoint": "/field-definitions/:id",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 422,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/audit/events",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/digest/preview",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/digest/send",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/digest/logs",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/settings",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    },
+    {
+      "method": "PATCH",
+      "endpoint": "/settings",
+      "authRequired": true,
+      "allowedRoles": [
+        "ADMIN"
+      ],
+      "noTokenStatus": 401,
+      "adminStatus": 200,
+      "supervisorStatus": 403,
+      "operatorStatus": 403,
+      "adminAllowed": true,
+      "supervisorAllowed": false,
+      "operatorAllowed": false
+    }
+  ],
+  "testReel": {
+    "id": "6aba41855d0cac0f1de1f9fe",
+    "reel_no": "TEST-R-365482",
+    "initial_weight": 1000,
+    "usage1_deducted": 300,
+    "usage2_deducted": 300,
+    "declined_and_reverted_to": 700
+  }
+}

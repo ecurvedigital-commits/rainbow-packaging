@@ -1,0 +1,148 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+/* ---------- Design tokens ----------
+   Re-mapping Tailwind's own scales means every existing page (tables, cards,
+   forms, modals) picks up the new look without per-page edits. */
+@theme {
+  --color-brand-navy: #0F172A;
+  --color-brand-blue: #4F46E5;
+  --color-brand-blue-dark: #3730A3;
+  --color-brand-green: #059669;
+  --color-brand-amber: #D97706;
+  --color-brand-red: #E11D48;
+
+  --color-surface: #F5F6FA;
+
+  /* Cool slate greys with a hint of indigo, replacing the default neutral grey */
+  --color-gray-50:  #F8FAFC;
+  --color-gray-100: #F1F5F9;
+  --color-gray-200: #E5E9F0;
+  --color-gray-300: #CBD5E1;
+  --color-gray-400: #94A3B8;
+  --color-gray-500: #64748B;
+  --color-gray-600: #475569;
+  --color-gray-700: #334155;
+  --color-gray-800: #1E293B;
+  --color-gray-900: #0F172A;
+
+  --font-family-sans: "Inter", system-ui, sans-serif;
+  --font-family-display: "Manrope", "Inter", sans-serif;
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 6px 16px -4px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-xl: 0 20px 40px -12px rgba(15, 23, 42, 0.18);
+
+  /* Slightly tighter, more consistent corners */
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.875rem;
+  --radius-3xl: 1.125rem;
+}
+
+:root {
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-gray-900);
+  font-size: 14px;
+  line-height: 1.5;
+  font-feature-settings: "cv11", "ss01";
+  margin: 0;
+  font-family: var(--font-family-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-family-display);
+  letter-spacing: -0.015em;
+}
+
+/* Numbers line up in tables and KPI cards */
+table, .tabular { font-variant-numeric: tabular-nums; }
+
+::selection { background: rgba(79, 70, 229, 0.18); }
+
+/* Visible keyboard focus everywhere, on top of Tailwind's own focus utilities */
+:focus-visible {
+  outline: 2px solid var(--color-brand-blue);
+  outline-offset: 2px;
+}
+
+/* Slim, quiet scrollbars for the dense tables and panels */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Motion reserved for state changes the person triggered: opening a modal,
+   a toast confirming an action, the mobile nav sliding in. Respect reduced motion. */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in { animation: fadeIn 0.2s ease-out; }
+.animate-slide-up { animation: slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-scale-in { animation: scaleIn 0.16s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in, .animate-slide-up, .animate-scale-in {
+    animation: none;
+  }
+}
+
+@keyframes slideRight {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-right { animation: slideRight 0.24s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* Table polish: quiet header, subtle row hover */
+table thead th { letter-spacing: 0.04em; }
+table tbody tr { transition: background-color 0.12s ease; }
+
+/* Sign-in blueprint panel styling */
+.auth-panel-bg {
+  background: linear-gradient(160deg, #0F172A 0%, #1E1B4B 60%, #0F172A 100%) !important;
+}
+
+.auth-blueprint-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px) !important;
+  background-size: 36px 36px !important;
+}

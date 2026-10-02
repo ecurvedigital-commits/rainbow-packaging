@@ -1,0 +1,910 @@
+{
+  "info": {
+    "_postman_id": "b7e28a91-5f21-4d90-a3bc-d18471c6e123",
+    "name": "Rainbow Packages — Reel Inventory API",
+    "description": "Complete Postman collection for Rainbow Packages Reel Inventory Management API (/api/v1).\nCovers all 43 endpoints with environment variables, auth test scripts, request bodies, and route parameters.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reelId",
+      "value": "6516f8b1c4b2a1a012345678",
+      "type": "string"
+    },
+    {
+      "key": "eventId",
+      "value": "6516f8b1c4b2a1a012345679",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "6516f8b1c4b2a1a012345680",
+      "type": "string"
+    },
+    {
+      "key": "notificationId",
+      "value": "6516f8b1c4b2a1a012345681",
+      "type": "string"
+    },
+    {
+      "key": "fieldDefId",
+      "value": "6516f8b1c4b2a1a012345682",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "System Health & DB Status",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Checks server uptime and MongoDB connection state."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login (Admin / Supervisor / Operator)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.access_token) {",
+                  "        pm.collectionVariables.set('accessToken', json.data.access_token);",
+                  "        console.log('Access token saved to collection variable accessToken');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin@12345\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticates user and returns short-lived JWT access token while setting httpOnly refresh cookie. Automatically captures `accessToken` in collection variables."
+          }
+        },
+        {
+          "name": "Refresh Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.access_token) {",
+                  "        pm.collectionVariables.set('accessToken', json.data.access_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Rotates refresh token and returns a new access token."
+          }
+        },
+        {
+          "name": "Get Current User (Me)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Returns profile information for the authenticated user."
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"Admin@12345\",\n  \"new_password\": \"Admin@NewPass2026\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "change-password"]
+            },
+            "description": "Changes password and resets must_change_password flag."
+          }
+        },
+        {
+          "name": "Logout Current Session",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Revokes current refresh token cookie and ends session."
+          }
+        },
+        {
+          "name": "Logout All Sessions",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout-all"]
+            },
+            "description": "Revokes all refresh tokens across all devices for this user."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users (Admin Only)",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Suresh Chandra\",\n  \"username\": \"suresh.c\",\n  \"role\": \"SUPERVISOR\",\n  \"email\": \"suresh@example.com\",\n  \"phone\": \"9876543210\",\n  \"password\": \"Initial@12345\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            },
+            "description": "Creates a SUPERVISOR or OPERATOR account with temporary password."
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users?role=SUPERVISOR&is_active=true&page=1&limit=20&sort=-created_at",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [
+                { "key": "role", "value": "SUPERVISOR", "description": "Filter by role: ADMIN, SUPERVISOR, OPERATOR" },
+                { "key": "is_active", "value": "true", "description": "Filter by status: true, false" },
+                { "key": "q", "value": "", "description": "Search by name or username", "disabled": true },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "sort", "value": "-created_at" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Suresh Chandra Updated\",\n  \"email\": \"suresh.updated@example.com\",\n  \"phone\": \"9876543211\",\n  \"role\": \"SUPERVISOR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Set User Status (Activate/Deactivate)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Reset User Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"NewTemp@12345\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}", "reset-password"]
+            }
+          }
+        },
+        {
+          "name": "Unlock Locked User Account",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/unlock",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}", "unlock"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reels",
+      "item": [
+        {
+          "name": "List Reels (Filtered & Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reels?page=1&limit=20&sort=sr_no",
+              "host": ["{{baseUrl}}"],
+              "path": ["reels"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "sort", "value": "sr_no" },
+                { "key": "status", "value": "REEL,CUT", "disabled": true },
+                { "key": "quality", "value": "VK,SPECTRA", "disabled": true },
+                { "key": "supplier", "value": "Alpha Papers", "disabled": true },
+                { "key": "gsm_min", "value": "100", "disabled": true },
+                { "key": "gsm_max", "value": "300", "disabled": true },
+                { "key": "size_min", "value": "50", "disabled": true },
+                { "key": "size_max", "value": "150", "disabled": true },
+                { "key": "weight_min", "value": "100", "disabled": true },
+                { "key": "weight_max", "value": "1500", "disabled": true },
+                { "key": "purchase_date_from", "value": "2026-01-01", "disabled": true },
+                { "key": "purchase_date_to", "value": "2026-12-31", "disabled": true },
+                { "key": "station", "value": "Station 1", "disabled": true },
+                { "key": "approval_status", "value": "PENDING", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Quick Search Reels by Number",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reels/search?q=100",
+              "host": ["{{baseUrl}}"],
+              "path": ["reels", "search"],
+              "query": [
+                { "key": "q", "value": "100", "description": "Reel number substring" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Reel (Operator / Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reel_no\": \"1004\",\n  \"quality\": \"VK\",\n  \"bf\": 18,\n  \"purchase_date\": \"2026-09-28\",\n  \"supplier_name\": \"Alpha Papers Ltd.\",\n  \"size\": 100,\n  \"gsm\": 150,\n  \"max_weight\": 1000,\n  \"custom_fields\": {\n    \"thickness_micron\": 80,\n    \"batch_code\": \"B-2026\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reels",
+              "host": ["{{baseUrl}}"],
+              "path": ["reels"]
+            },
+            "description": "Submits a new reel. Applies immediately with PENDING status for Operator, or CONFIRMED for Admin."
+          }
+        },
+        {
+          "name": "Get Reel Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reels/{{reelId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["reels", "{{reelId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Reel Journey (Timeline)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reels/{{reelId}}/journey",
+              "host": ["{{baseUrl}}"],
+              "path": ["reels", "{{reelId}}", "journey"]
+            },
+            "description": "Chronological history of all lifecycle events on this reel."
+          }
+        },
+        {
+          "name": "Record Reel Usage (Operator / Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"station\": \"Station 1\",\n  \"current_weight_entered\": 750,\n  \"expected_previous_weight\": 1000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reels/{{reelId}}/usage",
+              "host": ["{{baseUrl}}"],
+              "path": ["reels", "{{reelId}}", "usage"]
+            },
+            "description": "Enters post-usage weight. Subtracts usage immediately and tags entry as Pending confirmation."
+          }
+        },
+        {
+          "name": "Admin Correction on Reel (Admin Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplier_name\": \"Alpha Papers Premium Ltd.\",\n  \"gsm\": 155,\n  \"max_weight\": 1000,\n  \"previous_weight\": 750,\n  \"reason\": \"Corrected supplier branding and GSM error on invoice\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reels/{{reelId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["reels", "{{reelId}}"]
+            }
+          }
+        },
+        {
+          "name": "Void Reel (Admin Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Damaged during transport, unusable\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reels/{{reelId}}/void",
+              "host": ["{{baseUrl}}"],
+              "path": ["reels", "{{reelId}}", "void"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Approvals",
+      "item": [
+        {
+          "name": "List Pending Approvals Queue (Supervisor / Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/approvals/pending?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["approvals", "pending"],
+              "query": [
+                { "key": "event_type", "value": "USAGE_LOGGED", "disabled": true },
+                { "key": "performed_by", "value": "{{userId}}", "disabled": true },
+                { "key": "q", "value": "1004", "disabled": true },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "Returns entries waiting for confirmation sorted oldest first (FIFO)."
+          }
+        },
+        {
+          "name": "List My Submitted Entries (Operator)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/approvals/mine?status=PENDING&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["approvals", "mine"],
+              "query": [
+                { "key": "status", "value": "PENDING", "description": "PENDING, CONFIRMED, DECLINED" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Confirm Pending Entry (Supervisor / Admin)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/approvals/{{eventId}}/confirm",
+              "host": ["{{baseUrl}}"],
+              "path": ["approvals", "{{eventId}}", "confirm"]
+            },
+            "description": "Signs off on the pending creation or usage entry."
+          }
+        },
+        {
+          "name": "Decline Pending Entry (Supervisor / Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Weight scale calibration error, please re-measure.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/approvals/{{eventId}}/decline",
+              "host": ["{{baseUrl}}"],
+              "path": ["approvals", "{{eventId}}", "decline"]
+            },
+            "description": "Declines entry, automatically cascades reverts to baseline, and notifies operator."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List User Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"],
+              "query": [
+                { "key": "unread", "value": "true", "disabled": true },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Unread Count Badge",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "unread-count"]
+            }
+          }
+        },
+        {
+          "name": "Mark Single Notification as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "{{notificationId}}", "read"]
+            }
+          }
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "read-all"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Metric Summary Tiles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "summary"]
+            },
+            "description": "Returns total reels, weight in stock (kg), pending confirmations count, and 30+ day aging count."
+          }
+        },
+        {
+          "name": "Get 3-Column Status Board (REEL / CUT / NILL)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/status-board?limit_per_column=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "status-board"],
+              "query": [
+                { "key": "limit_per_column", "value": "50" },
+                { "key": "quality", "value": "VK", "disabled": true },
+                { "key": "supplier", "value": "Alpha Papers", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Weight Breakdown by Quality",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/breakdown?by=quality",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "breakdown"],
+              "query": [
+                { "key": "by", "value": "quality", "description": "quality or supplier" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Weight Breakdown by Supplier",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/breakdown?by=supplier",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "breakdown"],
+              "query": [
+                { "key": "by", "value": "supplier", "description": "quality or supplier" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Dead Stock Aging List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/aging?min_days=30&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "aging"],
+              "query": [
+                { "key": "min_days", "value": "30" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Field Definitions",
+      "item": [
+        {
+          "name": "List Custom Parameter Definitions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/field-definitions?active=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["field-definitions"],
+              "query": [
+                { "key": "active", "value": "true", "description": "true, false, all" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Custom Field Definition (Admin Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Caliper (pt)\",\n  \"type\": \"number\",\n  \"key\": \"caliper_pt\",\n  \"required\": false,\n  \"options\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/field-definitions",
+              "host": ["{{baseUrl}}"],
+              "path": ["field-definitions"]
+            }
+          }
+        },
+        {
+          "name": "Update Custom Field Definition (Admin Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Caliper Rating (pt)\",\n  \"required\": false,\n  \"is_active\": true,\n  \"order\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/field-definitions/{{fieldDefId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["field-definitions", "{{fieldDefId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit & Digest (Admin Only)",
+      "item": [
+        {
+          "name": "Query System Audit Events Log",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/audit/events?date=2026-09-28&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["audit", "events"],
+              "query": [
+                { "key": "date", "value": "2026-09-28" },
+                { "key": "from", "value": "2026-09-01", "disabled": true },
+                { "key": "to", "value": "2026-09-30", "disabled": true },
+                { "key": "event_type", "value": "USAGE_LOGGED", "disabled": true },
+                { "key": "approval_status", "value": "PENDING", "disabled": true },
+                { "key": "performed_by", "value": "{{userId}}", "disabled": true },
+                { "key": "reel_no", "value": "1004", "disabled": true },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Preview Daily Digest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/digest/preview?date=2026-09-28",
+              "host": ["{{baseUrl}}"],
+              "path": ["digest", "preview"],
+              "query": [
+                { "key": "date", "value": "2026-09-28" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Trigger Daily Digest Send",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-09-28\",\n  \"force\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/digest/send",
+              "host": ["{{baseUrl}}"],
+              "path": ["digest", "send"]
+            }
+          }
+        },
+        {
+          "name": "List Daily Digest Execution Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/digest/logs?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["digest", "logs"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Settings (Admin Only)",
+      "item": [
+        {
+          "name": "Get Application Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings"]
+            }
+          }
+        },
+        {
+          "name": "Update Application Settings",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aging_threshold_days\": 45,\n  \"digest\": {\n    \"enabled\": true,\n    \"time\": \"20:00\",\n    \"timezone\": \"Asia/Kolkata\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

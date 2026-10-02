@@ -1,0 +1,6 @@
+node_modules
+.env
+atlas-credentials.env
+logs
+coverage
+.DS_Store

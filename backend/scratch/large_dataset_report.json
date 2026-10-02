@@ -1,0 +1,134 @@
+{
+  "explainResults": [
+    {
+      "query": "Reels List (status=CUT & quality=SPECTRA sorted by purchase_date desc)",
+      "indexUsed": "\"COLLSCAN\"",
+      "winningPlanStage": "SORT",
+      "executionTimeMs": 14,
+      "nReturned": 25,
+      "totalDocsExamined": 417,
+      "totalKeysExamined": 417,
+      "assessment": "COLLSCAN / Unindexed Sort"
+    },
+    {
+      "query": "Reel Search by reel_no prefix (regex)",
+      "indexUsed": "\"COLLSCAN\"",
+      "winningPlanStage": "LIMIT",
+      "executionTimeMs": 1,
+      "nReturned": 10,
+      "totalDocsExamined": 10,
+      "totalKeysExamined": 10,
+      "assessment": "GOOD (Indexed)"
+    },
+    {
+      "query": "Approval Queue (approval_status=PENDING sorted by performed_at asc)",
+      "indexUsed": "\"COLLSCAN\"",
+      "winningPlanStage": "SORT",
+      "executionTimeMs": 2,
+      "nReturned": 25,
+      "totalDocsExamined": 1000,
+      "totalKeysExamined": 1000,
+      "assessment": "COLLSCAN / Unindexed"
+    },
+    {
+      "query": "Audit Events (event_type=CREATED sorted by performed_at desc)",
+      "indexUsed": "\"COLLSCAN\"",
+      "winningPlanStage": "SORT",
+      "executionTimeMs": 2,
+      "nReturned": 25,
+      "totalDocsExamined": 1002,
+      "totalKeysExamined": 1002,
+      "assessment": "COLLSCAN / Unindexed"
+    },
+    {
+      "query": "Notifications (user_id + is_read sorted by created_at desc)",
+      "indexUsed": "\"COLLSCAN\"",
+      "winningPlanStage": "LIMIT",
+      "executionTimeMs": 1,
+      "nReturned": 0,
+      "totalDocsExamined": 0,
+      "totalKeysExamined": 0,
+      "assessment": "GOOD (Indexed)"
+    }
+  ],
+  "deepPagResults": [
+    {
+      "page": 1,
+      "limit": 25,
+      "status": 200,
+      "timeMs": 353.54,
+      "total": 10002,
+      "totalPages": 401,
+      "itemsReturned": 25,
+      "hasNextPage": true,
+      "hasPreviousPage": false
+    },
+    {
+      "page": 2,
+      "limit": 25,
+      "status": 200,
+      "timeMs": 367.29,
+      "total": 10002,
+      "totalPages": 401,
+      "itemsReturned": 25,
+      "hasNextPage": true,
+      "hasPreviousPage": true
+    },
+    {
+      "page": 10,
+      "limit": 25,
+      "status": 200,
+      "timeMs": 178.02,
+      "total": 10002,
+      "totalPages": 401,
+      "itemsReturned": 25,
+      "hasNextPage": true,
+      "hasPreviousPage": true
+    },
+    {
+      "page": 100,
+      "limit": 25,
+      "status": 200,
+      "timeMs": 149.33,
+      "total": 10002,
+      "totalPages": 401,
+      "itemsReturned": 25,
+      "hasNextPage": true,
+      "hasPreviousPage": true
+    },
+    {
+      "page": 300,
+      "limit": 25,
+      "status": 200,
+      "timeMs": 149.7,
+      "total": 10002,
+      "totalPages": 401,
+      "itemsReturned": 25,
+      "hasNextPage": true,
+      "hasPreviousPage": true
+    },
+    {
+      "page": 400,
+      "limit": 25,
+      "status": 200,
+      "timeMs": 171.22,
+      "total": 10002,
+      "totalPages": 401,
+      "itemsReturned": 25,
+      "hasNextPage": true,
+      "hasPreviousPage": true
+    },
+    {
+      "page": 9999,
+      "limit": 25,
+      "status": 200,
+      "timeMs": 151.91,
+      "total": 10002,
+      "totalPages": 401,
+      "itemsReturned": 0,
+      "hasNextPage": false,
+      "hasPreviousPage": true
+    }
+  ],
+  "totalTestReelsSeeded": 10000
+}

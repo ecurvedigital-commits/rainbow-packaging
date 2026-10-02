@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-09-30T06:01:56.011Z",
+  "isCommit": true,
+  "totalReelsExamined": 2,
+  "masterProductsIdentified": 2,
+  "invalidReelsCount": 0,
+  "invalidReels": [],
+  "masterProductsSummary": [
+    {
+      "master_key": "VK-G150-BF20-S100",
+      "name": "VK 150GSM 20BF 100\"",
+      "reelCount": 1
+    },
+    {
+      "master_key": "VK-G150-BF18-S100",
+      "name": "VK 150GSM 18BF 100\"",
+      "reelCount": 1
+    }
+  ],
+  "migrationResult": {
+    "masterProductsCreated": 2,
+    "masterProductsReused": 0,
+    "reelsUpdated": 2
+  }
+}
