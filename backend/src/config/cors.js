@@ -2,7 +2,13 @@ import { env } from './env.js';
 
 export const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || env.CORS_ORIGINS.includes(origin) || env.CORS_ORIGINS.includes('*')) {
+    if (
+      !origin ||
+      env.CORS_ORIGINS.includes(origin) ||
+      env.CORS_ORIGINS.includes('*') ||
+      origin.endsWith('.netlify.app') ||
+      origin.endsWith('.vercel.app')
+    ) {
       callback(null, true);
     } else {
       callback(new Error(`CORS origin '${origin}' not allowed`));
