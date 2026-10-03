@@ -8,6 +8,7 @@ const settingSchema = new mongoose.Schema(
       enabled: { type: Boolean, default: true },
       time: { type: String, default: '20:00' },
       timezone: { type: String, default: 'Asia/Kolkata' },
+      recipients: { type: [String], default: [] },
     },
     updated_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     updated_at: { type: Date, default: Date.now },

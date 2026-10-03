@@ -7,6 +7,7 @@ export const updateSettingsSchema = z.object({
       enabled: z.boolean().optional(),
       time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must be HH:mm 24-hour format').optional(),
       timezone: z.string().optional(),
+      recipients: z.array(z.string().email('Invalid email address format')).optional(),
     }).optional(),
   }),
 });

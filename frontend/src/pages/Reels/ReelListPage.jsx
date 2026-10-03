@@ -16,6 +16,18 @@ import ErrorAlert from '../../components/Common/ErrorAlert';
 import EmptyState from '../../components/Common/EmptyState';
 import { formatWeight, formatDate, formatCurrency, getStatusBadgeClass } from '../../utils/formatters';
 
+const formatMasterCodeBadge = (code) => {
+  if (!code) return '';
+  const str = String(code).trim();
+  if (/^master code/i.test(str)) {
+    return str;
+  }
+  if (/^\d+$/.test(str)) {
+    return `Master Code ${str}`;
+  }
+  return `Master Code: ${str}`;
+};
+
 const BASE_FIELDS = [
   { key: 'supplier',       label: 'Supplier Name',        apiKey: 'supplier' },
   { key: 'master_code',    label: 'Master Code',          apiKey: 'master_code' },
@@ -110,6 +122,7 @@ export default function ReelListPage() {
   useEffect(() => {
     reelApi.getFilterOptions()
       .then((res) => {
+        console.log('[ReelListPage] Loaded Filter Options:', res?.data);
         if (res.success && res.data) {
           setFilterOptions({
             qualities:     res.data.qualities     || [],
@@ -117,14 +130,15 @@ export default function ReelListPage() {
             bfs:           res.data.bfs           || [],
             sizes:         res.data.sizes         || [],
             suppliers:     res.data.suppliers     || [],
-            master_codes:  res.data.master_codes  || res.data.master_keys || [],
+            master_codes:  (res.data.master_codes || [])
+              .filter((code) => Boolean(code) && !/^[A-Z]+-G\d+-BF\d+-S\d+/.test(code)),
             statuses:      res.data.statuses      || [],
             stations:      res.data.stations      || [],
             custom_fields: res.data.custom_fields || [],
           });
         }
       })
-      .catch((err) => console.error('Failed to load filter options:', err));
+      .catch((err) => console.error('[ReelListPage] Failed to load filter options:', err));
   }, []);
 
   // ── Build API params ────────────────────────────────────────────────────
@@ -162,12 +176,16 @@ export default function ReelListPage() {
   const fetchReels = useCallback(async () => {
     setLoading(true);
     setError(null);
+    const params = buildApiParams();
+    console.log('[ReelListPage] Fetching Reels with API Params:', params);
     try {
-      const response = await reelApi.getReels(buildApiParams());
+      const response = await reelApi.getReels(params);
       const items    = response.data || [];
+      console.log(`[ReelListPage] Received ${items.length} Reels:`, items);
       setReels(items);
       const meta = response.meta?.pagination || response.meta || {};
       if (meta) {
+        console.log('[ReelListPage] Pagination Meta:', meta);
         setPagination((prev) => ({
           ...prev,
           page:       meta.page       || prev.page,
@@ -177,6 +195,7 @@ export default function ReelListPage() {
         }));
       }
     } catch (err) {
+      console.error('[ReelListPage] Error fetching reels:', err);
       setError(err.message || 'Failed to fetch reels.');
     } finally {
       setLoading(false);
@@ -200,6 +219,7 @@ export default function ReelListPage() {
 
   // ── Sub-value toggle ───────────────────────────────────────────────────
   const toggleValue = (fieldKey, value) => {
+    console.log(`[ReelListPage] Toggling Filter [${fieldKey}]:`, value);
     setFilterValues((prev) => {
       const current = Array.isArray(prev[fieldKey]) ? prev[fieldKey] : [];
       const exists  = current.includes(String(value));
@@ -486,7 +506,7 @@ export default function ReelListPage() {
                               `}
                             >
                               {isChosen && <Check className="w-3 h-3 shrink-0" />}
-                              <span>{strOpt}</span>
+                              <span>{f.key === 'master_code' ? formatMasterCodeBadge(strOpt) : strOpt}</span>
                             </button>
                           );
                         })}
@@ -573,10 +593,10 @@ export default function ReelListPage() {
                         <div className="font-semibold text-slate-900 dark:text-white">
                           Reel #{reel.reel_no || reel.reel_number}
                         </div>
-                        {(reel.master_code || reel.master_key) && (
+                        {reel.master_code && (
                           <div className="mt-1">
                             <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-[10px] rounded-md tracking-wider border border-indigo-200 dark:border-indigo-800">
-                              Master Code: {reel.master_code ?? reel.master_key}
+                              {formatMasterCodeBadge(reel.master_code)}
                             </span>
                           </div>
                         )}

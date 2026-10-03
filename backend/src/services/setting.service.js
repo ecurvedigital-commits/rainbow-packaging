@@ -40,10 +40,11 @@ export async function getSettings({ actor }) {
   const settings = await ensureSettings();
   return {
     aging_threshold_days: settings.aging_threshold_days,
-    digest: settings.digest || {
-      enabled: true,
-      time: '20:00',
-      timezone: 'Asia/Kolkata',
+    digest: {
+      enabled: settings.digest?.enabled ?? true,
+      time: settings.digest?.time ?? '20:00',
+      timezone: settings.digest?.timezone ?? 'Asia/Kolkata',
+      recipients: settings.digest?.recipients || [],
     },
     updated_by: settings.updated_by ? settings.updated_by.toString() : null,
     updated_at: settings.updated_at,
@@ -52,7 +53,7 @@ export async function getSettings({ actor }) {
 
 /**
  * Updates system settings (docs/routes/settings.md).
- * @param {{ input: { aging_threshold_days?: number, digest?: { enabled?: boolean, time?: string, timezone?: string } }, actor: object }} args
+ * @param {{ input: { aging_threshold_days?: number, digest?: { enabled?: boolean, time?: string, timezone?: string, recipients?: Array<string> } }, actor: object }} args
  * @returns {Promise<object>}
  */
 export async function updateSettings({ input, actor }) {
@@ -67,6 +68,9 @@ export async function updateSettings({ input, actor }) {
     if (input.digest.enabled !== undefined) settings.digest.enabled = Boolean(input.digest.enabled);
     if (input.digest.time !== undefined) settings.digest.time = input.digest.time.trim();
     if (input.digest.timezone !== undefined) settings.digest.timezone = input.digest.timezone.trim();
+    if (input.digest.recipients !== undefined && Array.isArray(input.digest.recipients)) {
+      settings.digest.recipients = input.digest.recipients.map((e) => e.trim().toLowerCase()).filter(Boolean);
+    }
   }
 
   settings.updated_by = actor.id;

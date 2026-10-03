@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import ReelMark from '../../components/ReelMark';
 import { User, Lock, Eye, EyeOff, LogIn, Loader2, GitBranch, ShieldCheck, Layers } from 'lucide-react';
 
 export const LoginPage = () => {
-  const { login, authError, setAuthError } = useAuth();
+  const { login, authError, setAuthError, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
 
   const [username, setUsername] = useState('');
@@ -18,6 +18,10 @@ export const LoginPage = () => {
     document.title = 'Rainbow Packages | Sign In';
   }, []);
 
+  if (!loading && isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLocalError('');
@@ -29,9 +33,9 @@ export const LoginPage = () => {
       setSubmitting(false);
 
       if (loggedUser?.must_change_password) {
-        navigate('/change-password');
+        navigate('/change-password', { replace: true });
       } else {
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       }
     } catch (err) {
       setSubmitting(false);

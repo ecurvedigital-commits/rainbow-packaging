@@ -1,9 +1,12 @@
 import { DigestLog } from '../models/digestLog.model.js';
 import { ReelEvent } from '../models/reelEvent.model.js';
+import { Reel } from '../models/reel.model.js';
+import { Setting } from '../models/setting.model.js';
 import { User } from '../models/user.model.js';
 import { ROLES } from '../constants/roles.js';
 import { EVENT_TYPES } from '../constants/eventTypes.js';
 import { APPROVAL_STATUS } from '../constants/approvalStatus.js';
+import { RECORD_STATUS } from '../constants/reelStatus.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { env } from '../config/env.js';
 import { renderDailyDigest } from '../templates/dailyDigest.template.js';
@@ -18,13 +21,20 @@ import { ERROR_CODES } from '../constants/errorCodes.js';
  */
 export async function previewDigest({ query = {}, actor }) {
   const dateStr = query.date || new Date().toISOString().split('T')[0];
-  const start = new Date(dateStr);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(dateStr);
-  end.setHours(23, 59, 59, 999);
+  const [year, month, day] = dateStr.split('-').map(Number);
+
+  const localStart = new Date(year, month - 1, day, 0, 0, 0, 0);
+  const localEnd = new Date(year, month - 1, day, 23, 59, 59, 999);
+
+  const utcStart = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+  const utcEnd = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+
+  const start = localStart < utcStart ? localStart : utcStart;
+  const end = localEnd > utcEnd ? localEnd : utcEnd;
 
   const [
-    created,
+    createdEvents,
+    reelsCreatedCount,
     usage,
     confirmed,
     declined,
@@ -36,6 +46,13 @@ export async function previewDigest({ query = {}, actor }) {
     depletedCount,
   ] = await Promise.all([
     ReelEvent.countDocuments({ event_type: EVENT_TYPES.CREATED, performed_at: { $gte: start, $lte: end } }),
+    Reel.countDocuments({
+      $or: [
+        { created_at: { $gte: start, $lte: end } },
+        { purchase_date: { $gte: start, $lte: end } },
+      ],
+      record_status: RECORD_STATUS.ACTIVE,
+    }),
     ReelEvent.countDocuments({ event_type: EVENT_TYPES.USAGE_LOGGED, performed_at: { $gte: start, $lte: end } }),
     ReelEvent.countDocuments({ event_type: EVENT_TYPES.CONFIRMED, performed_at: { $gte: start, $lte: end } }),
     ReelEvent.countDocuments({ event_type: EVENT_TYPES.DECLINED_REVERTED, performed_at: { $gte: start, $lte: end } }),
@@ -77,6 +94,8 @@ export async function previewDigest({ query = {}, actor }) {
     }),
   ]);
 
+  const created = Math.max(createdEvents, reelsCreatedCount);
+
   let oldest_pending_hours = 0;
   if (oldestPending && oldestPending.performed_at) {
     const oldestTime = new Date(oldestPending.performed_at).getTime();
@@ -98,8 +117,52 @@ export async function previewDigest({ query = {}, actor }) {
     total_weight_consumed_kg += weight;
   }
 
-  const recipients = admins.map((a) => a.email).filter(Boolean);
+  const appSetting = await Setting.findById('app').lean();
+  const configuredRecipients = appSetting?.digest?.recipients || [];
+  const adminEmails = admins.map((a) => a.email).filter(Boolean);
+  const recipients = Array.from(new Set([...configuredRecipients, ...adminEmails]));
   const deep_link = `${env.FRONTEND_URL}/admin/audit?date=${dateStr}`;
+
+  // Fetch detailed usage log events for modal breakdown on frontend
+  const usageEvents = await ReelEvent.find({
+    event_type: EVENT_TYPES.USAGE_LOGGED,
+    performed_at: { $gte: start, $lte: end },
+  }).populate('reel_id').lean();
+
+  const quality_details = {};
+  for (const log of usageEvents) {
+    const reel = log.reel_id || {};
+    const q = reel.quality || 'Standard Quality';
+    const bf = reel.bf ? `${reel.bf} BF` : '';
+    const gsm = reel.gsm ? `${reel.gsm} GSM` : '';
+    const label = [q, bf, gsm].filter(Boolean).join(' ');
+
+    if (!quality_details[label]) {
+      quality_details[label] = {
+        label,
+        quality: reel.quality || 'N/A',
+        bf: reel.bf || null,
+        gsm: reel.gsm || null,
+        total_weight: 0,
+        entries: [],
+      };
+    }
+
+    const weightUsed = log.payload?.used_this_time || 0;
+    quality_details[label].total_weight = Math.round((quality_details[label].total_weight + weightUsed) * 100) / 100;
+    quality_details[label].entries.push({
+      id: log._id.toString(),
+      reel_no: reel.reel_no || 'N/A',
+      master_code: reel.master_code || reel.master_key || 'N/A',
+      supplier_name: reel.supplier_name || 'N/A',
+      station: log.payload?.station || 'N/A',
+      weight_used: weightUsed,
+      previous_weight: log.payload?.previous_weight ?? null,
+      current_weight: log.payload?.current_weight_entered ?? null,
+      performed_by: log.performed_by_name || 'Operator',
+      performed_at: log.performed_at,
+    });
+  }
 
   return {
     date: dateStr,
@@ -107,6 +170,7 @@ export async function previewDigest({ query = {}, actor }) {
     reels_created_count: created,
     reels_depleted_count: depletedCount,
     quality_breakdown,
+    quality_details,
     counts: {
       created,
       usage,

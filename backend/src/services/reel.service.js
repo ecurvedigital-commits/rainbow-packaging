@@ -1,11 +1,14 @@
 import { Reel } from '../models/reel.model.js';
 import { ReelEvent } from '../models/reelEvent.model.js';
 import { FieldDefinition } from '../models/fieldDefinition.model.js';
+import { MasterCode } from '../models/masterCode.model.js';
+import { MasterProduct } from '../models/masterProduct.model.js';
 import { ROLES } from '../constants/roles.js';
 import { EVENT_TYPES } from '../constants/eventTypes.js';
 import { APPROVAL_STATUS } from '../constants/approvalStatus.js';
 import { RECORD_STATUS } from '../constants/reelStatus.js';
 import { deriveReelStatus } from '../utils/reelStatus.js';
+import { generateMasterKey } from '../utils/masterKeyGenerator.js';
 import { buildReelFilter } from '../utils/buildReelFilter.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { getNextSequence } from './counter.service.js';
@@ -37,12 +40,97 @@ export async function listReels({ filters = {}, actor }) {
     sortOption._id = -1;
   }
 
-  const [reels, total] = await Promise.all([
+  if (filters.master_code) {
+    const rawCodes = String(filters.master_code).split(',').map((c) => c.trim()).filter(Boolean);
+    const normalizeCode = (str) => String(str || '').toLowerCase().replace(/^(master\s*code|code|mc)\s*/i, '').trim();
+    const targetNormalized = new Set(rawCodes.map(normalizeCode));
+
+    const allMasterCodeDocs = await MasterCode.find({ status: 'ACTIVE' }).lean();
+
+    const matchedMasterCodeDocs = allMasterCodeDocs.filter((mc) => {
+      const codeNorm = normalizeCode(mc.master_code);
+      const nameNorm = normalizeCode(mc.master_code_name);
+      return targetNormalized.has(codeNorm) || targetNormalized.has(nameNorm) || rawCodes.includes(mc.master_code);
+    });
+
+    const mcOrConditions = [];
+
+    rawCodes.forEach((c) => {
+      const norm = normalizeCode(c);
+      mcOrConditions.push({ master_code: c });
+      if (norm) {
+        mcOrConditions.push({ master_code: norm });
+        mcOrConditions.push({ master_code: `Master Code ${norm}` });
+      }
+      mcOrConditions.push({ master_key: c });
+    });
+
+    matchedMasterCodeDocs.forEach((mc) => {
+      if (mc.quality && mc.gsm && mc.bf && mc.size) {
+        try {
+          const gen = generateMasterKey({ quality: mc.quality, gsm: mc.gsm, bf: mc.bf, size: mc.size });
+          if (gen?.master_key) {
+            mcOrConditions.push({ master_key: gen.master_key });
+          }
+        } catch {}
+        mcOrConditions.push({
+          quality: String(mc.quality).trim().toUpperCase(),
+          gsm: Number(mc.gsm),
+          bf: Number(mc.bf),
+          size: Number(mc.size),
+        });
+      }
+    });
+
+    delete query.master_code;
+    delete query.master_key;
+
+    if (query.$or) {
+      query.$and = [{ $or: query.$or }, { $or: mcOrConditions }];
+      delete query.$or;
+    } else {
+      query.$or = mcOrConditions;
+    }
+  }
+
+  console.log('[listReels] Executing Mongoose Reel.find with query:', JSON.stringify(query));
+
+  const [reels, total, masterCodeDocs, masterProductDocs] = await Promise.all([
     Reel.find(query).sort(sortOption).skip(skip).limit(limit).lean(),
     Reel.countDocuments(query),
+    MasterCode.find({ status: 'ACTIVE' }).select('master_code quality gsm bf size').lean(),
+    MasterProduct.find({ is_active: true, master_code: { $ne: null } }).select('master_key master_code quality gsm bf size').lean(),
   ]);
 
+  const masterCodeMap = new Map();
+  const masterKeyToCodeMap = new Map();
+
+  if (masterCodeDocs && masterCodeDocs.length > 0) {
+    masterCodeDocs.forEach((mc) => {
+      if (mc.master_code) {
+        const key = `${String(mc.quality).toUpperCase().trim()}-${Number(mc.gsm)}-${Number(mc.bf)}-${Number(mc.size)}`;
+        masterCodeMap.set(key, mc.master_code);
+      }
+    });
+  }
+
+  if (masterProductDocs && masterProductDocs.length > 0) {
+    masterProductDocs.forEach((mp) => {
+      if (mp.master_code) {
+        if (mp.master_key) masterKeyToCodeMap.set(mp.master_key, mp.master_code);
+        const key = `${String(mp.quality).toUpperCase().trim()}-${Number(mp.gsm)}-${Number(mp.bf)}-${Number(mp.size)}`;
+        if (!masterCodeMap.has(key)) masterCodeMap.set(key, mp.master_code);
+      }
+    });
+  }
+
   const items = reels.map((reel) => {
+    const specKey = `${String(reel.quality || '').toUpperCase().trim()}-${Number(reel.gsm)}-${Number(reel.bf)}-${Number(reel.size)}`;
+    const isDirectMasterCode = reel.master_code && reel.master_code !== reel.master_key;
+    const resolvedMasterCode = isDirectMasterCode
+      ? reel.master_code
+      : (masterCodeMap.get(specKey) || (reel.master_key ? masterKeyToCodeMap.get(reel.master_key) : null) || null);
+
     const json = {
       id: reel._id.toString(),
       sr_no: reel.sr_no,
@@ -50,7 +138,7 @@ export async function listReels({ filters = {}, actor }) {
       master_product_id: reel.master_product_id ? reel.master_product_id.toString() : null,
       master_key: reel.master_key || null,
       master_code_id: reel.master_code_id ? reel.master_code_id.toString() : null,
-      master_code: reel.master_code || null,
+      master_code: resolvedMasterCode || null,
       quality: reel.quality,
       bf: reel.bf,
       purchase_date: reel.purchase_date,
@@ -223,6 +311,9 @@ export async function getReelJourney({ id, query = {}, actor }) {
     const declineReason = event.decline_reason || (decisionDoc ? decisionDoc.decline_reason : null);
     let decision = null;
 
+    const approvedByName = event.approved_by_name || (decisionDoc ? decisionDoc.performed_by_name : (event.approval_status === APPROVAL_STATUS.CONFIRMED ? (event.performed_by_name || 'System Admin') : null));
+    const approvedAt = event.approved_at || (decisionDoc ? decisionDoc.performed_at : (event.approval_status === APPROVAL_STATUS.CONFIRMED ? (event.performed_at || event.created_at) : null));
+
     if (decisionDoc) {
       decision = {
         by_name: decisionDoc.performed_by_name,
@@ -235,9 +326,14 @@ export async function getReelJourney({ id, query = {}, actor }) {
       }
     } else if (event.approval_status === APPROVAL_STATUS.DECLINED) {
       decision = {
-        by_name: event.approved_by_name || 'Admin',
-        at: event.approved_at || event.performed_at,
+        by_name: approvedByName || 'Admin',
+        at: approvedAt || event.performed_at,
         reason: declineReason,
+      };
+    } else if (event.approval_status === APPROVAL_STATUS.CONFIRMED) {
+      decision = {
+        by_name: approvedByName,
+        at: approvedAt,
       };
     }
 
@@ -247,6 +343,8 @@ export async function getReelJourney({ id, query = {}, actor }) {
       approval_status: event.approval_status,
       performed_by_name: event.performed_by_name,
       performed_at: event.performed_at,
+      approved_by_name: approvedByName,
+      approved_at: approvedAt,
       decline_reason: declineReason,
       payload: event.payload || {},
       decision,
@@ -566,7 +664,8 @@ export async function getFilterOptions() {
     sizes,
     suppliers,
     masterKeys,
-    masterCodes,
+    reelMasterCodes,
+    definedMasterCodesDocs,
     statuses,
     stations,
     fieldDefs,
@@ -578,10 +677,25 @@ export async function getFilterOptions() {
     Reel.distinct('supplier_name', { record_status: RECORD_STATUS.ACTIVE }),
     Reel.distinct('master_key', { record_status: RECORD_STATUS.ACTIVE }),
     Reel.distinct('master_code', { record_status: RECORD_STATUS.ACTIVE }),
+    MasterCode.find({ status: 'ACTIVE' }).select('master_code').lean(),
     Reel.distinct('status', { record_status: RECORD_STATUS.ACTIVE }),
     Reel.distinct('stations_used', { record_status: RECORD_STATUS.ACTIVE }),
     FieldDefinition.find({ is_active: true }).lean(),
   ]);
+
+  const definedCodes = definedMasterCodesDocs.map((mc) => mc.master_code).filter(Boolean);
+  const isTechnicalKey = (str) => typeof str === 'string' && /^[A-Z]+-G\d+-BF\d+-S\d+/.test(str);
+
+  const cleanMasterCodes = Array.from(new Set([...definedCodes, ...reelMasterCodes]))
+    .filter((code) => Boolean(code) && !isTechnicalKey(code))
+    .sort((a, b) => {
+      const matchA = String(a).match(/\d+/);
+      const matchB = String(b).match(/\d+/);
+      if (matchA && matchB) {
+        return parseInt(matchA[0], 10) - parseInt(matchB[0], 10);
+      }
+      return String(a).localeCompare(String(b), undefined, { numeric: true });
+    });
 
   return {
     qualities: qualities.filter(Boolean).sort(),
@@ -590,14 +704,7 @@ export async function getFilterOptions() {
     sizes: sizes.filter(Boolean).sort((a, b) => a - b),
     suppliers: suppliers.filter(Boolean).sort(),
     master_keys: masterKeys.filter(Boolean).sort(),
-    master_codes: masterCodes
-      .filter(Boolean)
-      .sort((a, b) => {
-        const numA = Number(a);
-        const numB = Number(b);
-        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-        return String(a).localeCompare(String(b), undefined, { numeric: true });
-      }),
+    master_codes: cleanMasterCodes,
     statuses: statuses.filter(Boolean).sort(),
     stations: stations.filter(Boolean).sort(),
     custom_fields: fieldDefs.map((f) => ({ key: f.key, name: f.name, type: f.field_type, options: f.options || [] })),

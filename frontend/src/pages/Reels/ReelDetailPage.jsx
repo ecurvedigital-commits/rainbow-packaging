@@ -134,9 +134,13 @@ export const ReelDetailPage = () => {
               <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'var(--font-family-display)' }}>
                 Reel #{reel.reel_no}
               </h1>
-              {reel.master_key && (
+              {reel.master_code && (
                 <span className="px-2.5 py-1 bg-brand-blue/10 text-brand-blue font-mono font-bold text-xs rounded-lg">
-                  {reel.master_key}
+                  {/^master code/i.test(String(reel.master_code).trim())
+                    ? reel.master_code
+                    : (/^\d+$/.test(String(reel.master_code).trim())
+                      ? `Master Code ${reel.master_code}`
+                      : `Master Code: ${reel.master_code}`)}
                 </span>
               )}
               <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusBadgeStyle(reel.status)}`}>
@@ -233,7 +237,7 @@ export const ReelDetailPage = () => {
               const eventId = event.id || event._id;
               const eventType = event.event_type || event.type || 'EVENT';
               const performedBy = event.performed_by?.name || event.performed_by_name || event.performed_by?.username || event.performed_by || 'User';
-              const approvedBy = event.decision?.by_name || event.approved_by?.name || event.approved_by?.username || event.approved_by;
+              const approvedBy = event.decision?.by_name || event.approved_by_name || event.approved_by?.name || event.approved_by?.username || (typeof event.approved_by === 'string' ? event.approved_by : null) || performedBy;
               const status = event.approval_status || (event.approved_at ? 'CONFIRMED' : 'PENDING');
               const isPending = status === 'PENDING';
 
@@ -329,7 +333,7 @@ export const ReelDetailPage = () => {
                     ) : (status === 'CONFIRMED' || approvedBy) && (
                       <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-800 flex items-center gap-1.5 mt-2">
                         <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
-                        <span>Confirmed by <strong>{event.decision?.by_name || approvedBy}</strong> on {formatDateTime(event.decision?.at || event.approved_at)}</span>
+                        <span>Confirmed by <strong>{event.decision?.by_name || approvedBy}</strong> on {formatDateTime(event.decision?.at || event.approved_at || event.performed_at)}</span>
                       </div>
                     )}
                   </div>

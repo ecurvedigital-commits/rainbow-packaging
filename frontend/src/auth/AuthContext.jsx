@@ -36,8 +36,15 @@ export const AuthProvider = ({ children }) => {
           clearTokens();
         }
       } catch (err) {
-        console.warn('Session restoration failed:', err.message);
-        clearTokens();
+        console.warn('Session restoration check warning:', err.message);
+        if (err.status === 401 || err.code === 'UNAUTHORIZED' || err.code === 'SESSION_EXPIRED') {
+          clearTokens();
+          setUser(null);
+          setIsAuthenticated(false);
+        } else if (token) {
+          // Retain authenticated state if token exists and error is transient network glitch
+          setIsAuthenticated(true);
+        }
       } finally {
         setLoading(false);
       }
