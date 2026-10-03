@@ -1,11 +1,10 @@
 services:
   - type: web
-    name: rainbow-packaging-backend
+    name: rainbow-packaging
     env: node
     plan: free
-    rootDir: backend
-    buildCommand: npm install && npm run db:indexes
-    startCommand: npm start
+    buildCommand: npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend && npm run db:indexes --prefix backend
+    startCommand: npm start --prefix backend
     envVars:
       - key: NODE_ENV
         value: production
@@ -33,7 +32,5 @@ services:
         value: true
       - key: COOKIE_SAMESITE
         value: lax
-      - key: FRONTEND_URL
-        sync: false
       - key: CORS_ORIGINS
-        sync: false
+        value: "*"
