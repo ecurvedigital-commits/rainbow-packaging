@@ -38,11 +38,15 @@ export function buildReelFilter(filters = {}, actor = {}) {
 
   // Master Code filter (supports comma-separated multi-select)
   if (filters.master_code) {
-    const codes = String(filters.master_code).split(',').map((c) => c.trim()).filter(Boolean);
-    if (codes.length === 1) {
-      query.master_code = codes[0];
-    } else if (codes.length > 1) {
-      query.master_code = { $in: codes };
+    const rawCodes = String(filters.master_code).split(',').map((c) => c.trim()).filter(Boolean);
+    const codeVariants = Array.from(new Set(rawCodes.flatMap((c) => {
+      const num = Number(c);
+      return !isNaN(num) && String(num) === c ? [c, num] : [c];
+    })));
+    if (codeVariants.length === 1) {
+      query.master_code = codeVariants[0];
+    } else if (codeVariants.length > 1) {
+      query.master_code = { $in: codeVariants };
     }
   }
 
@@ -134,14 +138,16 @@ export function buildReelFilter(filters = {}, actor = {}) {
     if (filters.weight_max !== undefined) query.previous_weight.$lte = Number(filters.weight_max);
   }
 
-  // Purchase date range
-  if (filters.purchase_date_from || filters.purchase_date_to) {
+  // Purchase date / Creation date range
+  const dateFrom = filters.purchase_date_from || filters.created_from;
+  const dateTo = filters.purchase_date_to || filters.created_to;
+  if (dateFrom || dateTo) {
     query.purchase_date = {};
-    if (filters.purchase_date_from) {
-      query.purchase_date.$gte = new Date(filters.purchase_date_from);
+    if (dateFrom) {
+      query.purchase_date.$gte = new Date(dateFrom);
     }
-    if (filters.purchase_date_to) {
-      const toDate = new Date(filters.purchase_date_to);
+    if (dateTo) {
+      const toDate = new Date(dateTo);
       toDate.setHours(23, 59, 59, 999);
       query.purchase_date.$lte = toDate;
     }

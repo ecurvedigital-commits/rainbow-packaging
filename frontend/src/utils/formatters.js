@@ -35,6 +35,11 @@ export const formatWeight = (val) => {
   return `${Number(val).toLocaleString()} kg`;
 };
 
+export const formatCurrency = (val) => {
+  if (val === undefined || val === null || isNaN(val)) return '₹ 0';
+  return `₹ ${Number(val).toLocaleString('en-IN')}`;
+};
+
 export const getStatusBadgeStyle = (status) => {
   switch ((status || '').toUpperCase()) {
     case 'AVAILABLE':

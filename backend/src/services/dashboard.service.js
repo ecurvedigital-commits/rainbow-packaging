@@ -71,6 +71,7 @@ export async function getSummary({ actor }) {
   return {
     total_reels,
     weight_in_stock,
+    total_stock_value: Math.round(weight_in_stock * 55),
     pending_confirmations,
     unused_reels,
     aging_threshold_days: agingThresholdDays,

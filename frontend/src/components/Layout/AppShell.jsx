@@ -4,10 +4,11 @@ import { useAuth } from '../../auth/AuthContext';
 import { notificationApi } from '../../api/notificationApi';
 import { approvalApi } from '../../api/approvalApi';
 import ReelMark from '../ReelMark';
+import LoginQuickActionsModal from '../Common/LoginQuickActionsModal';
 import {
   LayoutDashboard, ClipboardCheck, Boxes, Layers, Users, Settings, LogOut,
   Bell, Menu, ChevronDown, KeyRound, SlidersHorizontal, FileText, Mail, Weight,
-  AlertTriangle, ArrowRight, X, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen
+  AlertTriangle, ArrowRight, X, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Sparkles
 } from 'lucide-react';
 
 export const AppShell = ({ children }) => {
@@ -19,6 +20,17 @@ export const AppShell = ({ children }) => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+
+  // Login 3-Option Quick Action Modal state
+  const [showQuickActions, setShowQuickActions] = useState(false);
+
+  useEffect(() => {
+    // Show quick actions modal once per login session
+    if (!sessionStorage.getItem('rp_quick_actions_shown')) {
+      sessionStorage.setItem('rp_quick_actions_shown', 'true');
+      setShowQuickActions(true);
+    }
+  }, []);
 
   // Desktop Sidebar Collapsed State (Persisted in localStorage)
   const [collapsed, setCollapsed] = useState(() => {
@@ -144,6 +156,7 @@ export const AppShell = ({ children }) => {
           isRoleAdmin={isRoleAdmin}
           isRoleSupervisor={isRoleSupervisor}
           onLogout={handleLogout}
+          onOpenQuickActions={() => setShowQuickActions(true)}
         />
       </aside>
 
@@ -161,6 +174,7 @@ export const AppShell = ({ children }) => {
               isRoleSupervisor={isRoleSupervisor}
               onLogout={handleLogout}
               onNavigate={() => setMobileNavOpen(false)}
+              onOpenQuickActions={() => setShowQuickActions(true)}
             />
           </aside>
         </div>
@@ -191,6 +205,16 @@ export const AppShell = ({ children }) => {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Quick Actions Trigger Button (Desktop Only) */}
+            <button
+              onClick={() => setShowQuickActions(true)}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-full shadow-xs transition-all"
+              title="Open Quick Actions Modal (1. Create, 2. Update, 3. Details)"
+            >
+              <Sparkles size={14} className="animate-pulse shrink-0" />
+              <span>Quick Actions</span>
+            </button>
+
             {/* Notification Bell Shortcut */}
             <NavLink
               to="/notifications"
@@ -296,6 +320,12 @@ export const AppShell = ({ children }) => {
             </div>
           </div>
         )}
+
+        {/* 3-Option Login Quick Actions Modal */}
+        <LoginQuickActionsModal
+          isOpen={showQuickActions}
+          onClose={() => setShowQuickActions(false)}
+        />
       </div>
     </div>
   );
@@ -311,6 +341,7 @@ const SidebarContent = ({
   isRoleSupervisor,
   onLogout,
   onNavigate,
+  onOpenQuickActions,
 }) => (
   <>
     {/* Header & Collapse Toggle */}
@@ -343,6 +374,23 @@ const SidebarContent = ({
 
     {/* Navigation Items */}
     <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto custom-scrollbar">
+      {/* QUICK ACTIONS BUTTON */}
+      {onOpenQuickActions && (
+        <button
+          onClick={() => {
+            if (onNavigate) onNavigate();
+            onOpenQuickActions();
+          }}
+          className={`w-full flex items-center ${
+            collapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-3 py-2.5'
+          } mb-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-xs transition-all`}
+          title="Quick Actions (1. Create, 2. Update, 3. Details)"
+        >
+          <Sparkles size={18} className="shrink-0 animate-pulse" />
+          {!collapsed && <span>Quick Actions</span>}
+        </button>
+      )}
+
       {/* MAIN NAV SECTION */}
       <div>
         {!collapsed ? (

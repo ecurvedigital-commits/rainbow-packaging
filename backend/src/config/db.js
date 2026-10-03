@@ -16,12 +16,19 @@ try {
  */
 export async function connectDb() {
   try {
+    // Configure DNS fallback for MongoDB Atlas SRV lookup on Windows/local environments
+    try {
+      dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
+    } catch (dnsErr) {
+      // Ignore if custom DNS cannot be set
+    }
+
     mongoose.set('strictQuery', true);
     mongoose.set('autoIndex', env.NODE_ENV !== 'production');
 
     const conn = await mongoose.connect(env.MONGODB_URI, {
       dbName: env.MONGODB_DB_NAME,
-      serverSelectionTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 15000,
       maxPoolSize: 10,
     });
 

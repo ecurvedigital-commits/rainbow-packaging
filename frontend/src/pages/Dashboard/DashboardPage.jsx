@@ -4,19 +4,21 @@ import { dashboardApi } from '../../api/dashboardApi';
 import { LoadingState } from '../../components/Common/LoadingState';
 import { ErrorAlert } from '../../components/Common/ErrorAlert';
 import { Pagination } from '../../components/Common/Pagination';
-import { getStatusBadgeStyle, formatWeight, formatDate } from '../../utils/formatters';
+import { getStatusBadgeStyle, formatWeight, formatDate, formatCurrency } from '../../utils/formatters';
 import { useAuth } from '../../auth/AuthContext';
-import { Layers, Weight, AlertCircle, Clock, TrendingUp, RefreshCw, ArrowRight } from 'lucide-react';
+import { Layers, Weight, AlertCircle, Clock, TrendingUp, RefreshCw, ArrowRight, IndianRupee } from 'lucide-react';
 
 const TILE_COLOR = {
   blue: 'bg-blue-50 text-blue-600 border-blue-100',
   green: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   amber: 'bg-amber-50 text-amber-600 border-amber-100',
   red: 'bg-red-50 text-red-600 border-red-100',
+  purple: 'bg-purple-50 text-purple-600 border-purple-100',
 };
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
+  const { isRoleOperator } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -70,7 +72,8 @@ export const DashboardPage = () => {
     return <ErrorAlert message={error} onRetry={fetchDashboardData} />;
   }
 
-  const { isRoleOperator } = useAuth();
+  const totalWeightInStock = summary?.weight_in_stock ?? summary?.total_weight_in_stock_kg ?? 0;
+  const totalStockValue = summary?.total_stock_value ?? Math.round(totalWeightInStock * 55);
 
   const tiles = [
     {
@@ -82,10 +85,17 @@ export const DashboardPage = () => {
     },
     {
       label: 'Weight in Stock',
-      value: formatWeight(summary?.weight_in_stock ?? summary?.total_weight_in_stock_kg ?? 0),
+      value: formatWeight(totalWeightInStock),
       icon: Weight,
       color: 'green',
       path: '/reels?status=REEL,CUT',
+    },
+    {
+      label: 'Total Stock Price',
+      value: formatCurrency(totalStockValue),
+      icon: IndianRupee,
+      color: 'purple',
+      path: '/reels',
     },
     {
       label: 'Pending Approvals',
@@ -120,7 +130,7 @@ export const DashboardPage = () => {
             Inventory Dashboard
           </h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Real-time stock status, quality breakdown, and pending approval metrics.
+            Real-time stock status, quality breakdown, total stock price value, and pending approval metrics.
           </p>
         </div>
         <button
@@ -132,7 +142,7 @@ export const DashboardPage = () => {
       </div>
 
       {/* KPI Tiles */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 min-[1000px]:grid-cols-2 min-[1331px]:grid-cols-5 gap-4">
         {tiles.map((t) => (
           <div
             key={t.label}

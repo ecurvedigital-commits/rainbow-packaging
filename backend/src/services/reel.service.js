@@ -87,19 +87,35 @@ export async function searchReels({ query = {}, actor }) {
   if (!searchStr) return [];
 
   const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const maxLimit = Math.min(50, Math.max(1, parseInt(query.limit, 10) || 10));
+  const maxLimit = Math.min(50, Math.max(1, parseInt(query.limit, 10) || 20));
   const skip = (page - 1) * maxLimit;
 
   const regex = new RegExp(searchStr, 'i');
+  const orConditions = [
+    { reel_no: regex },
+    { supplier_name: regex },
+    { master_key: regex },
+    { master_code: regex },
+    { quality: regex },
+  ];
+
+  const numVal = Number(searchStr);
+  if (!isNaN(numVal) && numVal > 0) {
+    orConditions.push({ gsm: numVal });
+    orConditions.push({ bf: numVal });
+    orConditions.push({ size: numVal });
+    orConditions.push({ previous_weight: numVal });
+  }
+
   const reels = await Reel.find({
     record_status: RECORD_STATUS.ACTIVE,
-    reel_no: regex,
+    $or: orConditions,
   })
     .skip(skip)
     .limit(maxLimit)
     .lean();
 
-  // Sort exact match first
+  // Sort exact reel_no or supplier match first
   reels.sort((a, b) => {
     const aExact = a.reel_no.toLowerCase() === searchStr.toLowerCase();
     const bExact = b.reel_no.toLowerCase() === searchStr.toLowerCase();
@@ -114,9 +130,14 @@ export async function searchReels({ query = {}, actor }) {
 
   return reels.map((reel) => ({
     id: reel._id.toString(),
+    sr_no: reel.sr_no,
     reel_no: reel.reel_no,
     master_key: reel.master_key || null,
+    master_code: reel.master_code || null,
     quality: reel.quality,
+    gsm: reel.gsm,
+    bf: reel.bf,
+    size: reel.size,
     supplier_name: reel.supplier_name || null,
     previous_weight: reel.previous_weight,
     max_weight: reel.max_weight,
@@ -545,6 +566,7 @@ export async function getFilterOptions() {
     sizes,
     suppliers,
     masterKeys,
+    masterCodes,
     statuses,
     stations,
     fieldDefs,
@@ -555,6 +577,7 @@ export async function getFilterOptions() {
     Reel.distinct('size', { record_status: RECORD_STATUS.ACTIVE }),
     Reel.distinct('supplier_name', { record_status: RECORD_STATUS.ACTIVE }),
     Reel.distinct('master_key', { record_status: RECORD_STATUS.ACTIVE }),
+    Reel.distinct('master_code', { record_status: RECORD_STATUS.ACTIVE }),
     Reel.distinct('status', { record_status: RECORD_STATUS.ACTIVE }),
     Reel.distinct('stations_used', { record_status: RECORD_STATUS.ACTIVE }),
     FieldDefinition.find({ is_active: true }).lean(),
@@ -567,6 +590,14 @@ export async function getFilterOptions() {
     sizes: sizes.filter(Boolean).sort((a, b) => a - b),
     suppliers: suppliers.filter(Boolean).sort(),
     master_keys: masterKeys.filter(Boolean).sort(),
+    master_codes: masterCodes
+      .filter(Boolean)
+      .sort((a, b) => {
+        const numA = Number(a);
+        const numB = Number(b);
+        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+        return String(a).localeCompare(String(b), undefined, { numeric: true });
+      }),
     statuses: statuses.filter(Boolean).sort(),
     stations: stations.filter(Boolean).sort(),
     custom_fields: fieldDefs.map((f) => ({ key: f.key, name: f.name, type: f.field_type, options: f.options || [] })),
