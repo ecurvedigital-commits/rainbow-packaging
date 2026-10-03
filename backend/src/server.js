@@ -5,6 +5,7 @@ import { ensureSettings } from './services/setting.service.js';
 import { ensureAdmin } from './services/user.service.js';
 import { initJobs } from './jobs/index.js';
 import { createApp } from './app.js';
+import { startKeepAlive, stopKeepAlive } from './services/keepAlive.service.js';
 
 let server;
 
@@ -19,10 +20,12 @@ async function bootstrap() {
 
     server = app.listen(env.PORT, () => {
       logger.info({ port: env.PORT, env: env.NODE_ENV }, `Server is running on http://localhost:${env.PORT}`);
+      startKeepAlive();
     });
 
     const shutdown = async (signal) => {
       logger.info({ signal }, 'Received shutdown signal, closing server cleanly...');
+      stopKeepAlive();
       if (server) {
         server.close(async () => {
           logger.info('HTTP server closed');
@@ -44,3 +47,4 @@ async function bootstrap() {
 }
 
 bootstrap();
+

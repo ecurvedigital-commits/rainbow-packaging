@@ -57,9 +57,9 @@ export function createApp() {
   // Apply rate limiter to general API routes
   app.use('/api/v1', apiRateLimiter, apiRouter);
 
-  // SPA fallback: Return index.html for non-API routes when frontend build exists
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/docs')) {
+  // SPA fallback: Return index.html for non-API routes when frontend build exists (Express 5 compatible)
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.startsWith('/docs')) {
       return next();
     }
     const indexPath = path.join(frontendDistPath, 'index.html');
