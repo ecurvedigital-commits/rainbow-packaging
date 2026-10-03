@@ -87,7 +87,7 @@ const initialEvents = [
     performed_at: '2023-08-15T14:00:00Z',
     approved_by: null,
     approved_at: null,
-    payload: { station: 'Station 1', previous_weight: 1200, current_weight_entered: 800, used_this_time: 400 }
+    payload: { station: 'E-Flute', previous_weight: 1200, current_weight_entered: 800, used_this_time: 400 }
   }
 ];
 

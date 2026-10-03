@@ -54,7 +54,7 @@ Query:
 | `purchase_date_from`, `purchase_date_to` | Date range (inclusive) |
 | `station` | One or more stations used |
 | `approval_status` | `PENDING` or `CONFIRMED` |
-| `cf.<key>` | Custom parameter filter, e.g. `cf.batch_code=B-2`, `cf.thickness_micron_min=60` |
+| `cf.<key>` | Custom parameter filter, e.g. `cf.batch_code=B-2`, `cf.thickness_micron_min=60`, `cf.batch_code_exists=true` (any non-empty value recorded) |
 | `include_voided` | `true` to include voided reels (Admin only) |
 | `page`, `limit`, `sort` | Sortable: `sr_no`, `reel_no`, `status`, `quality`, `supplier_name`, `purchase_date`, `gsm`, `size`, `previous_weight`, `last_activity_at`, and `cf.<key>` |
 

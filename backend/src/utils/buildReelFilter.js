@@ -141,6 +141,19 @@ export function buildReelFilter(filters = {}, actor = {}) {
     }
   }
 
+  // Aging reels threshold (last_activity_at <= now - aging_days)
+  const agingDays = filters.aging_days || filters.aging;
+  if (agingDays !== undefined && agingDays !== '') {
+    const days = Number(agingDays);
+    if (!isNaN(days) && days > 0) {
+      const agingCutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      query.last_activity_at = { $lte: agingCutoff };
+      if (!query.status) {
+        query.status = { $ne: 'NILL' };
+      }
+    }
+  }
+
   // Station used
   if (filters.station) {
     const stations = Array.isArray(filters.station)
@@ -166,7 +179,14 @@ export function buildReelFilter(filters = {}, actor = {}) {
   for (const key of Object.keys(filters)) {
     if (key.startsWith('cf.')) {
       const fieldName = key.substring(3);
-      if (fieldName.endsWith('_min')) {
+      if (fieldName.endsWith('_exists')) {
+        const realKey = `custom_fields.${fieldName.substring(0, fieldName.length - 7)}`;
+        if (String(filters[key]).toLowerCase() === 'true') {
+          query[realKey] = { $exists: true, $nin: ['', null] };
+        } else {
+          query[realKey] = { $in: [null, ''] };
+        }
+      } else if (fieldName.endsWith('_min')) {
         const realKey = `custom_fields.${fieldName.substring(0, fieldName.length - 4)}`;
         query[realKey] = query[realKey] || {};
         query[realKey].$gte = Number(filters[key]);

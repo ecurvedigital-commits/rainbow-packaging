@@ -128,7 +128,29 @@ export async function getStatusBoard({ filters = {}, actor }) {
  * @returns {Promise<Array<object>>}
  */
 export async function getBreakdown({ filters = {}, actor }) {
-  const groupByField = filters.by === 'supplier' ? '$supplier_name' : '$quality';
+  if (filters.by === 'quality') {
+    const results = await Reel.aggregate([
+      { $match: { record_status: RECORD_STATUS.ACTIVE } },
+      {
+        $group: {
+          _id: { quality: '$quality', bf: '$bf' },
+          reel_count: { $sum: 1 },
+          total_weight: { $sum: '$previous_weight' },
+        },
+      },
+      { $sort: { reel_count: -1, total_weight: -1 } },
+    ]);
+
+    return results.map((r) => ({
+      label: r._id.bf !== undefined && r._id.bf !== null ? `${r._id.quality || 'Unknown'} (${r._id.bf} BF)` : (r._id.quality || 'Unknown'),
+      quality: r._id.quality,
+      bf: r._id.bf,
+      reel_count: r.reel_count,
+      total_weight: Math.round((r.total_weight || 0) * 100) / 100,
+    }));
+  }
+
+  const groupByField = '$supplier_name';
 
   const results = await Reel.aggregate([
     { $match: { record_status: RECORD_STATUS.ACTIVE } },
@@ -144,6 +166,7 @@ export async function getBreakdown({ filters = {}, actor }) {
 
   return results.map((r) => ({
     label: r._id || 'Unknown',
+    supplier: r._id,
     reel_count: r.reel_count,
     total_weight: Math.round((r.total_weight || 0) * 100) / 100,
   }));

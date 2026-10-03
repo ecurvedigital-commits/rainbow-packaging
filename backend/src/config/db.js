@@ -1,13 +1,24 @@
+import { execSync } from 'child_process';
 import dns from 'dns';
 import mongoose from 'mongoose';
 import { env } from './env.js';
 import { logger } from './logger.js';
 
-// Configure DNS fallback for MongoDB Atlas SRV lookup on local/Windows environments
-try {
-  dns.setServers(['8.8.8.8', '1.1.1.1']);
-} catch {
-  // Ignore if custom DNS cannot be set
+/**
+ * Configure DNS servers dynamically for Node on Windows
+ */
+function configureDns() {
+  if (process.platform === 'win32') {
+    try {
+      const output = execSync('powershell -NoProfile -Command "(Get-DnsClientServerAddress -AddressFamily IPv4).ServerAddresses"', { encoding: 'utf8' });
+      const ips = output.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+      if (ips.length > 0) {
+        dns.setServers(ips);
+      }
+    } catch {
+      // Ignore if DNS fallback cannot be fetched
+    }
+  }
 }
 
 /**
@@ -16,12 +27,7 @@ try {
  */
 export async function connectDb() {
   try {
-    // Configure DNS fallback for MongoDB Atlas SRV lookup on Windows/local environments
-    try {
-      dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
-    } catch (dnsErr) {
-      // Ignore if custom DNS cannot be set
-    }
+    configureDns();
 
     mongoose.set('strictQuery', true);
     mongoose.set('autoIndex', env.NODE_ENV !== 'production');

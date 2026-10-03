@@ -95,7 +95,7 @@ export const DashboardPage = () => {
       value: formatCurrency(totalStockValue),
       icon: IndianRupee,
       color: 'purple',
-      path: '/reels',
+      path: '/reels?status=REEL,CUT',
     },
     {
       label: 'Pending Approvals',
@@ -173,11 +173,20 @@ export const DashboardPage = () => {
       {/* Quality & Supplier Breakdowns */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <BreakdownCard
-          title="Reels by Quality"
+          title="Reels by Quality & BF"
           icon={TrendingUp}
           data={qualityBreakdown}
           total={summary?.total_reels || 1}
           barClass="bg-brand-blue"
+          filterType="Qualities"
+          initialLimit={5}
+          onItemClick={(item) => {
+            const params = new URLSearchParams();
+            if (item.quality) params.set('quality', item.quality);
+            if (item.bf !== undefined && item.bf !== null) params.set('bf', item.bf);
+            navigate(`/reels?${params.toString()}`);
+          }}
+          onLoadMore={() => navigate('/reels')}
         />
         <BreakdownCard
           title="Weight by Supplier"
@@ -186,6 +195,27 @@ export const DashboardPage = () => {
           total={summary?.weight_in_stock || 1}
           barClass="bg-brand-green"
           isWeight={true}
+          filterType="Suppliers"
+          initialLimit={5}
+          onItemClick={(item) => {
+            const supplierName = item.supplier || item.label;
+            if (supplierName && supplierName !== 'Unknown') {
+              navigate(`/reels?supplier=${encodeURIComponent(supplierName)}`);
+            } else {
+              navigate('/reels');
+            }
+          }}
+          onLoadMore={() => {
+            const topSuppliers = supplierBreakdown
+              .slice(0, 5)
+              .map((s) => s.supplier || s.label)
+              .filter((s) => s && s !== 'Unknown');
+            if (topSuppliers.length > 0) {
+              navigate(`/reels?supplier=${encodeURIComponent(topSuppliers.join(','))}`);
+            } else {
+              navigate('/reels');
+            }
+          }}
         />
       </div>
 
@@ -289,35 +319,88 @@ const TabButton = ({ active, onClick, children }) => (
   </button>
 );
 
-const BreakdownCard = ({ title, icon: Icon, data = [], total = 1, barClass, isWeight = false }) => (
-  <div className="bg-white rounded-2xl shadow-xs border border-gray-200 p-5">
-    <h3 className="font-bold text-sm text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'var(--font-family-display)' }}>
-      <Icon size={16} className="text-gray-400" /> {title}
-    </h3>
-    <div className="space-y-3">
-      {!Array.isArray(data) || data.length === 0 ? (
-        <p className="text-xs text-gray-400 text-center py-4">No data available</p>
-      ) : (
-        data.map((item, idx) => {
-          const label = item.label || item._id || item.quality || item.supplier || item.name || 'Unknown';
-          const count = item.total_weight !== undefined ? item.total_weight : (item.reel_count !== undefined ? item.reel_count : item.count || 0);
-          const percent = total > 0 ? Math.min(Math.round((count / total) * 100), 100) : 0;
-          return (
-            <div key={`${label}-${idx}`} className="flex items-center gap-3">
-              <div className="w-28 text-xs font-semibold text-gray-700 truncate" title={label}>{label}</div>
-              <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                <div className={`${barClass} h-full rounded-full`} style={{ width: `${percent}%` }} />
-              </div>
-              <div className="w-20 text-right text-xs font-bold text-gray-900">
-                {isWeight ? `${count.toLocaleString()} kg` : count}
-              </div>
-            </div>
-          );
-        })
+const BreakdownCard = ({
+  title,
+  icon: Icon,
+  data = [],
+  total = 1,
+  barClass,
+  isWeight = false,
+  initialLimit = 5,
+  onItemClick,
+  onLoadMore,
+  filterType = 'Items',
+}) => {
+  const [showAll, setShowAll] = useState(false);
+  const visibleData = showAll ? data : data.slice(0, initialLimit);
+  const hasMore = data.length > initialLimit;
+
+  return (
+    <div className="bg-white rounded-2xl shadow-xs border border-gray-200 p-5 flex flex-col justify-between">
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2" style={{ fontFamily: 'var(--font-family-display)' }}>
+            <Icon size={16} className="text-gray-400" /> {title}
+          </h3>
+          <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full border border-gray-200">
+            {data.length} {filterType}
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          {!Array.isArray(data) || data.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-4">No data available</p>
+          ) : (
+            visibleData.map((item, idx) => {
+              const label = item.label || item._id || item.quality || item.supplier || item.name || 'Unknown';
+              const count = isWeight
+                ? (item.total_weight !== undefined ? item.total_weight : item.count || 0)
+                : (item.reel_count !== undefined ? item.reel_count : item.count || 0);
+              const percent = total > 0 ? Math.min(Math.round((count / total) * 100), 100) : 0;
+              return (
+                <div
+                  key={`${label}-${idx}`}
+                  onClick={() => onItemClick && onItemClick(item)}
+                  className={`flex items-center gap-3 ${
+                    onItemClick ? 'cursor-pointer hover:bg-blue-50/50 p-2 rounded-xl border border-transparent hover:border-blue-100 transition-all group' : ''
+                  }`}
+                  title={onItemClick ? `Click to filter reels by ${label}` : label}
+                >
+                  <div className="w-36 text-xs font-bold text-gray-800 truncate group-hover:text-brand-blue" title={label}>
+                    {label}
+                  </div>
+                  <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                    <div className={`${barClass} h-full rounded-full transition-all duration-300`} style={{ width: `${percent}%` }} />
+                  </div>
+                  <div className="w-24 text-right text-xs font-bold text-gray-900">
+                    {isWeight ? `${count.toLocaleString()} kg` : `${count} reels`}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {hasMore && (
+        <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+          <button
+            onClick={() => setShowAll(!showAll)}
+            className="text-xs font-semibold text-gray-600 hover:text-gray-900 flex items-center gap-1 transition-colors"
+          >
+            {showAll ? 'Show Less' : `Show ${data.length - initialLimit} More`}
+          </button>
+          <button
+            onClick={onLoadMore}
+            className="text-xs font-bold text-brand-blue hover:text-blue-700 flex items-center gap-1 transition-colors bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl border border-blue-100"
+          >
+            Load More in Reel List <ArrowRight size={13} />
+          </button>
+        </div>
       )}
     </div>
-  </div>
-);
+  );
+};
 
 const STATUS_THEME = {
   green: { header: 'bg-emerald-50 text-emerald-800 border-emerald-200', badge: 'bg-emerald-600 text-white', hover: 'hover:border-emerald-400' },

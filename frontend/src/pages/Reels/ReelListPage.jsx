@@ -65,13 +65,28 @@ export default function ReelListPage() {
   });
 
   // Set of field keys that are currently "open" (expanded) — multiple allowed
-  const [openFields, setOpenFields] = useState(new Set(['supplier']));
+  const [openFields, setOpenFields] = useState(() => {
+    const fields = new Set(['supplier']);
+    if (searchParams.get('quality')) fields.add('paper_quality');
+    if (searchParams.get('bf')) fields.add('bf');
+    if (searchParams.get('status')) fields.add('status');
+    return fields;
+  });
 
   // Per-field selected values (each is an array)
   const [filterValues, setFilterValues] = useState(() => {
     const statusParam = searchParams.get('status');
-    const initialStatus = statusParam ? statusParam.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean) : [];
-    return { ...EMPTY_FILTER_VALUES, status: initialStatus };
+    const supplierParam = searchParams.get('supplier');
+    const qualityParam = searchParams.get('quality');
+    const bfParam = searchParams.get('bf');
+
+    return {
+      ...EMPTY_FILTER_VALUES,
+      status: statusParam ? statusParam.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean) : [],
+      supplier: supplierParam ? supplierParam.split(',').map((s) => s.trim()).filter(Boolean) : [],
+      paper_quality: qualityParam ? qualityParam.split(',').map((s) => s.trim()).filter(Boolean) : [],
+      bf: bfParam ? bfParam.split(',').map((s) => s.trim()).filter(Boolean) : [],
+    };
   });
 
   // Free-text search
@@ -523,11 +538,22 @@ export default function ReelListPage() {
         )}
 
         {/* Active filter tag summary */}
-        {totalActiveCount > 0 && (
+        {(totalActiveCount > 0 || Boolean(searchParams.get('aging'))) && (
           <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700/50 flex flex-wrap items-center gap-2">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Active Filters ({totalActiveCount}):
+              Active Filters ({totalActiveCount + (searchParams.get('aging') ? 1 : 0)}):
             </span>
+            {searchParams.get('aging') && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-full border border-amber-200 dark:border-amber-800">
+                <span className="text-amber-600 font-medium">Unused:</span>
+                <strong>{searchParams.get('aging')}+ Days</strong>
+                <button onClick={() => navigate('/reels')}
+                  className="hover:text-amber-900 dark:hover:text-white p-0.5 rounded-full hover:bg-amber-200/50"
+                  title="Remove Aging Filter">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
             {allFields.map((f) => {
               const vals = Array.isArray(filterValues[f.key]) ? filterValues[f.key] : [];
               if (!vals.length) return null;
@@ -584,9 +610,19 @@ export default function ReelListPage() {
                   const initialWeight = reel.max_weight ?? reel.initial_weight_kg;
                   const itemPrice     = Math.round((currentWeight || 0) * 55);
 
+                  const statusStr = (reel.status || '').toUpperCase();
+                  const rowAccent =
+                    statusStr === 'REEL' || statusStr === 'FULL' || statusStr === 'AVAILABLE'
+                      ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-l-4 border-l-emerald-500 hover:bg-emerald-100/90 dark:hover:bg-emerald-900/60'
+                      : statusStr === 'CUT' || statusStr === 'IN_USE'
+                      ? 'bg-amber-50/80 dark:bg-amber-950/40 border-l-4 border-l-amber-500 hover:bg-amber-100/90 dark:hover:bg-amber-900/60'
+                      : statusStr === 'NILL' || statusStr === 'DEPLETED'
+                      ? 'bg-rose-50/80 dark:bg-rose-950/40 border-l-4 border-l-rose-500 hover:bg-rose-100/90 dark:hover:bg-rose-900/60'
+                      : 'bg-slate-50 dark:bg-slate-800 border-l-4 border-l-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50';
+
                   return (
                     <tr key={reelId || reel.sr_no}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition cursor-pointer"
+                      className={`${rowAccent} transition cursor-pointer`}
                       onClick={() => navigate(`/reels/${reelId}`)}>
 
                       <td className="px-6 py-4">
@@ -636,7 +672,8 @@ export default function ReelListPage() {
                       </td>
 
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusBadgeClass(reel.status)}`}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${getStatusBadgeClass(reel.status)}`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-80" />
                           {reel.status}
                         </span>
                       </td>

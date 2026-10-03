@@ -168,7 +168,7 @@ export async function listUsageLogs({ filters = {}, actor }) {
       approved_by_name: event.approved_by_name,
       approved_at: event.approved_at,
       decline_reason: event.decline_reason || null,
-      station: event.payload?.station || 'Station 1',
+      station: event.payload?.station || 'E-Flute',
       previous_weight: event.payload?.previous_weight,
       current_weight_entered: event.payload?.current_weight_entered,
       used_this_time: event.payload?.used_this_time,

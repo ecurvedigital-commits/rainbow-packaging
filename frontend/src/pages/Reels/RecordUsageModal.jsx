@@ -10,7 +10,7 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
   const [search, setSearch] = useState('');
   const [searching, setSearching] = useState(false);
   const [selectedReel, setSelectedReel] = useState(reel || null);
-  const [station, setStation] = useState('Station 1');
+  const [station, setStation] = useState('E-Flute');
   const [currentWeight, setCurrentWeight] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -165,9 +165,9 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
               <div>
                 <label className={labelClass}>Machine Station *</label>
                 <select className={inputClass} value={station} onChange={(e) => setStation(e.target.value)}>
-                  <option value="Station 1">Station 1</option>
-                  <option value="Station 2">Station 2</option>
-                  <option value="Station 3">Station 3</option>
+                  <option value="E-Flute">E-Flute</option>
+                  <option value="Narrow-Flute">Narrow-Flute</option>
+                  <option value="Sheater">Sheater</option>
                 </select>
               </div>
 
