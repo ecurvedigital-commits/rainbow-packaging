@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { reelApi } from '../../api/reelApi';
+import { masterCodeApi } from '../../api/masterCodeApi';
 import { fieldDefinitionApi } from '../../api/fieldDefinitionApi';
-import { X, Save, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Save, Loader2, AlertCircle, RefreshCw, Layers, Key } from 'lucide-react';
 
 const inputClass = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue transition-shadow';
 const labelClass = 'block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1';
 
 export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
   const [fieldDefs, setFieldDefs] = useState([]);
+  const [masterCodes, setMasterCodes] = useState([]);
+  const [selectedMasterCodeId, setSelectedMasterCodeId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [loadingNextNo, setLoadingNextNo] = useState(false);
   const [error, setError] = useState('');
@@ -43,12 +46,32 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
 
     const fetchInitialData = async () => {
       try {
-        const res = await fieldDefinitionApi.list();
-        if (res.success && Array.isArray(res.data)) {
-          setFieldDefs(res.data.filter((f) => f.is_active !== false));
+        const [fieldRes, codeRes] = await Promise.all([
+          fieldDefinitionApi.list(),
+          masterCodeApi.list({ status: 'ACTIVE' }),
+        ]);
+
+        if (fieldRes.success && Array.isArray(fieldRes.data)) {
+          setFieldDefs(fieldRes.data.filter((f) => f.is_active !== false));
+        }
+
+        if (codeRes.success && Array.isArray(codeRes.data)) {
+          setMasterCodes(codeRes.data);
+          // Auto select first master code if available
+          if (codeRes.data.length > 0) {
+            const first = codeRes.data[0];
+            setSelectedMasterCodeId(first.master_code_id || first.id);
+            setFormData((prev) => ({
+              ...prev,
+              quality: first.quality,
+              gsm: first.gsm,
+              bf: first.bf,
+              size: first.size,
+            }));
+          }
         }
       } catch (err) {
-        console.warn('Failed to load custom fields:', err.message);
+        console.warn('Failed to load initial reel modal data:', err.message);
       }
 
       fetchNextReelNumber();
@@ -57,10 +80,26 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
     fetchInitialData();
   }, [isOpen]);
 
-  const getMasterKeyPreview = () => {
+  const handleMasterCodeChange = (e) => {
+    const codeId = e.target.value;
+    setSelectedMasterCodeId(codeId);
+    const selected = masterCodes.find((mc) => (mc.master_code_id || mc.id) === codeId);
+    if (selected) {
+      setFormData((prev) => ({
+        ...prev,
+        quality: selected.quality,
+        gsm: selected.gsm,
+        bf: selected.bf,
+        size: selected.size,
+      }));
+    }
+  };
+
+  // Real-time Technical Master Key generator (Canonical formula: QualityCode-GsmCode-BfCode-SizeCode)
+  const getTechnicalMasterKey = () => {
     try {
       const qCodeMap = { VK: 'VK', SPECTRA: 'SPC', ULTRA: 'ULT', SK: 'SK', IMPORTANT: 'IMP', SBS: 'SBS', FBB: 'FBB', DCB: 'DCB' };
-      const qCode = qCodeMap[formData.quality] || formData.quality;
+      const qCode = qCodeMap[formData.quality] || formData.quality || 'VK';
       const gsmNum = parseInt(formData.gsm, 10);
       const gsmCode = isNaN(gsmNum) ? 'G000' : `G${gsmNum < 100 ? String(gsmNum).padStart(3, '0') : gsmNum}`;
       const bfNum = parseInt(formData.bf, 10);
@@ -73,7 +112,7 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
     }
   };
 
-  const masterKeyPreview = getMasterKeyPreview();
+  const technicalMasterKey = getTechnicalMasterKey();
 
   if (!isOpen) return null;
 
@@ -83,8 +122,12 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
     setSubmitting(true);
 
     try {
+      const selectedCodeDoc = masterCodes.find((mc) => (mc.master_code_id || mc.id) === selectedMasterCodeId);
+
       const payload = {
         reel_no: formData.reel_no.trim(),
+        master_code: selectedCodeDoc ? selectedCodeDoc.master_code : undefined,
+        master_code_id: selectedMasterCodeId || undefined,
         quality: formData.quality,
         bf: Number(formData.bf),
         supplier_name: formData.supplier_name.trim(),
@@ -131,6 +174,34 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
         )}
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* STEP 1: Business Master Code Selector Box */}
+          <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-brand-blue uppercase tracking-wider flex items-center gap-1.5">
+                <Layers size={14} className="text-brand-blue" />
+                Master Code (Business Classification) *
+              </label>
+              <span className="text-[11px] font-semibold text-indigo-600 bg-white px-2 py-0.5 rounded-md border border-indigo-100">
+                {masterCodes.length} Active Master Codes
+              </span>
+            </div>
+            <select
+              className="w-full border border-indigo-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
+              value={selectedMasterCodeId}
+              onChange={handleMasterCodeChange}
+            >
+              {masterCodes.map((mc) => (
+                <option key={mc.master_code_id || mc.id} value={mc.master_code_id || mc.id}>
+                  Master Code {mc.master_code} — {mc.master_code_name} ({mc.quality}, {mc.gsm} GSM, {mc.bf} BF, {mc.size} cm)
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-gray-500">
+              Selecting a Master Code automatically pre-fills Quality, GSM, BF, and Size.
+            </p>
+          </div>
+
+          {/* STEP 2: Pre-filled Technical Specification Fields & Reel Details */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <div className="flex items-center justify-between">
@@ -241,6 +312,22 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
             </div>
           </div>
 
+          {/* STEP 3: Derived Read-Only Technical Master Key Display Box */}
+          <div className="bg-indigo-50/80 border border-indigo-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div>
+              <label className="text-[11px] font-bold text-brand-blue uppercase tracking-wider flex items-center gap-1.5">
+                <Key size={14} className="text-brand-blue" />
+                Technical Master Key (System Derived Spec)
+              </label>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Auto-calculated from Quality ({formData.quality}) + GSM ({formData.gsm}) + BF ({formData.bf}) + Size ({formData.size} cm). Read-only.
+              </p>
+            </div>
+            <div className="px-4 py-2 bg-brand-blue text-white rounded-xl font-mono font-bold text-sm tracking-wide shadow-xs shrink-0 border border-brand-blue-dark">
+              {technicalMasterKey}
+            </div>
+          </div>
+
           {/* Dynamic Custom Fields */}
           {fieldDefs.length > 0 && (
             <div className="pt-4 border-t border-gray-100">
@@ -270,17 +357,6 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
             </div>
           )}
 
-          {/* Master Product Key Live Preview Card */}
-          <div className="bg-brand-blue/5 border border-brand-blue/20 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-bold text-brand-blue uppercase tracking-wider">Product Classification Category</p>
-              <p className="text-xs text-gray-600">Reel will be grouped under this Master Product Key:</p>
-            </div>
-            <div className="px-3.5 py-1.5 bg-brand-blue text-white rounded-lg font-mono font-bold text-sm tracking-wide shadow-xs shrink-0">
-              {masterKeyPreview}
-            </div>
-          </div>
-
           <div className="pt-4 border-t border-gray-100 flex justify-end gap-3 shrink-0">
             <button type="button" onClick={onClose} disabled={submitting} className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100">
               Cancel
@@ -297,4 +373,3 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
 };
 
 export default CreateReelModal;
-

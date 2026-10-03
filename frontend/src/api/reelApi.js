@@ -70,8 +70,17 @@ export const reelApi = {
     });
   },
 
-  getJourney: async (id) => {
-    return apiFetch(`/reels/${id}/journey`, {
+  getJourney: async (id, params = {}) => {
+    const query = new URLSearchParams();
+    if (typeof params === 'object') {
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== '') {
+          query.append(key, val);
+        }
+      });
+    }
+    const queryString = query.toString();
+    return apiFetch(`/reels/${id}/journey${queryString ? `?${queryString}` : ''}`, {
       method: 'GET',
     });
   },

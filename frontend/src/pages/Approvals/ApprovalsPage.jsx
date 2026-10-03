@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   CheckCircle, Clock, Check, X, ShieldCheck, 
-  RefreshCw, ArrowRight, Search 
+  RefreshCw, ArrowRight, Search, Eye, History 
 } from 'lucide-react';
 import { approvalApi } from '../../api/approvalApi';
 import { useAuth } from '../../auth/AuthContext';
 import DeclineReasonModal from './DeclineReasonModal';
+import ApprovalDetailModal from './ApprovalDetailModal';
+import ReelJourneyModal from './ReelJourneyModal';
 import Pagination from '../../components/Common/Pagination';
 import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';
@@ -31,6 +33,8 @@ export default function ApprovalsPage() {
   const [actionLoadingId, setActionLoadingId] = useState(null);
 
   const [declineTarget, setDeclineTarget] = useState(null);
+  const [selectedDetailItem, setSelectedDetailItem] = useState(null);
+  const [journeyTarget, setJourneyTarget] = useState(null); // { reelId, reelNo }
   const [toast, setToast] = useState(null);
 
   const [pagination, setPagination] = useState({
@@ -117,6 +121,7 @@ export default function ApprovalsPage() {
     try {
       await approvalApi.approve(approvalId);
       setToast({ type: 'success', message: 'Approval request confirmed successfully!' });
+      setSelectedDetailItem(null);
       fetchPending();
     } catch (err) {
       setToast({ type: 'error', message: err.message || 'Failed to confirm request.' });
@@ -133,12 +138,17 @@ export default function ApprovalsPage() {
       await approvalApi.decline(targetId, reason);
       setToast({ type: 'success', message: 'Approval request declined.' });
       setDeclineTarget(null);
+      setSelectedDetailItem(null);
       fetchPending();
     } catch (err) {
       setToast({ type: 'error', message: err.message || 'Failed to decline request.' });
     } finally {
       setActionLoadingId(null);
     }
+  };
+
+  const handleOpenJourney = (reelId, reelNo) => {
+    setJourneyTarget({ reelId, reelNo });
   };
 
   return (
@@ -159,7 +169,7 @@ export default function ApprovalsPage() {
             Approval Management
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            Review reel creations, usage logs, and weight adjustments submitted by operators.
+            Review reel creations, usage logs, and weight adjustments submitted by operators. Click any row to view complete details.
           </p>
         </div>
         <button
@@ -295,9 +305,13 @@ export default function ApprovalsPage() {
               return (
                 <div
                   key={itemId}
-                  className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-indigo-300 dark:hover:border-indigo-700 transition"
                 >
-                  <div className="space-y-2">
+                  {/* Clickable Content */}
+                  <div
+                    onClick={() => setSelectedDetailItem(item)}
+                    className="space-y-2 flex-1 cursor-pointer group"
+                  >
                     <div className="flex items-center gap-3">
                       <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase ${
                         item.event_type === 'CREATED'
@@ -306,7 +320,7 @@ export default function ApprovalsPage() {
                       }`}>
                         {item.event_type || 'ENTRY'}
                       </span>
-                      <span className="font-semibold text-slate-900 dark:text-white">
+                      <span className="font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
                         Reel #{reelNo}
                       </span>
                       {item.waiting_hours !== undefined && (
@@ -349,42 +363,42 @@ export default function ApprovalsPage() {
                           </span>
                         </>
                       )}
-                      {(item.reel?.supplier_name || item.payload?.fields?.supplier_name) && (
-                        <>
-                          <span>•</span>
-                          <span>Supplier: <strong className="text-slate-700">{item.reel?.supplier_name || item.payload?.fields?.supplier_name}</strong></span>
-                        </>
-                      )}
                     </div>
                   </div>
 
                   {/* Actions */}
-                  {canApprove ? (
-                    <div className="flex items-center gap-3 self-end md:self-center shrink-0">
-                      <button
-                        onClick={() => setDeclineTarget(item)}
-                        disabled={actionLoadingId === itemId || item.can_confirm === false}
-                        className="px-4 py-2 text-sm font-medium text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 border border-rose-200 dark:border-rose-900/50 rounded-xl transition flex items-center gap-1.5 disabled:opacity-50"
-                      >
-                        <X className="w-4 h-4" />
-                        <span>Decline</span>
-                      </button>
+                  <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                    <button
+                      onClick={() => setSelectedDetailItem(item)}
+                      className="px-3 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 rounded-xl border border-indigo-200 dark:border-indigo-800 transition flex items-center gap-1.5"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Details</span>
+                    </button>
 
-                      <button
-                        onClick={() => handleApprove(itemId)}
-                        disabled={actionLoadingId === itemId || item.can_confirm === false}
-                        className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition shadow-sm flex items-center gap-1.5 disabled:opacity-50"
-                        title={item.can_confirm === false ? 'Older pending entry must be resolved first (FIFO)' : 'Confirm entry'}
-                      >
-                        <Check className="w-4 h-4" />
-                        <span>Confirm</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-slate-400 italic">
-                      Requires Supervisor or Admin privileges
-                    </div>
-                  )}
+                    {canApprove && (
+                      <>
+                        <button
+                          onClick={() => setDeclineTarget(item)}
+                          disabled={actionLoadingId === itemId || item.can_confirm === false}
+                          className="px-3 py-2 text-xs font-medium text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 border border-rose-200 dark:border-rose-900/50 rounded-xl transition flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>Decline</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleApprove(itemId)}
+                          disabled={actionLoadingId === itemId || item.can_confirm === false}
+                          className="px-3.5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                          title={item.can_confirm === false ? 'Older pending entry must be resolved first (FIFO)' : 'Confirm entry'}
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Confirm</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -417,19 +431,26 @@ export default function ApprovalsPage() {
                     <th className="px-6 py-3">Approval Status</th>
                     <th className="px-6 py-3">Reviewed By</th>
                     <th className="px-6 py-3">Date</th>
+                    <th className="px-6 py-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
                   {historyItems.map((item) => {
                     const itemId = item.id || item._id;
+                    const reelId = item.reel_id || item.reel?.id || item.reel?._id;
+                    const reelNo = item.reel_no || item.reel_number || item.reel?.reel_no || 'N/A';
                     const status = item.approval_status || item.status || 'CONFIRMED';
                     return (
-                      <tr key={itemId} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition">
+                      <tr 
+                        key={itemId} 
+                        onClick={() => setSelectedDetailItem(item)}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition"
+                      >
                         <td className="px-6 py-4 font-semibold text-xs uppercase">
                           {item.event_type || item.type || item.action}
                         </td>
                         <td className="px-6 py-4 font-mono font-bold text-indigo-600">
-                          {item.reel_no || item.reel_number || item.reel?.reel_no || 'N/A'}
+                          Reel #{reelNo}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
@@ -447,6 +468,18 @@ export default function ApprovalsPage() {
                         </td>
                         <td className="px-6 py-4 text-xs text-slate-500 whitespace-nowrap">
                           {formatDate(item.performed_at || item.created_at)}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDetailItem(item);
+                            }}
+                            className="px-2.5 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-lg transition inline-flex items-center gap-1"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Details</span>
+                          </button>
                         </td>
                       </tr>
                     );
@@ -467,6 +500,30 @@ export default function ApprovalsPage() {
         )
       )}
 
+      {/* Detail Modal */}
+      {selectedDetailItem && (
+        <ApprovalDetailModal
+          item={selectedDetailItem}
+          canApprove={canApprove}
+          loadingAction={!!actionLoadingId}
+          onClose={() => setSelectedDetailItem(null)}
+          onConfirm={handleApprove}
+          onDecline={(item) => setDeclineTarget(item)}
+          onViewJourney={(rId, rNo) => {
+            handleOpenJourney(rId, rNo);
+          }}
+        />
+      )}
+
+      {/* Reel Journey Modal (Paginated timeline) */}
+      {journeyTarget && (
+        <ReelJourneyModal
+          reelId={journeyTarget.reelId}
+          reelNo={journeyTarget.reelNo}
+          onClose={() => setJourneyTarget(null)}
+        />
+      )}
+
       {/* Decline Reason Modal */}
       {declineTarget && (
         <DeclineReasonModal
@@ -479,3 +536,4 @@ export default function ApprovalsPage() {
     </div>
   );
 }
+

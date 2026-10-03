@@ -36,6 +36,21 @@ export function buildReelFilter(filters = {}, actor = {}) {
     query.master_product_id = filters.master_product_id;
   }
 
+  // Master Code filter (supports comma-separated multi-select)
+  if (filters.master_code) {
+    const codes = String(filters.master_code).split(',').map((c) => c.trim()).filter(Boolean);
+    if (codes.length === 1) {
+      query.master_code = codes[0];
+    } else if (codes.length > 1) {
+      query.master_code = { $in: codes };
+    }
+  }
+
+  // Master Code ID filter
+  if (filters.master_code_id) {
+    query.master_code_id = filters.master_code_id;
+  }
+
   // Status (REEL, CUT, NILL)
   if (filters.status) {
     const statuses = Array.isArray(filters.status)

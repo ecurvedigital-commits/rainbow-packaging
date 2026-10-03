@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import ReelMark from '../../components/ReelMark';
@@ -13,6 +13,10 @@ export const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState('');
+
+  useEffect(() => {
+    document.title = 'Rainbow Packages | Sign In';
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,9 +59,7 @@ export const LoginPage = () => {
         </svg>
 
         <div className="flex items-center gap-3 relative">
-          <div className="bg-brand-blue p-2.5 rounded-xl text-white shadow-xs">
-            <ReelMark size={22} />
-          </div>
+          <ReelMark size={36} />
           <span className="text-xl font-bold tracking-tight" style={{ color: '#0F172A', fontFamily: 'var(--font-family-display)' }}>
             Rainbow Packages
           </span>
@@ -84,10 +86,8 @@ export const LoginPage = () => {
       {/* Sign-in form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-white">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden flex items-center gap-2 mb-10 justify-center">
-            <div className="bg-brand-blue p-2 rounded-lg text-white">
-              <ReelMark size={18} />
-            </div>
+          <div className="lg:hidden flex items-center gap-2.5 mb-10 justify-center">
+            <ReelMark size={28} />
             <span className="text-lg font-semibold" style={{ fontFamily: 'var(--font-family-display)' }}>Rainbow Packages</span>
           </div>
 

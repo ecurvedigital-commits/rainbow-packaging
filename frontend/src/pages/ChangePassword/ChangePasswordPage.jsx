@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import ReelMark from '../../components/ReelMark';
@@ -14,6 +14,10 @@ export const ChangePasswordPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    document.title = 'Rainbow Packages | Change Password';
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,9 +52,7 @@ export const ChangePasswordPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-md p-8 animate-scale-in">
         <div className="flex items-center gap-3 mb-6">
-          <div className="bg-brand-blue p-2.5 rounded-xl text-white">
-            <ReelMark size={24} />
-          </div>
+          <ReelMark size={32} />
           <div>
             <h1 className="text-xl font-bold text-gray-900" style={{ fontFamily: 'var(--font-family-display)' }}>
               Change Password

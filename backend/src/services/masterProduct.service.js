@@ -1,4 +1,5 @@
 import { MasterProduct } from '../models/masterProduct.model.js';
+import { MasterCode } from '../models/masterCode.model.js';
 import { Reel } from '../models/reel.model.js';
 import { RECORD_STATUS } from '../constants/reelStatus.js';
 import { generateMasterKey } from '../utils/masterKeyGenerator.js';
@@ -9,11 +10,18 @@ import { ERROR_CODES } from '../constants/errorCodes.js';
 /**
  * Resolves or creates a MasterProduct document atomically.
  * Concurrency-safe for parallel reel creations.
- * @param {{ quality: string, gsm: number, bf: number, size: number, actor?: object, session?: object }} args
+ * @param {{ quality: string, gsm: number, bf: number, size: number, master_code?: string, master_code_id?: string, actor?: object, session?: object }} args
  * @returns {Promise<object>} MasterProduct document
  */
-export async function resolveMasterProduct({ quality, gsm, bf, size, actor, session }) {
+export async function resolveMasterProduct({ quality, gsm, bf, size, master_code, master_code_id, actor, session }) {
   const generated = generateMasterKey({ quality, gsm, bf, size });
+
+  let resolvedCodeDoc = null;
+  if (master_code_id) {
+    resolvedCodeDoc = await MasterCode.findById(master_code_id).session(session);
+  } else if (master_code) {
+    resolvedCodeDoc = await MasterCode.findOne({ master_code: String(master_code).trim() }).session(session);
+  }
 
   let masterProduct = await MasterProduct.findOne({ master_key: generated.master_key }).session(session);
 
@@ -23,6 +31,8 @@ export async function resolveMasterProduct({ quality, gsm, bf, size, actor, sess
         [
           {
             master_key: generated.master_key,
+            master_code_id: resolvedCodeDoc ? resolvedCodeDoc._id : null,
+            master_code: resolvedCodeDoc ? resolvedCodeDoc.master_code : (master_code || null),
             name: generated.name,
             quality: generated.quality,
             gsm: generated.gsm,
@@ -44,6 +54,10 @@ export async function resolveMasterProduct({ quality, gsm, bf, size, actor, sess
         throw err;
       }
     }
+  } else if (resolvedCodeDoc && (!masterProduct.master_code_id || masterProduct.master_code !== resolvedCodeDoc.master_code)) {
+    masterProduct.master_code_id = resolvedCodeDoc._id;
+    masterProduct.master_code = resolvedCodeDoc.master_code;
+    await masterProduct.save({ session });
   }
 
   return masterProduct;

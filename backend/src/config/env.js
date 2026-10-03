@@ -12,7 +12,7 @@ const envSchema = z.object({
   LOG_LEVEL: z.string().default('info'),
 
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
-  MONGODB_DB_NAME: z.string().default('rainbow_dev'),
+  MONGODB_DB_NAME: z.string().default('reel_inventory_dev'),
 
   JWT_ACCESS_SECRET: z.string().min(16, 'JWT_ACCESS_SECRET must be at least 16 characters'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),

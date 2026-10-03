@@ -11,6 +11,7 @@ import { auditRoutes } from './audit.routes.js';
 import { digestRoutes } from './digest.routes.js';
 import { settingRoutes } from './setting.routes.js';
 import masterProductRoutes from './masterProduct.routes.js';
+import masterCodeRoutes from './masterCode.routes.js';
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/reels', reelRoutes);
 router.use('/master-products', masterProductRoutes);
+router.use('/master-codes', masterCodeRoutes);
 router.use('/approvals', approvalRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/dashboard', dashboardRoutes);

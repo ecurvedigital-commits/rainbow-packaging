@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   ClipboardCheck, Clock, CheckCircle2, XCircle, Search, 
-  RefreshCw, ArrowRight, Scale, Layers, AlertCircle, FileText
+  RefreshCw, ArrowRight, Scale, Layers, AlertCircle, FileText, Eye
 } from 'lucide-react';
 import { approvalApi } from '../../api/approvalApi';
+import ApprovalDetailModal from './ApprovalDetailModal';
+import ReelJourneyModal from './ReelJourneyModal';
 import Pagination from '../../components/Common/Pagination';
 import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';
@@ -18,6 +20,9 @@ export default function OperatorApprovalsPage() {
   const [statusFilter, setStatusFilter] = useState(''); // '' | 'PENDING' | 'CONFIRMED' | 'DECLINED'
   const [eventTypeFilter, setEventTypeFilter] = useState('');
   const [searchQ, setSearchQ] = useState('');
+
+  const [selectedDetailItem, setSelectedDetailItem] = useState(null);
+  const [journeyTarget, setJourneyTarget] = useState(null); // { reelId, reelNo }
 
   const [pagination, setPagination] = useState({
     page: 1,
@@ -357,6 +362,20 @@ export default function OperatorApprovalsPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Details Button */}
+                  <div className="shrink-0 self-end md:self-center">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedDetailItem(item);
+                      }}
+                      className="px-3.5 py-2 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition flex items-center gap-1.5"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Details</span>
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -371,6 +390,27 @@ export default function OperatorApprovalsPage() {
             onLimitChange={(l) => setPagination((prev) => ({ ...prev, limit: l, page: 1 }))}
           />
         </div>
+      )}
+
+      {/* Detail Modal */}
+      {selectedDetailItem && (
+        <ApprovalDetailModal
+          item={selectedDetailItem}
+          canApprove={false}
+          onClose={() => setSelectedDetailItem(null)}
+          onViewJourney={(reelId, reelNo) => {
+            setJourneyTarget({ reelId, reelNo });
+          }}
+        />
+      )}
+
+      {/* Reel Journey Modal (Paginated timeline) */}
+      {journeyTarget && (
+        <ReelJourneyModal
+          reelId={journeyTarget.reelId}
+          reelNo={journeyTarget.reelNo}
+          onClose={() => setJourneyTarget(null)}
+        />
       )}
     </div>
   );

@@ -49,6 +49,8 @@ export async function listReels({ filters = {}, actor }) {
       reel_no: reel.reel_no,
       master_product_id: reel.master_product_id ? reel.master_product_id.toString() : null,
       master_key: reel.master_key || null,
+      master_code_id: reel.master_code_id ? reel.master_code_id.toString() : null,
+      master_code: reel.master_code || null,
       quality: reel.quality,
       bf: reel.bf,
       purchase_date: reel.purchase_date,
@@ -141,6 +143,8 @@ export async function getReel({ id, actor }) {
     reel_no: reel.reel_no,
     master_product_id: reel.master_product_id ? reel.master_product_id.toString() : null,
     master_key: reel.master_key || null,
+    master_code_id: reel.master_code_id ? reel.master_code_id.toString() : null,
+    master_code: reel.master_code || null,
     quality: reel.quality,
     bf: reel.bf,
     purchase_date: reel.purchase_date,
@@ -195,18 +199,25 @@ export async function getReelJourney({ id, query = {}, actor }) {
 
   const events = rawPrimaryEvents.map((event) => {
     const decisionDoc = decisionMap.get(event._id.toString());
+    const declineReason = event.decline_reason || (decisionDoc ? decisionDoc.decline_reason : null);
     let decision = null;
 
     if (decisionDoc) {
       decision = {
         by_name: decisionDoc.performed_by_name,
         at: decisionDoc.performed_at,
-        reason: decisionDoc.decline_reason || null,
+        reason: declineReason,
       };
       if (decisionDoc.payload && decisionDoc.payload.reverted_from !== undefined) {
         decision.reverted_from = decisionDoc.payload.reverted_from;
         decision.reverted_to = decisionDoc.payload.reverted_to;
       }
+    } else if (event.approval_status === APPROVAL_STATUS.DECLINED) {
+      decision = {
+        by_name: event.approved_by_name || 'Admin',
+        at: event.approved_at || event.performed_at,
+        reason: declineReason,
+      };
     }
 
     return {
@@ -215,6 +226,7 @@ export async function getReelJourney({ id, query = {}, actor }) {
       approval_status: event.approval_status,
       performed_by_name: event.performed_by_name,
       performed_at: event.performed_at,
+      decline_reason: declineReason,
       payload: event.payload || {},
       decision,
     };
@@ -256,6 +268,8 @@ export async function createReel({ input, actor }) {
       gsm: input.gsm,
       bf: input.bf,
       size: input.size,
+      master_code: input.master_code,
+      master_code_id: input.master_code_id,
       actor,
       session,
     });
@@ -267,6 +281,8 @@ export async function createReel({ input, actor }) {
           reel_no: trimmedReelNo,
           master_product_id: masterProduct._id,
           master_key: masterProduct.master_key,
+          master_code_id: masterProduct.master_code_id || null,
+          master_code: masterProduct.master_code || input.master_code || null,
           quality: input.quality,
           bf: input.bf,
           purchase_date: input.purchase_date ? new Date(input.purchase_date) : new Date(),

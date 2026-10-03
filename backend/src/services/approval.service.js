@@ -103,6 +103,7 @@ export async function listPendingApprovals({ filters = {}, actor }) {
 
       return {
         id: event._id.toString(),
+        reel_id: event.reel_id ? event.reel_id.toString() : null,
         event_type: event.event_type,
         reel: reelObj
           ? {
@@ -191,11 +192,17 @@ export async function listMyEntries({ filters = {}, actor }) {
   ]);
 
   const items = rawEvents.map((event) => {
+    const reelIdStr = event.reel_id ? event.reel_id.toString() : null;
     const item = {
       id: event._id.toString(),
+      reel_id: reelIdStr,
       event_type: event.event_type,
       approval_status: event.approval_status,
       reel_no: event.reel_no,
+      reel: {
+        id: reelIdStr,
+        reel_no: event.reel_no,
+      },
       performed_at: event.performed_at,
       payload: event.payload || {},
       decision: event.approved_by_name

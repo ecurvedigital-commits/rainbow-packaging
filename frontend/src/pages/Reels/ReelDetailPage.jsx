@@ -1,50 +1,106 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { reelApi } from '../../api/reelApi';
+import { approvalApi } from '../../api/approvalApi';
 import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';
+import Pagination from '../../components/Common/Pagination';
+import Toast from '../../components/Common/Toast';
 import { formatDate, formatDateTime, formatWeight, getStatusBadgeStyle, getApprovalBadgeStyle } from '../../utils/formatters';
-import { ArrowLeft, CheckCircle2, AlertTriangle, PlusCircle, Activity, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, AlertTriangle, PlusCircle, Activity, ShieldAlert, Check, X, XCircle } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { RecordUsageModal } from './RecordUsageModal';
 import { MasterCorrectionModal } from './MasterCorrectionModal';
 import { VoidReelModal } from './VoidReelModal';
+import DeclineReasonModal from '../Approvals/DeclineReasonModal';
 
 export const ReelDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isRoleAdmin, isRoleOperator } = useAuth();
+  const { isRoleAdmin, isRoleSupervisor, isRoleOperator } = useAuth();
+  const canApprove = isRoleAdmin || isRoleSupervisor;
 
   const [reel, setReel] = useState(null);
   const [journey, setJourney] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [declineTarget, setDeclineTarget] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 15,
+    total: 0,
+    totalPages: 1,
+  });
 
   const [showUsageModal, setShowUsageModal] = useState(false);
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [showVoidModal, setShowVoidModal] = useState(false);
 
-  const fetchReelDetails = async () => {
+  const fetchReelDetails = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const [reelRes, journeyRes] = await Promise.all([
         reelApi.getById(id),
-        reelApi.getJourney(id),
+        reelApi.getJourney(id, { page: pagination.page, limit: pagination.limit }),
       ]);
 
       if (reelRes.success) setReel(reelRes.data);
-      if (journeyRes.success) setJourney(journeyRes.data?.events || journeyRes.data || []);
+      if (journeyRes.success) {
+        const payload = journeyRes.data || journeyRes;
+        setJourney(payload.events || []);
+        const meta = journeyRes.meta || payload.meta || {};
+        setPagination((prev) => ({
+          ...prev,
+          page: meta.page || prev.page,
+          limit: meta.limit || prev.limit,
+          total: meta.total !== undefined ? meta.total : (payload.events?.length || 0),
+          totalPages: meta.totalPages || 1,
+        }));
+      }
     } catch (err) {
       setError(err.message || 'Failed to load reel details');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, pagination.page, pagination.limit]);
 
   useEffect(() => {
     fetchReelDetails();
-  }, [id]);
+  }, [fetchReelDetails]);
+
+  const handleApprove = async (eventId) => {
+    if (!canApprove) return;
+    setActionLoadingId(eventId);
+    try {
+      await approvalApi.approve(eventId);
+      setToast({ type: 'success', message: 'Approval request confirmed successfully!' });
+      fetchReelDetails();
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Failed to confirm request.' });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleDeclineSubmit = async (reason) => {
+    if (!declineTarget) return;
+    const targetId = declineTarget.id || declineTarget._id;
+    setActionLoadingId(targetId);
+    try {
+      await approvalApi.decline(targetId, reason);
+      setToast({ type: 'success', message: 'Approval request declined.' });
+      setDeclineTarget(null);
+      fetchReelDetails();
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Failed to decline request.' });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
   if (loading) return <LoadingState message="Loading reel details and journey timeline…" />;
   if (error) return <ErrorAlert message={error} onRetry={fetchReelDetails} />;
@@ -56,6 +112,14 @@ export const ReelDetailPage = () => {
 
   return (
     <div className="space-y-6">
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl shadow-xs border border-gray-200">
         <div className="flex items-center gap-3">
@@ -166,12 +230,15 @@ export const ReelDetailPage = () => {
         ) : (
           <div className="relative border-l-2 border-gray-100 ml-4 space-y-6">
             {journey.map((event) => {
+              const eventId = event.id || event._id;
               const eventType = event.event_type || event.type || 'EVENT';
-              const performedBy = event.performed_by?.name || event.performed_by?.username || event.performed_by || 'User';
-              const approvedBy = event.approved_by?.name || event.approved_by?.username || event.approved_by;
+              const performedBy = event.performed_by?.name || event.performed_by_name || event.performed_by?.username || event.performed_by || 'User';
+              const approvedBy = event.decision?.by_name || event.approved_by?.name || event.approved_by?.username || event.approved_by;
+              const status = event.approval_status || (event.approved_at ? 'CONFIRMED' : 'PENDING');
+              const isPending = status === 'PENDING';
 
               return (
-                <div key={event.id || event._id} className="relative pl-8">
+                <div key={eventId} className="relative pl-8">
                   <div className="absolute -left-[17px] top-0 w-8 h-8 rounded-full bg-blue-50 border-2 border-white flex items-center justify-center text-brand-blue shadow-xs">
                     {eventType === 'CREATED' && <PlusCircle size={16} />}
                     {eventType === 'USAGE_LOGGED' && <Activity size={16} />}
@@ -180,7 +247,7 @@ export const ReelDetailPage = () => {
                   </div>
 
                   <div className="bg-gray-50/80 border border-gray-200 rounded-2xl p-4 space-y-2">
-                    <div className="flex justify-between items-start gap-2">
+                    <div className="flex justify-between items-start gap-2 flex-wrap">
                       <div>
                         <h4 className="font-bold text-sm text-gray-900 capitalize">
                           {eventType.replace(/_/g, ' ')}
@@ -189,9 +256,34 @@ export const ReelDetailPage = () => {
                           by <span className="font-semibold text-gray-800">{performedBy}</span> on {formatDateTime(event.performed_at || event.created_at)}
                         </p>
                       </div>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getApprovalBadgeStyle(event.approval_status || (event.approved_at ? 'CONFIRMED' : 'PENDING'))}`}>
-                        {event.approval_status || (event.approved_at ? 'CONFIRMED' : 'PENDING')}
-                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getApprovalBadgeStyle(status)}`}>
+                          {status}
+                        </span>
+
+                        {isPending && canApprove && (
+                          <div className="flex items-center gap-1.5 ml-2">
+                            <button
+                              onClick={() => setDeclineTarget(event)}
+                              disabled={actionLoadingId === eventId}
+                              className="px-2.5 py-1 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition flex items-center gap-1 disabled:opacity-50"
+                            >
+                              <X size={12} />
+                              <span>Decline</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleApprove(eventId)}
+                              disabled={actionLoadingId === eventId}
+                              className="px-2.5 py-1 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition shadow-xs flex items-center gap-1 disabled:opacity-50"
+                            >
+                              <Check size={12} />
+                              <span>Confirm</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Event Payload Details */}
@@ -213,15 +305,51 @@ export const ReelDetailPage = () => {
                       </div>
                     )}
 
-                    {approvedBy && (
-                      <p className="text-[11px] text-emerald-700 font-medium flex items-center gap-1">
-                        <CheckCircle2 size={12} /> Approved by {approvedBy} on {formatDateTime(event.approved_at)}
-                      </p>
+                    {/* Decision Details Banner for Confirmed / Declined */}
+                    {status === 'DECLINED' || (event.decision && event.decision.reason) || event.decline_reason ? (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs space-y-1 mt-2">
+                        <div className="flex items-center gap-1.5 font-bold text-red-900">
+                          <XCircle size={14} className="text-red-600 shrink-0" />
+                          <span>Declined by <strong>{event.decision?.by_name || approvedBy || 'Admin/Supervisor'}</strong> on {formatDateTime(event.decision?.at || event.performed_at)}</span>
+                        </div>
+                        {(event.decline_reason || event.decision?.reason) && (
+                          <div className="text-red-800 font-medium pl-5 pt-0.5">
+                            <span className="font-bold">Reason: </span>
+                            <span className="bg-white px-2 py-0.5 rounded border border-red-200 font-mono text-[11px] text-red-900 font-semibold">
+                              "{event.decline_reason || event.decision?.reason}"
+                            </span>
+                          </div>
+                        )}
+                        {event.decision?.reverted_from !== undefined && (
+                          <p className="text-[11px] text-red-700 pl-5 font-mono">
+                            Weight reverted: {formatWeight(event.decision.reverted_from)} &rarr; {formatWeight(event.decision.reverted_to)}
+                          </p>
+                        )}
+                      </div>
+                    ) : (status === 'CONFIRMED' || approvedBy) && (
+                      <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-800 flex items-center gap-1.5 mt-2">
+                        <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                        <span>Confirmed by <strong>{event.decision?.by_name || approvedBy}</strong> on {formatDateTime(event.decision?.at || event.approved_at)}</span>
+                      </div>
                     )}
                   </div>
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination Controls for Timeline */}
+        {journey.length > 0 && (
+          <div className="mt-6 pt-4 border-t border-gray-100">
+            <Pagination
+              page={pagination.page}
+              limit={pagination.limit}
+              total={pagination.total}
+              totalPages={pagination.totalPages}
+              onPageChange={(p) => setPagination((prev) => ({ ...prev, page: p }))}
+              onLimitChange={(l) => setPagination((prev) => ({ ...prev, limit: l, page: 1 }))}
+            />
           </div>
         )}
       </div>
@@ -261,6 +389,16 @@ export const ReelDetailPage = () => {
             setShowVoidModal(false);
             fetchReelDetails();
           }}
+        />
+      )}
+
+      {/* Decline Reason Modal */}
+      {declineTarget && (
+        <DeclineReasonModal
+          title={`Decline Request for Reel #${reel.reel_no}`}
+          onClose={() => setDeclineTarget(null)}
+          onConfirm={handleDeclineSubmit}
+          loading={actionLoadingId === (declineTarget.id || declineTarget._id)}
         />
       )}
     </div>

@@ -25,7 +25,13 @@ export async function connectDb() {
       maxPoolSize: 10,
     });
 
-    logger.info({ db: env.MONGODB_DB_NAME }, 'Successfully connected to MongoDB Atlas');
+    const dbMode = env.NODE_ENV === 'production' ? 'PRODUCTION' : 'DEVELOPMENT';
+    const activeDbName = conn.connection.db ? conn.connection.db.databaseName : env.MONGODB_DB_NAME;
+
+    logger.info(
+      { dbEnvironment: dbMode, dbName: activeDbName },
+      `Database environment: ${dbMode} | Connected to database: "${activeDbName}"`
+    );
     return conn;
   } catch (error) {
     logger.error({ reason: error.message }, 'Failed to connect to MongoDB Atlas');

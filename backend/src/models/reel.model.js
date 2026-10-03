@@ -35,6 +35,16 @@ const reelSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    master_code_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'MasterCode',
+      default: null,
+    },
+    master_code: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     stations_used: { type: [String], default: [] },
     pending_count: { type: Number, default: 0 },
     record_status: {
@@ -84,5 +94,7 @@ reelSchema.index({ record_status: 1, supplier_name: 1, purchase_date: -1 });
 reelSchema.index({ record_status: 1, last_activity_at: 1 });
 reelSchema.index({ record_status: 1, master_key: 1 });
 reelSchema.index({ record_status: 1, master_product_id: 1 });
+reelSchema.index({ record_status: 1, master_code_id: 1 });
+reelSchema.index({ record_status: 1, master_code: 1 });
 
 export const Reel = mongoose.model('Reel', reelSchema);

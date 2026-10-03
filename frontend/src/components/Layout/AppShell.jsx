@@ -7,7 +7,7 @@ import ReelMark from '../ReelMark';
 import {
   LayoutDashboard, ClipboardCheck, Boxes, Layers, Users, Settings, LogOut,
   Bell, Menu, ChevronDown, KeyRound, SlidersHorizontal, FileText, Mail, Weight,
-  AlertTriangle, ArrowRight, X
+  AlertTriangle, ArrowRight, X, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 
 export const AppShell = ({ children }) => {
@@ -19,6 +19,19 @@ export const AppShell = ({ children }) => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+
+  // Desktop Sidebar Collapsed State (Persisted in localStorage)
+  const [collapsed, setCollapsed] = useState(() => {
+    return localStorage.getItem('rp_sidebar_collapsed') === 'true';
+  });
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('rp_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
 
   // Login popup: show once per session when pending approvals exist
   const [loginPopup, setLoginPopup] = useState(null); // { count: number }
@@ -78,11 +91,53 @@ export const AppShell = ({ children }) => {
     .slice(0, 2)
     .toUpperCase();
 
+  // Dynamic Document Title Branding
+  useEffect(() => {
+    const routeTitles = {
+      '/dashboard': 'Dashboard',
+      '/reels': 'Reel Inventory',
+      '/usage-logs': 'Record Reel Usage',
+      '/master-products': 'Master Products',
+      '/master-codes': 'Master Codes',
+      '/approvals': 'Approvals',
+      '/my-approvals': 'My Approvals',
+      '/notifications': 'Notifications',
+      '/users': 'User Management',
+      '/custom-fields': 'Custom Fields',
+      '/audit': 'Audit Logs',
+      '/digest': 'Daily Digest',
+      '/settings': 'System Settings',
+      '/change-password': 'Change Password',
+    };
+
+    const path = location.pathname;
+    let pageTitle = '';
+
+    if (routeTitles[path]) {
+      pageTitle = routeTitles[path];
+    } else if (path.startsWith('/reels/')) {
+      pageTitle = 'Reel Details';
+    } else if (path.startsWith('/master-products/')) {
+      pageTitle = 'Master Product Details';
+    } else {
+      const rawName = (path.split('/')[1] || 'Dashboard').replace(/-/g, ' ');
+      pageTitle = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+    }
+
+    document.title = `Rainbow Packages | ${pageTitle}`;
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen flex bg-surface">
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:flex lg:flex-col w-64 bg-white border-r border-gray-200 shrink-0 sticky top-0 h-screen">
+      {/* Collapsible Desktop sidebar */}
+      <aside
+        className={`hidden lg:flex lg:flex-col ${
+          collapsed ? 'w-20' : 'w-64'
+        } bg-white border-r border-gray-200 shrink-0 sticky top-0 h-screen transition-all duration-300 ease-in-out z-40`}
+      >
         <SidebarContent
+          collapsed={collapsed}
+          onToggleCollapse={toggleCollapsed}
           role={role}
           unreadCount={unreadCount}
           pendingCount={pendingCount}
@@ -98,6 +153,7 @@ export const AppShell = ({ children }) => {
           <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-[2px]" onClick={() => setMobileNavOpen(false)} />
           <aside className="absolute left-0 top-0 h-full w-72 bg-white flex flex-col animate-slide-right shadow-xl">
             <SidebarContent
+              collapsed={false}
               role={role}
               unreadCount={unreadCount}
               pendingCount={pendingCount}
@@ -122,7 +178,8 @@ export const AppShell = ({ children }) => {
             >
               <Menu size={22} />
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
+              <ReelMark size={24} />
               <span className="text-sm font-bold text-gray-900" style={{ fontFamily: 'var(--font-family-display)' }}>
                 Rainbow Packages
               </span>
@@ -246,6 +303,8 @@ export const AppShell = ({ children }) => {
 
 
 const SidebarContent = ({
+  collapsed = false,
+  onToggleCollapse,
   unreadCount,
   pendingCount,
   isRoleAdmin,
@@ -254,27 +313,51 @@ const SidebarContent = ({
   onNavigate,
 }) => (
   <>
-    <div className="flex items-center gap-3 px-5 h-16 border-b border-gray-200 shrink-0">
-      <div className="bg-brand-blue p-2 rounded-xl text-white shrink-0 shadow-sm">
-        <ReelMark size={20} />
+    {/* Header & Collapse Toggle */}
+    <div className={`flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-5'} h-16 border-b border-gray-200 shrink-0 transition-all duration-300`}>
+      <div className="flex items-center gap-3 min-w-0">
+        <ReelMark size={28} />
+        {!collapsed && (
+          <div className="min-w-0">
+            <p className="font-extrabold text-gray-900 text-sm leading-tight truncate" style={{ fontFamily: 'var(--font-family-display)' }}>
+              Rainbow Packages
+            </p>
+            <p className="text-gray-400 text-[11px]">Reel Inventory System</p>
+          </div>
+        )}
       </div>
-      <div className="min-w-0">
-        <p className="font-extrabold text-gray-900 text-sm leading-tight truncate" style={{ fontFamily: 'var(--font-family-display)' }}>
-          Rainbow Packages
-        </p>
-        <p className="text-gray-400 text-[11px]">Reel Inventory System</p>
-      </div>
+
+      {/* Collapse/Expand Toggle Button (Desktop Only) */}
+      {onToggleCollapse && (
+        <button
+          onClick={onToggleCollapse}
+          className={`p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition ${
+            collapsed ? 'mt-0' : ''
+          }`}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
+      )}
     </div>
 
+    {/* Navigation Items */}
     <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto custom-scrollbar">
       {/* MAIN NAV SECTION */}
       <div>
-        <p className="px-3 text-[10px] font-semibold text-gray-400 uppercase tracking-[0.08em] mb-2">Main Menu</p>
-        <div className="space-y-0.5">
-          <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" onClick={onNavigate} />
-          <NavItem to="/reels" icon={Boxes} label="Reel Inventory" onClick={onNavigate} />
-          <NavItem to="/master-products" icon={Layers} label="Master Products" onClick={onNavigate} />
-          <NavItem to="/usage-logs" icon={Weight} label="Record Reel Usage" onClick={onNavigate} />
+        {!collapsed ? (
+          <p className="px-3 text-[10px] font-semibold text-gray-400 uppercase tracking-[0.08em] mb-2">Main Menu</p>
+        ) : (
+          <div className="h-px bg-gray-200 my-2 mx-1" />
+        )}
+        <div className="space-y-1">
+          <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" collapsed={collapsed} onClick={onNavigate} />
+          <NavItem to="/reels" icon={Boxes} label="Reel Inventory" collapsed={collapsed} onClick={onNavigate} />
+          <NavItem to="/master-products" icon={Layers} label="Master Products" collapsed={collapsed} onClick={onNavigate} />
+          {isRoleSupervisor && (
+            <NavItem to="/master-codes" icon={SlidersHorizontal} label="Master Codes" collapsed={collapsed} onClick={onNavigate} />
+          )}
+          <NavItem to="/usage-logs" icon={Weight} label="Record Reel Usage" collapsed={collapsed} onClick={onNavigate} />
           {isRoleSupervisor ? (
             <NavItem
               to="/approvals"
@@ -282,6 +365,7 @@ const SidebarContent = ({
               label="Approvals"
               badgeCount={pendingCount}
               badgeColor="bg-amber-500 text-gray-900"
+              collapsed={collapsed}
               onClick={onNavigate}
             />
           ) : (
@@ -289,6 +373,7 @@ const SidebarContent = ({
               to="/my-approvals"
               icon={ClipboardCheck}
               label="My Approvals"
+              collapsed={collapsed}
               onClick={onNavigate}
             />
           )}
@@ -298,6 +383,7 @@ const SidebarContent = ({
             label="Notifications"
             badgeCount={unreadCount}
             badgeColor="bg-red-500 text-white"
+            collapsed={collapsed}
             onClick={onNavigate}
           />
         </div>
@@ -306,13 +392,17 @@ const SidebarContent = ({
       {/* ADMINISTRATION SECTION */}
       {isRoleAdmin && (
         <div>
-          <p className="px-3 text-[10px] font-semibold text-gray-400 uppercase tracking-[0.08em] mb-2">Administration</p>
-          <div className="space-y-0.5">
-            <NavItem to="/users" icon={Users} label="User Management" onClick={onNavigate} />
-            <NavItem to="/custom-fields" icon={SlidersHorizontal} label="Custom Fields" onClick={onNavigate} />
-            <NavItem to="/audit" icon={FileText} label="Audit Logs" onClick={onNavigate} />
-            <NavItem to="/digest" icon={Mail} label="Daily Digest" onClick={onNavigate} />
-            <NavItem to="/settings" icon={Settings} label="System Settings" onClick={onNavigate} />
+          {!collapsed ? (
+            <p className="px-3 text-[10px] font-semibold text-gray-400 uppercase tracking-[0.08em] mb-2">Administration</p>
+          ) : (
+            <div className="h-px bg-gray-200 my-2 mx-1" />
+          )}
+          <div className="space-y-1">
+            <NavItem to="/users" icon={Users} label="User Management" collapsed={collapsed} onClick={onNavigate} />
+            <NavItem to="/custom-fields" icon={SlidersHorizontal} label="Custom Fields" collapsed={collapsed} onClick={onNavigate} />
+            <NavItem to="/audit" icon={FileText} label="Audit Logs" collapsed={collapsed} onClick={onNavigate} />
+            <NavItem to="/digest" icon={Mail} label="Daily Digest" collapsed={collapsed} onClick={onNavigate} />
+            <NavItem to="/settings" icon={Settings} label="System Settings" collapsed={collapsed} onClick={onNavigate} />
           </div>
         </div>
       )}
@@ -322,34 +412,49 @@ const SidebarContent = ({
     <div className="p-3 border-t border-gray-200 shrink-0">
       <button
         onClick={onLogout}
-        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors text-[13px] font-medium"
+        title={collapsed ? 'Sign out' : undefined}
+        className={`w-full flex items-center ${
+          collapsed ? 'justify-center px-0' : 'gap-3 px-3'
+        } py-2.5 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors text-[13px] font-medium`}
       >
-        <LogOut size={16} /> Sign out
+        <LogOut size={16} />
+        {!collapsed && <span>Sign out</span>}
       </button>
     </div>
   </>
 );
 
-const NavItem = ({ to, icon: Icon, label, badgeCount = 0, badgeColor = 'bg-brand-blue text-white', onClick }) => (
+const NavItem = ({ to, icon: Icon, label, badgeCount = 0, badgeColor = 'bg-brand-blue text-white', collapsed = false, onClick }) => (
   <NavLink
     to={to}
     onClick={onClick}
+    title={collapsed ? label : undefined}
     className={({ isActive }) =>
-      `flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-colors ${
+      `relative flex items-center ${
+        collapsed ? 'justify-center px-0 py-3' : 'justify-between px-3 py-2.5'
+      } rounded-xl text-[13px] font-medium transition-all ${
         isActive
-          ? 'bg-indigo-50 text-brand-blue-dark ring-1 ring-inset ring-indigo-100'
+          ? 'bg-indigo-50 text-brand-blue-dark ring-1 ring-inset ring-indigo-100 font-bold'
           : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
       }`
     }
   >
-    <span className="flex items-center gap-2.5">
-      <Icon size={17} />
-      <span>{label}</span>
+    <span className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
+      <Icon size={18} className="shrink-0" />
+      {!collapsed && <span>{label}</span>}
     </span>
+
+    {/* Badge Counter */}
     {badgeCount > 0 && (
-      <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${badgeColor}`}>
-        {badgeCount}
-      </span>
+      collapsed ? (
+        <span className={`absolute top-1.5 right-1.5 w-4 h-4 text-[9px] font-bold rounded-full flex items-center justify-center ${badgeColor} shadow-xs`}>
+          {badgeCount > 9 ? '9+' : badgeCount}
+        </span>
+      ) : (
+        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${badgeColor}`}>
+          {badgeCount}
+        </span>
+      )
     )}
   </NavLink>
 );

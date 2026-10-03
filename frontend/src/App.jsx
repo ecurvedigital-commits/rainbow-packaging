@@ -13,6 +13,7 @@ import ReelDetailPage from './pages/Reels/ReelDetailPage';
 import UsageLogsPage from './pages/Reels/UsageLogsPage';
 import MasterProductListPage from './pages/MasterProducts/MasterProductListPage';
 import MasterProductDetailPage from './pages/MasterProducts/MasterProductDetailPage';
+import MasterCodeListPage from './pages/MasterCodes/MasterCodeListPage';
 import ApprovalsPage from './pages/Approvals/ApprovalsPage';
 import OperatorApprovalsPage from './pages/Approvals/OperatorApprovalsPage';
 import NotificationsPage from './pages/Notifications/NotificationsPage';
@@ -54,6 +55,16 @@ export default function App() {
           {/* Master Product Inventory Routes */}
           <Route path="/master-products" element={<MasterProductListPage />} />
           <Route path="/master-products/:id" element={<MasterProductDetailPage />} />
+
+          {/* Master Codes Management (Supervisors & Admins) */}
+          <Route
+            path="/master-codes"
+            element={
+              <RoleGuard allowedRoles={['SUPERVISOR', 'ADMIN']}>
+                <MasterCodeListPage />
+              </RoleGuard>
+            }
+          />
 
           {/* Approvals (Supervisors & Admins) */}
           <Route
