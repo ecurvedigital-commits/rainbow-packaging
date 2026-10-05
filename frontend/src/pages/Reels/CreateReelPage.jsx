@@ -109,8 +109,8 @@ const buildRowFromExcel = (raw, fieldDefs, fallback) => {
   row.max_weight = toNumberOrBlank(getCell(raw, ['max_weight', 'weight', 'reelweight', 'reelweightkg']));
   row.rate_per_kg = toNumberOrBlank(getCell(raw, ['rate_per_kg', 'rate', 'ratekg', 'rateperkg']));
   row.gsm = toNumberOrBlank(getCell(raw, ['gsm']));
-  row.size = toNumberOrBlank(getCell(raw, ['size', 'width', 'widthcm', 'sizewidth']));
-  row.bf = toNumberOrBlank(getCell(raw, ['bf', 'burstingfactor']));
+  row.size = toNumberOrBlank(getCell(raw, ['size', 'width', 'sizecm', 'widthcm', 'sizewidth', 'sizewidthcm']));
+  row.bf = toNumberOrBlank(getCell(raw, ['bf', 'burstingfactor', 'burstingfactorbf']));
   row.purchase_date = excelDateToInput(getCell(raw, ['purchase_date', 'purchasedate', 'date']));
 
   fieldDefs.forEach((def) => {
@@ -141,6 +141,44 @@ const Field = ({ definition, value, onChange }) => {
     </div>
   );
 };
+
+const MemoizedBulkRow = React.memo(({ row, rowIndex, allBulkColumns, updateBulkCustom, updateBulkCell, deleteBulkRow }) => {
+  return (
+    <tr className="odd:bg-white even:bg-gray-50/60 hover:bg-blue-50/40">
+      <td className="sticky left-0 z-10 bg-inherit px-3 py-2 border-b border-gray-100 font-bold text-gray-400">{rowIndex + 1}</td>
+      {allBulkColumns.map((column) => {
+        const value = column.bulkCustom
+          ? row.custom_fields?.[column.key] ?? ''
+          : row[column.key] ?? '';
+        return (
+          <td key={column.key} className="px-2 py-2 border-b border-gray-100 align-top">
+            <input
+              type={column.type === 'number' ? 'number' : column.type === 'date' ? 'date' : 'text'}
+              required={column.required}
+              value={value}
+              onChange={(e) => {
+                if (column.bulkCustom) updateBulkCustom(rowIndex, column.key, e.target.value);
+                else updateBulkCell(rowIndex, column.key, e.target.value);
+              }}
+              className={compactInputClass}
+              aria-label={`${column.label} row ${rowIndex + 1}`}
+            />
+          </td>
+        );
+      })}
+      <td className="sticky right-0 z-10 bg-inherit px-3 py-2 border-b border-gray-100">
+        <button
+          type="button"
+          onClick={() => deleteBulkRow(rowIndex)}
+          className="p-2 rounded-lg text-red-500 hover:bg-red-50"
+          title="Remove row"
+        >
+          <Trash2 size={15} />
+        </button>
+      </td>
+    </tr>
+  );
+});
 
 export default function CreateReelPage() {
   const navigate = useNavigate();
@@ -288,16 +326,16 @@ export default function CreateReelPage() {
     setBulkRows(createEmptyBulkRows(bulkCount, firstNo));
   };
 
-  const updateBulkCell = (rowIndex, key, value) => {
+  const updateBulkCell = React.useCallback((rowIndex, key, value) => {
     setBulkRows((rows) =>
       rows.map((row, index) =>
         index === rowIndex ? { ...row, [key]: value } : row
       )
     );
     setError('');
-  };
+  }, []);
 
-  const updateBulkCustom = (rowIndex, key, value) => {
+  const updateBulkCustom = React.useCallback((rowIndex, key, value) => {
     setBulkRows((rows) =>
       rows.map((row, index) =>
         index === rowIndex
@@ -306,12 +344,12 @@ export default function CreateReelPage() {
       )
     );
     setError('');
-  };
+  }, []);
 
-  const deleteBulkRow = (rowIndex) => {
+  const deleteBulkRow = React.useCallback((rowIndex) => {
     setBulkRows((rows) => rows.filter((_, index) => index !== rowIndex));
     setBulkCount((count) => Math.max(1, count - 1));
-  };
+  }, []);
 
   const buildPayload = (row) => ({
     reel_no: String(row.reel_no || '').trim(),
@@ -399,35 +437,28 @@ export default function CreateReelPage() {
     setSuccess('');
     setBulkResult(null);
 
-    const successRows = [];
-    const failedRows = [];
-
-    for (let index = 0; index < bulkRows.length; index += 1) {
-      const row = bulkRows[index];
-      try {
-        const res = await reelApi.create(buildPayload(row));
-        if (res.success) {
-          successRows.push({ index, reel_no: row.reel_no });
-        } else {
-          failedRows.push({ index, reel_no: row.reel_no, error: res.message || 'Creation failed' });
-        }
-      } catch (err) {
-        failedRows.push({ index, reel_no: row.reel_no, error: err.message || 'Creation failed' });
+    try {
+      const payload = bulkRows.map(row => buildPayload(row));
+      const res = await reelApi.bulkCreate(payload);
+      
+      if (!res.success) {
+        throw new Error(res.message || 'Bulk creation failed');
       }
-    }
 
-    setBulkResult({ successRows, failedRows });
-    if (failedRows.length === 0) {
-      setSuccess(`${successRows.length} reel${successRows.length === 1 ? '' : 's'} submitted successfully for approval.`);
+      setSuccess(`Successfully created ${bulkRows.length} reels!`);
       setBulkRows([]);
       setBulkCount(1);
       const nextNo = await fetchNextReelNumber();
       setNextReelNo(nextNo);
-    } else {
-      setError(`${failedRows.length} reel${failedRows.length === 1 ? '' : 's'} could not be created. Review the failed rows below.`);
+    } catch (err) {
+      const detail = Array.isArray(err.details) && err.details.length
+        ? ` (${err.details.slice(0, 3).map((d) => `${d.field}: ${d.message}`).join('; ')})`
+        : '';
+      setError((err.message || 'Failed to submit bulk rows. Please try again.') + detail);
     }
 
     setSubmitting(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleExcelImport = async (event) => {
@@ -501,7 +532,14 @@ export default function CreateReelPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {submitting && mode === 'bulk' && (
+        <div className="fixed inset-0 bg-white/80 z-[100] flex flex-col items-center justify-center backdrop-blur-sm">
+          <Loader2 size={48} className="animate-spin text-brand-blue mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'var(--font-family-display)' }}>Creating Reels...</h2>
+          <p className="text-gray-500 mt-2 font-medium">Please wait while {bulkRows.length} reels are securely recorded.</p>
+        </div>
+      )}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-start gap-3">
           <button
@@ -722,39 +760,15 @@ export default function CreateReelPage() {
                     </thead>
                     <tbody>
                       {bulkRows.map((row, rowIndex) => (
-                        <tr key={`bulk-${rowIndex}`} className="odd:bg-white even:bg-gray-50/60 hover:bg-blue-50/40">
-                          <td className="sticky left-0 z-10 bg-inherit px-3 py-2 border-b border-gray-100 font-bold text-gray-400">{rowIndex + 1}</td>
-                          {allBulkColumns.map((column) => {
-                            const value = column.bulkCustom
-                              ? row.custom_fields?.[column.key] ?? ''
-                              : row[column.key] ?? '';
-                            return (
-                              <td key={column.key} className="px-2 py-2 border-b border-gray-100 align-top">
-                                <input
-                                  type={column.type === 'number' ? 'number' : column.type === 'date' ? 'date' : 'text'}
-                                  required={column.required}
-                                  value={value}
-                                  onChange={(e) => {
-                                    if (column.bulkCustom) updateBulkCustom(rowIndex, column.key, e.target.value);
-                                    else updateBulkCell(rowIndex, column.key, e.target.value);
-                                  }}
-                                  className={compactInputClass}
-                                  aria-label={`${column.label} row ${rowIndex + 1}`}
-                                />
-                              </td>
-                            );
-                          })}
-                          <td className="sticky right-0 z-10 bg-inherit px-3 py-2 border-b border-gray-100">
-                            <button
-                              type="button"
-                              onClick={() => deleteBulkRow(rowIndex)}
-                              className="p-2 rounded-lg text-red-500 hover:bg-red-50"
-                              title="Remove row"
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          </td>
-                        </tr>
+                        <MemoizedBulkRow
+                          key={`bulk-${rowIndex}`}
+                          row={row}
+                          rowIndex={rowIndex}
+                          allBulkColumns={allBulkColumns}
+                          updateBulkCustom={updateBulkCustom}
+                          updateBulkCell={updateBulkCell}
+                          deleteBulkRow={deleteBulkRow}
+                        />
                       ))}
                     </tbody>
                   </table>

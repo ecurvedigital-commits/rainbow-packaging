@@ -10,6 +10,7 @@ import {
   getReelSchema,
   getReelJourneySchema,
   createReelSchema,
+  bulkCreateReelSchema,
   recordUsageSchema,
   updateReelSchema,
   voidReelSchema,
@@ -20,6 +21,7 @@ import {
   getReel,
   getReelJourney,
   createReel,
+  bulkCreateReels,
   recordUsage,
   updateReel,
   voidReel,
@@ -42,6 +44,7 @@ router.get('/:id', validate(getReelSchema), getReel);
 router.get('/:id/journey', validate(getReelJourneySchema), getReelJourney);
 
 router.post('/', authorizeRoles(ROLES.OPERATOR, ROLES.SUPERVISOR, ROLES.ADMIN), validate(createReelSchema), createReel);
+router.post('/bulk', authorizeRoles(ROLES.OPERATOR, ROLES.SUPERVISOR, ROLES.ADMIN), validate(bulkCreateReelSchema), bulkCreateReels);
 router.post('/:id/usage', authorizeRoles(ROLES.OPERATOR, ROLES.SUPERVISOR, ROLES.ADMIN), validate(recordUsageSchema), recordUsage);
 router.patch('/:id', authorizeRoles(ROLES.SUPERVISOR, ROLES.ADMIN), validate(updateReelSchema), updateReel);
 router.post('/:id/void', authorizeRoles(ROLES.ADMIN), validate(voidReelSchema), voidReel);

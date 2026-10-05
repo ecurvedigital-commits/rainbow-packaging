@@ -34,6 +34,12 @@ export async function createReel(req, res) {
   return sendSuccess(res, result, { status: 201 });
 }
 
+export async function bulkCreateReels(req, res) {
+  const { body } = req.validated;
+  const result = await reelService.bulkCreateReels({ input: body, actor: req.user });
+  return sendSuccess(res, result, { status: 201 });
+}
+
 export async function recordUsage(req, res) {
   const { params, body } = req.validated;
   const result = await usageService.recordUsage({ id: params.id, input: body, actor: req.user });

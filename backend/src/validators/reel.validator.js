@@ -59,6 +59,10 @@ export const createReelSchema = z.object({
   }),
 });
 
+export const bulkCreateReelSchema = z.object({
+  body: z.array(createReelSchema.shape.body).min(1, 'At least one reel is required').max(1000, 'Maximum 1000 reels at once'),
+});
+
 export const recordUsageSchema = z.object({
   params: idParamSchema,
   body: z.object({

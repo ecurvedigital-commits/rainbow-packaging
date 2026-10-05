@@ -92,6 +92,13 @@ export const reelApi = {
     });
   },
 
+  bulkCreate: async (data) => {
+    return apiFetch('/reels/bulk', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   recordUsage: async (id, data) => {
     return apiFetch(`/reels/${id}/usage`, {
       method: 'POST',

@@ -2,6 +2,7 @@ import { Reel } from '../models/reel.model.js';
 import { ReelEvent } from '../models/reelEvent.model.js';
 import { FieldDefinition } from '../models/fieldDefinition.model.js';
 import { MasterCode } from '../models/masterCode.model.js';
+import { Counter } from '../models/counter.model.js';
 import { MasterProduct } from '../models/masterProduct.model.js';
 import { ROLES } from '../constants/roles.js';
 import { EVENT_TYPES } from '../constants/eventTypes.js';
@@ -464,6 +465,127 @@ export async function getReelJourney({ id, query = {}, actor }) {
     meta: buildPaginationMeta({ page, limit, total }),
   };
 }
+
+/**
+ * Bulk Create Reels using insertMany
+ */
+export const bulkCreateReels = async ({ input, actor }) => withTransaction(async (session) => {
+  if (!Array.isArray(input) || input.length === 0) {
+    throw createApiError(422, ERROR_CODES.VALIDATION_ERROR, 'Input must be a non-empty array of reels.');
+  }
+
+  // 1. Duplicate reel numbers inside the batch and against existing active reels
+  const seen = new Map();
+  const reelNos = input.map((row, idx) => {
+    const no = String(row.reel_no).trim();
+    if (seen.has(no)) {
+      throw createApiError(422, ERROR_CODES.VALIDATION_ERROR, `Row ${idx + 1}: reel number "${no}" is duplicated (also in row ${seen.get(no) + 1}).`);
+    }
+    seen.set(no, idx);
+    return no;
+  });
+
+  const existing = await Reel.find({ reel_no: { $in: reelNos }, record_status: RECORD_STATUS.ACTIVE })
+    .select('reel_no')
+    .session(session)
+    .lean();
+  if (existing.length) {
+    const list = existing.slice(0, 5).map((r) => r.reel_no).join(', ');
+    throw createApiError(409, ERROR_CODES.DUPLICATE_REEL_NO, `Reel number(s) already exist: ${list}${existing.length > 5 ? ' …' : ''}`);
+  }
+
+  // 2. Resolve master products once per unique spec (sequential: same session)
+  const productCache = new Map();
+  const resolved = [];
+  for (let idx = 0; idx < input.length; idx++) {
+    const row = input[idx];
+    const cacheKey = [row.quality, row.gsm, row.bf, row.size, row.master_code_id || row.master_code || ''].join('|');
+    let product = productCache.get(cacheKey);
+    if (!product) {
+      try {
+        product = await resolveMasterProduct({
+          quality: row.quality,
+          gsm: row.gsm,
+          bf: row.bf,
+          size: row.size,
+          master_code: row.master_code,
+          master_code_id: row.master_code_id,
+          actor,
+          session,
+        });
+      } catch (err) {
+        throw createApiError(422, ERROR_CODES.VALIDATION_ERROR, `Row ${idx + 1}: ${err.message}`);
+      }
+      productCache.set(cacheKey, product);
+    }
+    resolved.push(product);
+  }
+
+  // 3. Reserve a contiguous block of sr_no values in one atomic step
+  const firstSr = await getNextSequence('reel_sr_no', session);
+  if (input.length > 1) {
+    await Counter.updateOne({ _id: 'reel_sr_no' }, { $inc: { seq: input.length - 1 } }, { session });
+  }
+
+  const now = new Date();
+  const reelDocs = input.map((row, idx) => ({
+    sr_no: firstSr + idx,
+    reel_no: reelNos[idx],
+    master_product_id: resolved[idx]._id,
+    master_key: resolved[idx].master_key,
+    master_code_id: resolved[idx].master_code_id || null,
+    master_code: resolved[idx].master_code || row.master_code || null,
+    quality: row.quality,
+    bf: row.bf,
+    purchase_date: row.purchase_date ? new Date(row.purchase_date) : now,
+    supplier_name: row.supplier_name.trim(),
+    size: row.size,
+    gsm: row.gsm,
+    rate_per_kg: row.rate_per_kg ?? 0,
+    max_weight: row.max_weight,
+    previous_weight: row.max_weight,
+    status: deriveReelStatus({ previous_weight: row.max_weight, max_weight: row.max_weight }),
+    custom_fields: row.custom_fields || {},
+    pending_count: 0,
+    record_status: RECORD_STATUS.ACTIVE,
+    created_by: actor.id,
+    last_activity_at: now,
+  }));
+
+  const insertedReels = await Reel.insertMany(reelDocs, { session });
+
+  const eventDocs = insertedReels.map((reel) => ({
+    reel_id: reel._id,
+    reel_no: reel.reel_no,
+    event_type: EVENT_TYPES.CREATED,
+    approval_status: APPROVAL_STATUS.CONFIRMED,
+    performed_by: actor.id,
+    performed_by_name: actor.name,
+    performed_by_role: actor.role,
+    performed_at: now,
+    approved_by: actor.id,
+    approved_by_name: actor.name,
+    approved_at: now,
+    payload: {
+      max_weight: reel.max_weight,
+      rate_per_kg: reel.rate_per_kg,
+      fields: {
+        reel_no: reel.reel_no,
+        quality: reel.quality,
+        bf: reel.bf,
+        gsm: reel.gsm,
+        size: reel.size,
+        rate_per_kg: reel.rate_per_kg,
+        supplier_name: reel.supplier_name,
+        purchase_date: reel.purchase_date,
+        custom_fields: reel.custom_fields,
+      },
+    },
+  }));
+  await ReelEvent.insertMany(eventDocs, { session });
+
+  return { insertedCount: insertedReels.length, message: `Successfully created ${insertedReels.length} reels in bulk.` };
+});
 
 /**
  * Create a new physical reel (docs/routes/reels.md).
