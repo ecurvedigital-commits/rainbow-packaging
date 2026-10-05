@@ -18,6 +18,7 @@ import {
 import { reelApi } from '../../api/reelApi';
 import { masterCodeApi } from '../../api/masterCodeApi';
 import { fieldDefinitionApi } from '../../api/fieldDefinitionApi';
+import { extractMasterCodeSpecs } from '../../utils/formatters';
 
 const inputClass =
   'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-shadow';
@@ -241,12 +242,13 @@ export default function CreateReelPage() {
           if (codes.length) {
             const first = codes[0];
             setSelectedMasterCodeId(first.master_code_id || first.id);
+            const specs = extractMasterCodeSpecs(first);
             setSingleForm((prev) => ({
               ...prev,
-              quality: first.quality ?? prev.quality,
-              gsm: first.gsm ?? prev.gsm,
-              bf: first.bf ?? prev.bf,
-              size: first.size ?? prev.size,
+              quality: specs.quality !== undefined ? specs.quality : prev.quality,
+              gsm: specs.gsm !== undefined ? specs.gsm : prev.gsm,
+              bf: specs.bf !== undefined ? specs.bf : prev.bf,
+              size: specs.size !== undefined ? specs.size : prev.size,
             }));
           }
         }
@@ -267,12 +269,13 @@ export default function CreateReelPage() {
 
   useEffect(() => {
     if (mode !== 'bulk' || !bulkRows.length) return;
+    const specs = extractMasterCodeSpecs(selectedMasterCode);
     const next = bulkRows.map((row) => ({
       ...row,
-      quality: row.quality || selectedMasterCode?.quality || DEFAULT_ROW.quality,
-      gsm: row.gsm === '' ? (selectedMasterCode?.gsm ?? DEFAULT_ROW.gsm) : row.gsm,
-      bf: row.bf === '' ? (selectedMasterCode?.bf ?? DEFAULT_ROW.bf) : row.bf,
-      size: row.size === '' ? (selectedMasterCode?.size ?? DEFAULT_ROW.size) : row.size,
+      quality: specs.quality !== undefined ? specs.quality : (row.quality || DEFAULT_ROW.quality),
+      gsm: specs.gsm !== undefined ? specs.gsm : (row.gsm === '' ? DEFAULT_ROW.gsm : row.gsm),
+      bf: specs.bf !== undefined ? specs.bf : (row.bf === '' ? DEFAULT_ROW.bf : row.bf),
+      size: specs.size !== undefined ? specs.size : (row.size === '' ? DEFAULT_ROW.size : row.size),
     }));
     setBulkRows(next);
     // Intentionally only runs when the selected master code changes.
@@ -285,12 +288,13 @@ export default function CreateReelPage() {
     const selected = masterCodes.find((mc) => (mc.master_code_id || mc.id) === id);
     if (!selected) return;
 
+    const specs = extractMasterCodeSpecs(selected);
     setSingleForm((prev) => ({
       ...prev,
-      quality: selected.quality ?? prev.quality,
-      gsm: selected.gsm ?? prev.gsm,
-      bf: selected.bf ?? prev.bf,
-      size: selected.size ?? prev.size,
+      quality: specs.quality !== undefined ? specs.quality : prev.quality,
+      gsm: specs.gsm !== undefined ? specs.gsm : prev.gsm,
+      bf: specs.bf !== undefined ? specs.bf : prev.bf,
+      size: specs.size !== undefined ? specs.size : prev.size,
     }));
   };
 
@@ -445,7 +449,7 @@ export default function CreateReelPage() {
         throw new Error(res.message || 'Bulk creation failed');
       }
 
-      setSuccess(`Successfully created ${bulkRows.length} reels!`);
+      setSuccess(`Successfully submitted ${bulkRows.length} reels for approval!`);
       setBulkRows([]);
       setBulkCount(1);
       const nextNo = await fetchNextReelNumber();

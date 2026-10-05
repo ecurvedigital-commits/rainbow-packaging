@@ -206,16 +206,22 @@ export async function listReels({ filters = {}, actor }) {
 
   const items = reels.map((reel) => {
     let resolvedMasterCode = null;
+    let resolvedMasterCodeName = null;
+    let mcDoc = null;
     if (reel.master_code && reel.master_code !== reel.master_key) {
       resolvedMasterCode = reel.master_code;
+      mcDoc = masterCodeDocs.find((m) => String(m.master_code) === String(reel.master_code));
     } else if (reel.master_code_id) {
-      const mcDoc = masterCodeDocs.find((m) => String(m._id) === String(reel.master_code_id));
+      mcDoc = masterCodeDocs.find((m) => String(m._id) === String(reel.master_code_id));
       if (mcDoc) resolvedMasterCode = mcDoc.master_code;
     }
 
-    if (!resolvedMasterCode) {
-      const matched = masterCodeDocs.find((mc) => matchReelToMasterCode(reel, mc));
-      if (matched) resolvedMasterCode = matched.master_code;
+    if (!resolvedMasterCode && !mcDoc) {
+      mcDoc = masterCodeDocs.find((mc) => matchReelToMasterCode(reel, mc));
+      if (mcDoc) resolvedMasterCode = mcDoc.master_code;
+    }
+    if (mcDoc) {
+      resolvedMasterCodeName = mcDoc.master_code_name;
     }
 
     const json = {
@@ -224,8 +230,9 @@ export async function listReels({ filters = {}, actor }) {
       reel_no: reel.reel_no,
       master_product_id: reel.master_product_id ? reel.master_product_id.toString() : null,
       master_key: reel.master_key || null,
-      master_code_id: reel.master_code_id ? reel.master_code_id.toString() : null,
+      master_code_id: reel.master_code_id ? reel.master_code_id.toString() : (mcDoc ? mcDoc._id.toString() : null),
       master_code: resolvedMasterCode || null,
+      master_code_name: resolvedMasterCodeName || null,
       quality: reel.quality,
       bf: reel.bf,
       purchase_date: reel.purchase_date,
@@ -339,16 +346,21 @@ export async function getReel({ id, actor }) {
   }
 
   let resolvedMasterCode = reel.master_code || null;
-  if (!resolvedMasterCode || resolvedMasterCode === reel.master_key) {
-    const masterCodeDocs = await MasterCode.find({ status: 'ACTIVE' }).lean();
-    if (reel.master_code_id) {
-      const mcDoc = masterCodeDocs.find((m) => String(m._id) === String(reel.master_code_id));
-      if (mcDoc) resolvedMasterCode = mcDoc.master_code;
-    }
-    if (!resolvedMasterCode) {
-      const matched = masterCodeDocs.find((mc) => matchReelToMasterCode(reel, mc));
-      if (matched) resolvedMasterCode = matched.master_code;
-    }
+  let resolvedMasterCodeName = null;
+  const masterCodeDocs = await MasterCode.find({ status: 'ACTIVE' }).lean();
+  let mcDoc = null;
+  if (reel.master_code_id) {
+    mcDoc = masterCodeDocs.find((m) => String(m._id) === String(reel.master_code_id));
+  }
+  if (!mcDoc && resolvedMasterCode && resolvedMasterCode !== reel.master_key) {
+    mcDoc = masterCodeDocs.find((m) => String(m.master_code) === String(resolvedMasterCode));
+  }
+  if (!mcDoc) {
+    mcDoc = masterCodeDocs.find((mc) => matchReelToMasterCode(reel, mc));
+  }
+  if (mcDoc) {
+    resolvedMasterCode = mcDoc.master_code;
+    resolvedMasterCodeName = mcDoc.master_code_name;
   }
 
   return {
@@ -357,8 +369,9 @@ export async function getReel({ id, actor }) {
     reel_no: reel.reel_no,
     master_product_id: reel.master_product_id ? reel.master_product_id.toString() : null,
     master_key: reel.master_key || null,
-    master_code_id: reel.master_code_id ? reel.master_code_id.toString() : null,
+    master_code_id: reel.master_code_id ? reel.master_code_id.toString() : (mcDoc ? mcDoc._id.toString() : null),
     master_code: resolvedMasterCode || null,
+    master_code_name: resolvedMasterCodeName || null,
     quality: reel.quality,
     bf: reel.bf,
     purchase_date: reel.purchase_date,
@@ -528,6 +541,8 @@ export const bulkCreateReels = async ({ input, actor }) => withTransaction(async
   }
 
   const now = new Date();
+  const isOperator = actor.role === ROLES.OPERATOR;
+  const initialApprovalStatus = isOperator ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED;
   const reelDocs = input.map((row, idx) => ({
     sr_no: firstSr + idx,
     reel_no: reelNos[idx],
@@ -546,7 +561,7 @@ export const bulkCreateReels = async ({ input, actor }) => withTransaction(async
     previous_weight: row.max_weight,
     status: deriveReelStatus({ previous_weight: row.max_weight, max_weight: row.max_weight }),
     custom_fields: row.custom_fields || {},
-    pending_count: 0,
+    pending_count: isOperator ? 1 : 0,
     record_status: RECORD_STATUS.ACTIVE,
     created_by: actor.id,
     last_activity_at: now,
@@ -558,14 +573,14 @@ export const bulkCreateReels = async ({ input, actor }) => withTransaction(async
     reel_id: reel._id,
     reel_no: reel.reel_no,
     event_type: EVENT_TYPES.CREATED,
-    approval_status: APPROVAL_STATUS.CONFIRMED,
+    approval_status: initialApprovalStatus,
     performed_by: actor.id,
     performed_by_name: actor.name,
     performed_by_role: actor.role,
     performed_at: now,
-    approved_by: actor.id,
-    approved_by_name: actor.name,
-    approved_at: now,
+    approved_by: isOperator ? null : actor.id,
+    approved_by_name: isOperator ? null : actor.name,
+    approved_at: isOperator ? null : now,
     payload: {
       max_weight: reel.max_weight,
       rate_per_kg: reel.rate_per_kg,
@@ -607,16 +622,14 @@ export async function createReel({ input, actor }) {
 
     const sr_no = await getNextSequence('reel_sr_no', session);
     
-    // -------------------------------------------------------------
-    // PREVIOUS CODE (Approval Workflow for Reel Creation):
-    // const isOperator = actor.role === ROLES.OPERATOR;
-    // const initialApprovalStatus = isOperator ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED;
-    // const pendingCount = isOperator ? 1 : 0;
-    // -------------------------------------------------------------
+    // Approval workflow for reel creation: operator-created reels wait for supervisor/admin approval
+    const isOperator = actor.role === ROLES.OPERATOR;
+    const initialApprovalStatus = isOperator ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED;
+    const pendingCount = isOperator ? 1 : 0;
 
-    // CURRENT FLOW: Approval dismantled/bypassed — reel creation is automatically confirmed immediately
-    const initialApprovalStatus = APPROVAL_STATUS.CONFIRMED;
-    const pendingCount = 0;
+    // BYPASS (disabled): reel creation automatically confirmed immediately
+    // const initialApprovalStatus = APPROVAL_STATUS.CONFIRMED;
+    // const pendingCount = 0;
     const status = deriveReelStatus({ previous_weight: input.max_weight, max_weight: input.max_weight });
 
     const masterProduct = await resolveMasterProduct({
@@ -665,8 +678,8 @@ export async function createReel({ input, actor }) {
       event_type: EVENT_TYPES.CREATED,
       approval_status: initialApprovalStatus,
       performed_by: actor,
-      // PREVIOUS CODE: approved_by: isOperator ? null : actor,
-      approved_by: actor,
+      approved_by: isOperator ? null : actor,
+      // BYPASS (disabled): approved_by: actor,
       payload: {
         max_weight: input.max_weight,
         rate_per_kg: reel.rate_per_kg,
@@ -753,12 +766,40 @@ export async function updateReel({ id, input, actor }) {
       reel.rate_per_kg = Number(input.rate_per_kg);
     }
 
+    if (input.master_code_id !== undefined || input.master_code !== undefined) {
+      let targetCode = input.master_code || null;
+      let targetCodeId = input.master_code_id || null;
+
+      if (targetCodeId) {
+        const mcDoc = await MasterCode.findById(targetCodeId).session(session);
+        if (mcDoc) {
+          targetCode = mcDoc.master_code;
+        }
+      } else if (targetCode) {
+        const mcDoc = await MasterCode.findOne({ master_code: targetCode }).session(session);
+        if (mcDoc) {
+          targetCodeId = mcDoc._id.toString();
+        }
+      }
+
+      if (targetCode !== reel.master_code) {
+        changes.push({ field: 'master_code', from: reel.master_code, to: targetCode });
+        reel.master_code = targetCode;
+      }
+      if (String(targetCodeId || '') !== String(reel.master_code_id || '')) {
+        changes.push({ field: 'master_code_id', from: reel.master_code_id, to: targetCodeId });
+        reel.master_code_id = targetCodeId;
+      }
+    }
+
     // Re-resolve MasterProduct if specification changed
     const masterProduct = await resolveMasterProduct({
       quality: reel.quality,
       gsm: reel.gsm,
       bf: reel.bf,
       size: reel.size,
+      master_code: reel.master_code,
+      master_code_id: reel.master_code_id,
       actor,
       session,
     });

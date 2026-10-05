@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { reelApi } from '../../api/reelApi';
 import { masterCodeApi } from '../../api/masterCodeApi';
 import { fieldDefinitionApi } from '../../api/fieldDefinitionApi';
+import { extractMasterCodeSpecs } from '../../utils/formatters';
 import { X, Save, Loader2, AlertCircle, RefreshCw, Layers, Key } from 'lucide-react';
 
 const inputClass = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue transition-shadow';
@@ -62,12 +63,13 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
           if (codeRes.data.length > 0) {
             const first = codeRes.data[0];
             setSelectedMasterCodeId(first.master_code_id || first.id);
+            const specs = extractMasterCodeSpecs(first);
             setFormData((prev) => ({
               ...prev,
-              quality: first.quality,
-              gsm: first.gsm,
-              bf: first.bf,
-              size: first.size,
+              quality: specs.quality !== undefined ? specs.quality : prev.quality,
+              gsm: specs.gsm !== undefined ? specs.gsm : prev.gsm,
+              bf: specs.bf !== undefined ? specs.bf : prev.bf,
+              size: specs.size !== undefined ? specs.size : prev.size,
             }));
           }
         }
@@ -86,12 +88,13 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
     setSelectedMasterCodeId(codeId);
     const selected = masterCodes.find((mc) => (mc.master_code_id || mc.id) === codeId);
     if (selected) {
+      const specs = extractMasterCodeSpecs(selected);
       setFormData((prev) => ({
         ...prev,
-        quality: selected.quality,
-        gsm: selected.gsm,
-        bf: selected.bf,
-        size: selected.size,
+        quality: specs.quality !== undefined ? specs.quality : prev.quality,
+        gsm: specs.gsm !== undefined ? specs.gsm : prev.gsm,
+        bf: specs.bf !== undefined ? specs.bf : prev.bf,
+        size: specs.size !== undefined ? specs.size : prev.size,
       }));
     }
   };

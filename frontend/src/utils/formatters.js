@@ -71,10 +71,59 @@ export const getApprovalBadgeStyle = (approvalStatus) => {
       return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300';
     case 'PENDING':
       return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300';
-    case 'DECLINED':
-    case 'DECLINED_REVERTED':
-      return 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300';
     default:
       return 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400';
   }
+};
+
+export const extractMasterCodeSpecs = (mc) => {
+  if (!mc) return {};
+  const specs = {};
+
+  if (mc.quality) {
+    const qUpper = String(mc.quality).trim().toUpperCase();
+    const bfUpper = String(mc.bf || '').trim().toUpperCase();
+    const nameUpper = String(mc.master_code_name || '').trim().toUpperCase();
+
+    if (qUpper === 'DUPLEX' || qUpper === 'DUP') {
+      if (bfUpper === 'ULTRA' || nameUpper.includes('ULTRA')) {
+        specs.quality = 'ULTRA';
+      } else if (bfUpper === 'DCB' || nameUpper.includes('DCB')) {
+        specs.quality = 'DCB';
+      } else if (bfUpper === 'SPECTRA' || nameUpper.includes('SPECTRA')) {
+        specs.quality = 'SPECTRA';
+      } else {
+        specs.quality = 'DUPLEX';
+      }
+    } else if (qUpper === 'IMPORT KRAFT' || qUpper === 'IMPORTANT') {
+      specs.quality = 'IMPORTANT';
+    } else {
+      specs.quality = qUpper;
+    }
+  }
+
+  if (mc.gsm !== undefined && mc.gsm !== null && mc.gsm !== '') {
+    const parsedGsm = parseInt(String(mc.gsm).replace(/[^\d]/g, ''), 10);
+    if (!isNaN(parsedGsm) && parsedGsm > 0) {
+      specs.gsm = parsedGsm;
+    }
+  }
+
+  if (mc.bf !== undefined && mc.bf !== null && mc.bf !== '') {
+    const parsedBf = parseInt(String(mc.bf).replace(/[^\d]/g, ''), 10);
+    if (!isNaN(parsedBf) && parsedBf > 0) {
+      specs.bf = parsedBf;
+    } else {
+      specs.bf = 18;
+    }
+  }
+
+  if (mc.size !== undefined && mc.size !== null && mc.size !== '') {
+    const parsedSize = parseFloat(String(mc.size).replace(/[^\d.]/g, ''));
+    if (!isNaN(parsedSize) && parsedSize > 0) {
+      specs.size = parsedSize;
+    }
+  }
+
+  return specs;
 };

@@ -134,13 +134,13 @@ export const ReelDetailPage = () => {
               <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'var(--font-family-display)' }}>
                 Reel #{reel.reel_no}
               </h1>
-              {reel.master_code && (
+              {(reel.master_code_name || reel.master_code) && (
                 <span className="px-2.5 py-1 bg-brand-blue/10 text-brand-blue font-mono font-bold text-xs rounded-lg">
-                  {/^master code/i.test(String(reel.master_code).trim())
+                  {reel.master_code_name || (/^master code/i.test(String(reel.master_code).trim())
                     ? reel.master_code
                     : (/^\d+$/.test(String(reel.master_code).trim())
                       ? `Master Code ${reel.master_code}`
-                      : `Master Code: ${reel.master_code}`)}
+                      : `Master Code: ${reel.master_code}`))}
                 </span>
               )}
               <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusBadgeStyle(reel.status)}`}>
@@ -370,7 +370,8 @@ export const ReelDetailPage = () => {
                     ) : (status === 'CONFIRMED' || approvedBy) && (
                       <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-800 flex items-center gap-1.5 mt-2">
                         <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
-                        <span>Confirmed by <strong>{event.decision?.by_name || approvedBy}</strong> on {formatDateTime(event.decision?.at || event.approved_at || event.performed_at)}</span>
+                        {/* <span>Confirmed by <strong>{event.decision?.by_name || approvedBy}</strong> on {formatDateTime(event.decision?.at || event.approved_at || event.performed_at)}</span> */}
+                        <span>Confirmed by <strong>{event.decision?.by_name || approvedBy}</strong> on {formatDate(event.decision?.at || event.approved_at || event.performed_at)}</span>
                       </div>
                     )}
                   </div>

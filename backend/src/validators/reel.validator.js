@@ -85,8 +85,11 @@ export const updateReelSchema = z.object({
     max_weight: z.coerce.number().positive().optional(),
     previous_weight: z.coerce.number().min(0).optional(),
     station: z.string().trim().optional(),
+    master_code: z.string().trim().optional(),
+    master_code_id: z.string().trim().optional(),
     custom_fields: z.record(z.any()).optional(),
     reason: z.string().optional(),
+    correction_reason: z.string().optional(),
   }),
 });
 

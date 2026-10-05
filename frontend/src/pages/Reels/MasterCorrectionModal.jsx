@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { reelApi } from '../../api/reelApi';
-import { X, Save, Loader2, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { masterCodeApi } from '../../api/masterCodeApi';
+import { extractMasterCodeSpecs } from '../../utils/formatters';
+import { X, Save, Loader2, AlertTriangle, ShieldAlert, Layers } from 'lucide-react';
 
 const inputClass = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue';
 const labelClass = 'block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1';
 
 export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess }) => {
+  const [masterCodes, setMasterCodes] = useState([]);
   const [formData, setFormData] = useState({
     reel_no: '',
+    master_code_id: '',
+    master_code: '',
     quality: 'VK',
     bf: 18,
     supplier_name: '',
@@ -23,9 +28,77 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let mounted = true;
+    masterCodeApi.list({ status: 'ACTIVE' })
+      .then((res) => {
+        if (mounted && res.success && Array.isArray(res.data)) {
+          setMasterCodes(res.data);
+        }
+      })
+      .catch((err) => console.error('Failed to load master codes in edit modal', err));
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
     if (reel) {
+      let matchedCodeId = '';
+      let matchedCode = reel.master_code || '';
+
+      if (masterCodes.length > 0) {
+        // 1. By ID
+        if (reel.master_code_id) {
+          const byId = masterCodes.find(mc => String(mc.master_code_id || mc.id || mc._id) === String(reel.master_code_id));
+          if (byId) {
+            matchedCodeId = byId.master_code_id || byId.id;
+            matchedCode = byId.master_code;
+          }
+        }
+        // 2. By Code
+        if (!matchedCodeId && reel.master_code) {
+          const clean = String(reel.master_code).replace(/^(master\s*code|code|mc)\s*:?\s*/i, '').trim();
+          const byCode = masterCodes.find(mc => 
+            String(mc.master_code).trim() === clean || 
+            String(mc.master_code).trim() === String(reel.master_code).trim() ||
+            String(mc.master_code_name).trim().toLowerCase() === String(reel.master_code).trim().toLowerCase()
+          );
+          if (byCode) {
+            matchedCodeId = byCode.master_code_id || byCode.id;
+            matchedCode = byCode.master_code;
+          }
+        }
+        // 3. By Name
+        if (!matchedCodeId && reel.master_code_name) {
+          const byName = masterCodes.find(mc => String(mc.master_code_name).trim().toLowerCase() === String(reel.master_code_name).trim().toLowerCase());
+          if (byName) {
+            matchedCodeId = byName.master_code_id || byName.id;
+            matchedCode = byName.master_code;
+          }
+        }
+        // 4. By Physical Specifications
+        if (!matchedCodeId) {
+          const reelQ = String(reel.quality || '').trim().toUpperCase();
+          const reelGsm = Number(reel.gsm);
+          const reelBf = Number(reel.bf);
+          const reelSize = Number(reel.size);
+          const bySpecs = masterCodes.find(mc => {
+            const specs = extractMasterCodeSpecs(mc);
+            if (specs.quality && specs.quality !== reelQ) return false;
+            if (specs.bf && specs.bf !== reelBf) return false;
+            if (specs.gsm && specs.gsm !== reelGsm) return false;
+            if (specs.size && specs.size !== reelSize) return false;
+            return true;
+          });
+          if (bySpecs) {
+            matchedCodeId = bySpecs.master_code_id || bySpecs.id;
+            matchedCode = bySpecs.master_code;
+          }
+        }
+      }
+
       setFormData({
         reel_no: reel.reel_no || '',
+        master_code_id: matchedCodeId,
+        master_code: matchedCode,
         quality: reel.quality || 'VK',
         bf: reel.bf || 18,
         supplier_name: reel.supplier_name || '',
@@ -37,9 +110,33 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
         correction_reason: '',
       });
     }
-  }, [reel]);
+  }, [reel, masterCodes]);
 
   if (!isOpen || !reel) return null;
+
+  const handleMasterCodeChange = (e) => {
+    const selectedId = e.target.value;
+    const selected = masterCodes.find(mc => (mc.master_code_id || mc.id) === selectedId);
+    
+    if (selected) {
+      const specs = extractMasterCodeSpecs(selected);
+      setFormData(prev => ({
+        ...prev,
+        master_code_id: selectedId,
+        master_code: selected.master_code,
+        quality: specs.quality !== undefined ? specs.quality : prev.quality,
+        gsm: specs.gsm !== undefined ? specs.gsm : prev.gsm,
+        bf: specs.bf !== undefined ? specs.bf : prev.bf,
+        size: specs.size !== undefined ? specs.size : prev.size,
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        master_code_id: '',
+        master_code: '',
+      }));
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,6 +152,8 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
       const reelId = reel.id || reel._id;
       const payload = {
         reel_no: formData.reel_no.trim(),
+        master_code_id: formData.master_code_id || null,
+        master_code: formData.master_code || null,
         quality: formData.quality,
         bf: Number(formData.bf),
         supplier_name: formData.supplier_name.trim(),
@@ -91,7 +190,7 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
               <h2 className="text-base font-bold text-amber-950" style={{ fontFamily: 'var(--font-family-display)' }}>
                 Master Reel Correction (ADMIN ONLY)
               </h2>
-              <p className="text-[11px] text-amber-800">Direct database override for master specs or weight error fix.</p>
+              <p className="text-[11px] text-amber-800">Direct database override for master specs, master code, or weight error fix.</p>
             </div>
           </div>
           <button onClick={onClose} disabled={submitting} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-amber-100">
@@ -107,6 +206,33 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
         )}
 
         <form onSubmit={handleSubmit} className="p-6 flex-1 overflow-y-auto space-y-4">
+          <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-3 mb-2">
+            <label className={`${labelClass} text-indigo-900 flex items-center gap-1.5`}>
+              <Layers size={14} className="text-indigo-600" />
+              Master Code (Business Classification)
+            </label>
+            <select
+              className={inputClass}
+              value={formData.master_code_id || ''}
+              onChange={handleMasterCodeChange}
+            >
+              <option value="">(None / Direct Specification)</option>
+              {masterCodes.map((mc) => {
+                const specs = [
+                  mc.quality ? `Quality: ${mc.quality}` : null,
+                  mc.bf ? `BF: ${mc.bf}` : null,
+                  mc.gsm ? `GSM: ${mc.gsm}` : null,
+                  mc.size ? `Size: ${mc.size} cm` : null,
+                ].filter(Boolean).join(', ');
+                return (
+                  <option key={mc.master_code_id || mc.id} value={mc.master_code_id || mc.id}>
+                    {mc.master_code} — {mc.master_code_name}{specs ? ` (${specs})` : ''}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Reel Number</label>

@@ -5,6 +5,7 @@ import {
   X, RotateCcw, Check, ChevronDown, ChevronUp, Calendar, IndianRupee, Clock, Printer, ArrowUpDown
 } from 'lucide-react';
 import { reelApi } from '../../api/reelApi';
+import { masterCodeApi } from '../../api/masterCodeApi';
 import { useAuth } from '../../auth/AuthContext';
 import CreateReelModal from './CreateReelModal';
 import RecordUsageModal from './RecordUsageModal';
@@ -16,16 +17,14 @@ import ErrorAlert from '../../components/Common/ErrorAlert';
 import EmptyState from '../../components/Common/EmptyState';
 import { formatWeight, formatDate, formatCurrency, getStatusBadgeClass } from '../../utils/formatters';
 
-const formatMasterCodeBadge = (code) => {
+const formatMasterCodeBadge = (code, reel = null, map = {}) => {
+  if (reel?.master_code_name) return reel.master_code_name;
   if (!code) return '';
   const str = String(code).trim();
-  if (/^master code/i.test(str)) {
-    return str;
-  }
-  if (/^\d+$/.test(str)) {
-    return `Master Code ${str}`;
-  }
-  return `Master Code: ${str}`;
+  if (map && map[str]) return map[str];
+  const numOnly = str.replace(/^(master\s*code|code|mc)\s*:?\s*/i, '');
+  if (map && map[numOnly]) return map[numOnly];
+  return str;
 };
 
 const BASE_FIELDS = [
@@ -64,6 +63,7 @@ export default function ReelListPage() {
   const [reels, setReels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [masterCodeMap, setMasterCodeMap] = useState({});
   const [pagination, setPagination] = useState({
     page: parseInt(searchParams.get('page') || '1', 10),
     limit: parseInt(searchParams.get('limit') || '15', 10),
@@ -140,8 +140,26 @@ export default function ReelListPage() {
     setPagination((p) => ({ ...p, page: 1 }));
   };
 
-  // ── Fetch filter options ────────────────────────────────────────────────
+  // ── Fetch filter options and master codes ─────────────────────────────
   useEffect(() => {
+    masterCodeApi.list({ status: 'ACTIVE' })
+      .then((res) => {
+        if (res.success && Array.isArray(res.data)) {
+          const map = {};
+          res.data.forEach((mc) => {
+            if (mc.master_code) {
+              map[mc.master_code] = mc.master_code_name || mc.master_code;
+              map[`Master Code ${mc.master_code}`] = mc.master_code_name || mc.master_code;
+            }
+            if (mc.master_code_id || mc.id) {
+              map[mc.master_code_id || mc.id] = mc.master_code_name || mc.master_code;
+            }
+          });
+          setMasterCodeMap(map);
+        }
+      })
+      .catch((err) => console.error('[ReelListPage] Failed to load master codes:', err));
+
     reelApi.getFilterOptions()
       .then((res) => {
         console.log('[ReelListPage] Loaded Filter Options:', res?.data);
@@ -843,7 +861,7 @@ export default function ReelListPage() {
                               `}
                             >
                               {isChosen && <Check className="w-3 h-3 shrink-0" />}
-                              <span>{f.key === 'master_code' ? formatMasterCodeBadge(strOpt) : strOpt}</span>
+                              <span>{f.key === 'master_code' ? formatMasterCodeBadge(strOpt, null, masterCodeMap) : strOpt}</span>
                             </button>
                           );
                         })}
@@ -1022,10 +1040,10 @@ export default function ReelListPage() {
                           <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                             <span>Reel #{reel.reel_no || reel.reel_number}</span>
                           </div>
-                          {reel.master_code && (
+                          {(reel.master_code_name || reel.master_code) && (
                             <div className="mt-1">
                               <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-[10px] rounded-md tracking-wider border border-indigo-200 dark:border-indigo-800">
-                                {formatMasterCodeBadge(reel.master_code)}
+                                {formatMasterCodeBadge(reel.master_code, reel, masterCodeMap)}
                               </span>
                             </div>
                           )}
