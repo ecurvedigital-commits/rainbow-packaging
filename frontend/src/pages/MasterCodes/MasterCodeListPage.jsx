@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { masterCodeApi } from '../../api/masterCodeApi';
 import { useAuth } from '../../auth/AuthContext';
 import {
   Layers, Plus, Search, RefreshCw, AlertCircle, Edit, Trash2, CheckCircle2, XCircle,
-  X, Save, Loader2
+  X, Save, Loader2, Eye
 } from 'lucide-react';
 
 const inputClass = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue transition-shadow';
 const labelClass = 'block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1';
 
 export const MasterCodeListPage = () => {
+  const navigate = useNavigate();
   const { role } = useAuth();
   const normalizedRole = (role || '').toUpperCase().replace(/_/g, ' ');
   const isRoleAdmin = normalizedRole === 'ADMIN' || normalizedRole === 'HEAD ADMIN' || normalizedRole === 'SUPER ADMIN' || normalizedRole === 'ADMINISTRATOR';
@@ -63,15 +65,15 @@ export const MasterCodeListPage = () => {
     const maxNum = codes.reduce((acc, c) => {
       const n = parseInt(c.master_code, 10);
       return !isNaN(n) && n > acc ? n : acc;
-    }, 19);
+    }, 18);
 
     setFormData({
       master_code: String(maxNum + 1),
       master_code_name: '',
-      quality: 'VK',
-      gsm: 150,
-      bf: 18,
-      size: 100,
+      quality: '',
+      gsm: '',
+      bf: '',
+      size: '',
       description: '',
       status: 'ACTIVE',
     });
@@ -207,20 +209,24 @@ export const MasterCodeListPage = () => {
               </thead>
               <tbody className="divide-y divide-gray-100 text-xs text-gray-700">
                 {codes.map((item) => (
-                  <tr key={item.master_code_id || item.id} className="hover:bg-gray-50/80 transition-colors">
+                  <tr
+                    key={item.master_code_id || item.id}
+                    onClick={() => navigate(`/master-codes/${item.master_code_id || item.id || item.master_code}`)}
+                    className="hover:bg-indigo-50/70 dark:hover:bg-slate-800/80 cursor-pointer transition-colors"
+                  >
                     <td className="py-3.5 px-4 font-bold text-brand-blue font-mono">
                       Code {item.master_code}
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-gray-900">
+                    <td className="py-3.5 px-4 font-semibold text-gray-900 dark:text-white">
                       {item.master_code_name}
                       {item.description && (
                         <p className="text-[11px] text-gray-400 font-normal mt-0.5">{item.description}</p>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 font-bold">{item.quality}</td>
-                    <td className="py-3.5 px-4 font-mono">{item.gsm} GSM</td>
-                    <td className="py-3.5 px-4 font-mono">{item.bf} BF</td>
-                    <td className="py-3.5 px-4 font-mono">{item.size} cm</td>
+                    <td className="py-3.5 px-4 font-bold">{item.quality || '-'}</td>
+                    <td className="py-3.5 px-4 font-mono">{item.gsm ? `${item.gsm} GSM` : '-'}</td>
+                    <td className="py-3.5 px-4 font-mono">{item.bf ? `${item.bf} BF` : '-'}</td>
+                    <td className="py-3.5 px-4 font-mono">{item.size ? `${item.size} cm` : '-'}</td>
                     <td className="py-3.5 px-4">
                       {item.status === 'ACTIVE' ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
@@ -233,17 +239,33 @@ export const MasterCodeListPage = () => {
                       )}
                     </td>
                     {isRoleSupervisor && (
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => handleOpenEditModal(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/master-codes/${item.master_code_id || item.id || item.master_code}`);
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                            title="View Master Code Details"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditModal(item);
+                            }}
                             className="p-1.5 text-gray-400 hover:text-brand-blue hover:bg-indigo-50 rounded-lg transition"
                             title="Edit Master Code"
                           >
                             <Edit size={15} />
                           </button>
                           <button
-                            onClick={() => handleDelete(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(item);
+                            }}
                             className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                             title="Delete Master Code"
                           >
@@ -293,16 +315,14 @@ export const MasterCodeListPage = () => {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Quality *</label>
-                  <select
+                  <label className={labelClass}>Quality</label>
+                  <input
+                    type="text"
                     className={inputClass}
+                    placeholder="e.g. duplex, sk, vk, fbb, sbs"
                     value={formData.quality}
                     onChange={(e) => setFormData({ ...formData, quality: e.target.value })}
-                  >
-                    {['VK', 'SPECTRA', 'ULTRA', 'SK', 'IMPORTANT', 'SBS', 'FBB', 'DCB'].map((q) => (
-                      <option key={q} value={q}>{q}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
               </div>
 
@@ -312,7 +332,7 @@ export const MasterCodeListPage = () => {
                   required
                   type="text"
                   className={inputClass}
-                  placeholder="e.g. Duplex 250 GSM Ultra"
+                  placeholder="e.g. Duplex ultra 220"
                   value={formData.master_code_name}
                   onChange={(e) => setFormData({ ...formData, master_code_name: e.target.value })}
                 />
@@ -320,36 +340,33 @@ export const MasterCodeListPage = () => {
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className={labelClass}>GSM *</label>
+                  <label className={labelClass}>GSM</label>
                   <input
-                    required
-                    type="number"
-                    min="1"
+                    type="text"
                     className={inputClass}
+                    placeholder="e.g. 220, 230/240, 250+"
                     value={formData.gsm}
-                    onChange={(e) => setFormData({ ...formData, gsm: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, gsm: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>BF *</label>
+                  <label className={labelClass}>BF</label>
                   <input
-                    required
-                    type="number"
-                    min="1"
+                    type="text"
                     className={inputClass}
+                    placeholder="e.g. ultra, dcb, spectra, 18"
                     value={formData.bf}
-                    onChange={(e) => setFormData({ ...formData, bf: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, bf: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Size (cm) *</label>
+                  <label className={labelClass}>Size</label>
                   <input
-                    required
-                    type="number"
-                    min="1"
+                    type="text"
                     className={inputClass}
+                    placeholder="e.g. 100, 110 or custom"
                     value={formData.size}
-                    onChange={(e) => setFormData({ ...formData, size: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, size: e.target.value })}
                   />
                 </div>
               </div>

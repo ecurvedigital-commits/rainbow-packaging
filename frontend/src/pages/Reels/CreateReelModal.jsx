@@ -22,6 +22,7 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
     supplier_name: '',
     size: 100,
     gsm: 150,
+    rate_per_kg: '',
     max_weight: 1000,
     purchase_date: new Date().toISOString().split('T')[0],
     custom_fields: {},
@@ -133,6 +134,7 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
         supplier_name: formData.supplier_name.trim(),
         size: Number(formData.size),
         gsm: Number(formData.gsm),
+        rate_per_kg: formData.rate_per_kg ? Number(formData.rate_per_kg) : 0,
         max_weight: Number(formData.max_weight),
         purchase_date: formData.purchase_date,
         custom_fields: formData.custom_fields,
@@ -190,11 +192,19 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
               value={selectedMasterCodeId}
               onChange={handleMasterCodeChange}
             >
-              {masterCodes.map((mc) => (
-                <option key={mc.master_code_id || mc.id} value={mc.master_code_id || mc.id}>
-                  Master Code {mc.master_code} — {mc.master_code_name} ({mc.quality}, {mc.gsm} GSM, {mc.bf} BF, {mc.size} cm)
-                </option>
-              ))}
+              {masterCodes.map((mc) => {
+                const specs = [
+                  mc.quality ? `Quality: ${mc.quality}` : null,
+                  mc.bf ? `BF: ${mc.bf}` : null,
+                  mc.gsm ? `GSM: ${mc.gsm}` : null,
+                  mc.size ? `Size: ${mc.size} cm` : null,
+                ].filter(Boolean).join(', ');
+                return (
+                  <option key={mc.master_code_id || mc.id} value={mc.master_code_id || mc.id}>
+                    Master Code {mc.master_code} — {mc.master_code_name} {specs ? `(${specs})` : ''}
+                  </option>
+                );
+              })}
             </select>
             <p className="text-[11px] text-gray-500">
               Selecting a Master Code automatically pre-fills Quality, GSM, BF, and Size.
@@ -229,15 +239,14 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
 
             <div>
               <label className={labelClass}>Quality *</label>
-              <select
+              <input
+                required
+                type="text"
                 className={inputClass}
+                placeholder="e.g. duplex, sk, vk, import kraft, fbb, sbs"
                 value={formData.quality}
                 onChange={(e) => setFormData({ ...formData, quality: e.target.value })}
-              >
-                {['VK', 'SPECTRA', 'ULTRA', 'SK', 'IMPORTANT', 'SBS', 'FBB', 'DCB'].map((q) => (
-                  <option key={q} value={q}>{q}</option>
-                ))}
-              </select>
+              />
             </div>
 
             <div>
@@ -265,36 +274,53 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
             </div>
 
             <div>
-              <label className={labelClass}>GSM *</label>
+              <div className="flex items-center justify-between">
+                <label className={labelClass}>Rate / KG (₹)</label>
+                {formData.rate_per_kg && formData.max_weight > 0 && (
+                  <span className="text-[10px] text-brand-green font-bold mb-1">
+                    Est: ₹{(Number(formData.rate_per_kg) * Number(formData.max_weight)).toLocaleString('en-IN')}
+                  </span>
+                )}
+              </div>
               <input
-                required
                 type="number"
-                min="1"
+                step="0.01"
+                min="0"
                 className={inputClass}
+                placeholder="e.g. 55.00"
+                value={formData.rate_per_kg}
+                onChange={(e) => setFormData({ ...formData, rate_per_kg: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>GSM</label>
+              <input
+                type="text"
+                className={inputClass}
+                placeholder="e.g. 220, 230/240, 250+"
                 value={formData.gsm}
                 onChange={(e) => setFormData({ ...formData, gsm: e.target.value })}
               />
             </div>
 
             <div>
-              <label className={labelClass}>Size / Width (cm) *</label>
+              <label className={labelClass}>Size / Width (cm)</label>
               <input
-                required
-                type="number"
-                min="1"
+                type="text"
                 className={inputClass}
+                placeholder="e.g. 100, 110, 120"
                 value={formData.size}
                 onChange={(e) => setFormData({ ...formData, size: e.target.value })}
               />
             </div>
 
             <div>
-              <label className={labelClass}>Bursting Factor (BF) *</label>
+              <label className={labelClass}>Bursting Factor (BF)</label>
               <input
-                required
-                type="number"
-                min="1"
+                type="text"
                 className={inputClass}
+                placeholder="e.g. 18, 22, ultra, dcb, spectra"
                 value={formData.bf}
                 onChange={(e) => setFormData({ ...formData, bf: e.target.value })}
               />
@@ -312,7 +338,7 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
             </div>
           </div>
 
-          {/* STEP 3: Derived Read-Only Technical Master Key Display Box */}
+          {/* STEP 3: Derived Read-Only Technical Master Key Display Box (Hidden)
           <div className="bg-indigo-50/80 border border-indigo-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
             <div>
               <label className="text-[11px] font-bold text-brand-blue uppercase tracking-wider flex items-center gap-1.5">
@@ -327,6 +353,7 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
               {technicalMasterKey}
             </div>
           </div>
+          */}
 
           {/* Dynamic Custom Fields */}
           {fieldDefs.length > 0 && (

@@ -8,12 +8,13 @@ const reelSchema = new mongoose.Schema(
   {
     sr_no: { type: Number, required: true, unique: true },
     reel_no: { type: String, required: true, trim: true },
-    quality: { type: String, required: true, enum: QUALITIES },
+    quality: { type: String, required: true, trim: true },
     bf: { type: Number, required: true },
     purchase_date: { type: Date, required: true, default: Date.now },
     supplier_name: { type: String, required: true, trim: true },
     size: { type: Number, required: true },
     gsm: { type: Number, required: true },
+    rate_per_kg: { type: Number, default: 0, set: roundTwoDecimals },
     max_weight: { type: Number, required: true, set: roundTwoDecimals },
     previous_weight: { type: Number, required: true, set: roundTwoDecimals },
     status: {

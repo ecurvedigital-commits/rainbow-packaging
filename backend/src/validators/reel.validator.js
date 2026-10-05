@@ -45,13 +45,16 @@ export const getReelJourneySchema = z.object({
 export const createReelSchema = z.object({
   body: z.object({
     reel_no: z.string().min(1, 'Reel number is required').trim(),
-    quality: z.enum(QUALITIES),
+    quality: z.string().min(1, 'Quality is required').trim(),
     bf: z.coerce.number().positive(),
     purchase_date: dateOnlySchema.optional(),
     supplier_name: z.string().min(1, 'Supplier name is required').trim(),
     size: z.coerce.number().positive(),
     gsm: z.coerce.number().positive(),
+    rate_per_kg: z.coerce.number().min(0).optional().default(0),
     max_weight: z.coerce.number().positive(),
+    master_code: z.string().optional(),
+    master_code_id: z.string().optional(),
     custom_fields: z.record(z.any()).optional().default({}),
   }),
 });
@@ -69,7 +72,7 @@ export const updateReelSchema = z.object({
   params: idParamSchema,
   body: z.object({
     reel_no: z.string().trim().optional(),
-    quality: z.enum(QUALITIES).optional(),
+    quality: z.string().trim().optional(),
     bf: z.coerce.number().positive().optional(),
     purchase_date: dateOnlySchema.optional(),
     supplier_name: z.string().trim().optional(),
@@ -77,6 +80,7 @@ export const updateReelSchema = z.object({
     gsm: z.coerce.number().positive().optional(),
     max_weight: z.coerce.number().positive().optional(),
     previous_weight: z.coerce.number().min(0).optional(),
+    station: z.string().trim().optional(),
     custom_fields: z.record(z.any()).optional(),
     reason: z.string().optional(),
   }),

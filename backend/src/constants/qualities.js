@@ -7,4 +7,13 @@ export const QUALITIES = Object.freeze([
   'SBS',
   'FBB',
   'DCB',
+  'duplex',
+  'sk',
+  'vk',
+  'import kraft',
+  'fbb',
+  'sbs',
+  'spectra',
+  'ultra',
+  'dcb',
 ]);

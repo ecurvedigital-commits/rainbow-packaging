@@ -74,6 +74,7 @@ export const DashboardPage = () => {
 
   const totalWeightInStock = summary?.weight_in_stock ?? summary?.total_weight_in_stock_kg ?? 0;
   const totalStockValue = summary?.total_stock_value ?? Math.round(totalWeightInStock * 55);
+  const pricePerKg = summary?.price_per_kg ?? summary?.avg_price_per_kg ?? (totalWeightInStock > 0 ? Math.round((totalStockValue / totalWeightInStock) * 100) / 100 : 55);
 
   const tiles = [
     {
@@ -91,8 +92,8 @@ export const DashboardPage = () => {
       path: '/reels?status=REEL,CUT',
     },
     {
-      label: 'Total Stock Price',
-      value: formatCurrency(totalStockValue),
+      label: 'Price / KG',
+      value: `₹${Number(pricePerKg).toFixed(2)}/kg`,
       icon: IndianRupee,
       color: 'purple',
       path: '/reels?status=REEL,CUT',
@@ -130,7 +131,7 @@ export const DashboardPage = () => {
             Inventory Dashboard
           </h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Real-time stock status, quality breakdown, total stock price value, and pending approval metrics.
+            Real-time stock status, quality breakdown, price per kg, and pending approval metrics.
           </p>
         </div>
         <button

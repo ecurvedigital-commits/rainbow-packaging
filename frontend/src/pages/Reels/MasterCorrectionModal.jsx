@@ -15,6 +15,7 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
     gsm: 150,
     max_weight: 1000,
     current_weight: 1000,
+    station: '',
     correction_reason: '',
   });
 
@@ -32,6 +33,7 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
         gsm: reel.gsm || 150,
         max_weight: reel.max_weight || 1000,
         current_weight: reel.current_weight ?? reel.previous_weight ?? 1000,
+        station: (reel.stations_used && reel.stations_used.length > 0) ? reel.stations_used[reel.stations_used.length - 1] : '',
         correction_reason: '',
       });
     }
@@ -51,7 +53,7 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
     setSubmitting(true);
     try {
       const reelId = reel.id || reel._id;
-      const res = await reelApi.masterCorrection(reelId, {
+      const payload = {
         reel_no: formData.reel_no.trim(),
         quality: formData.quality,
         bf: Number(formData.bf),
@@ -59,9 +61,14 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
         size: Number(formData.size),
         gsm: Number(formData.gsm),
         max_weight: Number(formData.max_weight),
-        current_weight: Number(formData.current_weight),
+        previous_weight: Number(formData.current_weight),
+        reason: formData.correction_reason.trim(),
         correction_reason: formData.correction_reason.trim(),
-      });
+      };
+      if (formData.station) {
+        payload.station = formData.station;
+      }
+      const res = await reelApi.masterCorrection(reelId, payload);
       setSubmitting(false);
 
       if (res.success) {
@@ -134,6 +141,18 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
             <div>
               <label className={labelClass}>Bursting Factor (BF)</label>
               <input required type="number" min="1" className={inputClass} value={formData.bf} onChange={(e) => setFormData({ ...formData, bf: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelClass}>Machine / Assigned Station</label>
+              <select className={inputClass} value={formData.station} onChange={(e) => setFormData({ ...formData, station: e.target.value })}>
+                <option value="">(None / Keep Existing)</option>
+                <option value="E-Flute">E-Flute</option>
+                <option value="Narrow-Flute">Narrow-Flute</option>
+                <option value="Sheater">Sheater</option>
+                <option value="Sold to revaty">Sold to revaty</option>
+                <option value="Return">Return</option>
+                <option value="Others">Others</option>
+              </select>
             </div>
           </div>
 

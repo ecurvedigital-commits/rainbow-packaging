@@ -16,20 +16,20 @@ const masterCodeSchema = new mongoose.Schema(
     },
     quality: {
       type: String,
-      required: true,
-      enum: QUALITIES,
+      trim: true,
+      default: '',
     },
     gsm: {
-      type: Number,
-      required: true,
+      type: mongoose.Schema.Types.Mixed,
+      default: '',
     },
     bf: {
-      type: Number,
-      required: true,
+      type: mongoose.Schema.Types.Mixed,
+      default: '',
     },
     size: {
-      type: Number,
-      required: true,
+      type: mongoose.Schema.Types.Mixed,
+      default: '',
     },
     description: {
       type: String,

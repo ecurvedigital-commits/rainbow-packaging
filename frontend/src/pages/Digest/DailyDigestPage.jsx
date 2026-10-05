@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Calendar, FileSpreadsheet, RefreshCw, Scale, ArrowDownRight, Package, Send,
   CheckCircle2, Clock, Mail, AlertTriangle, Activity, Maximize2, X, Search,
@@ -14,9 +15,12 @@ import ErrorAlert from '../../components/Common/ErrorAlert';
 import { formatWeight, formatDate } from '../../utils/formatters';
 
 export default function DailyDigestPage() {
+  const navigate = useNavigate();
   const { isRoleAdmin } = useAuth();
 
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [fromDate, setFromDate] = useState(todayStr);
+  const [toDate, setToDate] = useState(todayStr);
   const [digestData, setDigestData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -26,15 +30,17 @@ export default function DailyDigestPage() {
   const [showBreakdownModal, setShowBreakdownModal] = useState(false);
   const [showRecipientsModal, setShowRecipientsModal] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [showDepletedList, setShowDepletedList] = useState(false);
+  const [depletedSearch, setDepletedSearch] = useState('');
 
   const exportDropdownRef = useRef(null);
 
-  const fetchDigest = async (selectedDate) => {
+  const fetchDigest = async (fDate = fromDate, tDate = toDate) => {
     setLoading(true);
     setError(null);
     setSendSuccessMessage(null);
     try {
-      const response = await digestApi.getDailyDigest(selectedDate);
+      const response = await digestApi.getDailyDigest({ fromDate: fDate, toDate: tDate });
       setDigestData(response.data || null);
     } catch (err) {
       setError(err.message || 'Failed to fetch daily digest report.');
@@ -44,8 +50,8 @@ export default function DailyDigestPage() {
   };
 
   useEffect(() => {
-    fetchDigest(date);
-  }, [date]);
+    fetchDigest(fromDate, toDate);
+  }, [fromDate, toDate]);
 
   // Click outside for export dropdown
   useEffect(() => {
@@ -60,13 +66,31 @@ export default function DailyDigestPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showExportDropdown]);
 
+  const displayDateStr = fromDate === toDate ? fromDate : `${fromDate} to ${toDate}`;
+  const displayFormattedDate = fromDate === toDate ? formatDate(fromDate) : `${formatDate(fromDate)} – ${formatDate(toDate)}`;
+
+  const allUsageEntries = Object.values(digestData?.quality_details || {}).flatMap((q) => q.entries || []);
+  const depletedReelEntries = allUsageEntries.filter((log) => log.is_depleted || log.current_weight === 0);
+
+  const filteredDepletedEntries = depletedReelEntries.filter((log) => {
+    if (!depletedSearch.trim()) return true;
+    const s = depletedSearch.toLowerCase();
+    return (
+      (log.reel_no || '').toLowerCase().includes(s) ||
+      (log.master_code || '').toLowerCase().includes(s) ||
+      (log.supplier_name || '').toLowerCase().includes(s) ||
+      (log.station || '').toLowerCase().includes(s) ||
+      (log.performed_by || '').toLowerCase().includes(s)
+    );
+  });
+
   const handleSendDigest = async () => {
-    if (!window.confirm(`Trigger daily email digest send for ${date}?`)) return;
+    if (!window.confirm(`Trigger daily email digest send for ${displayDateStr}?`)) return;
     setSending(true);
     setSendSuccessMessage(null);
     setError(null);
     try {
-      await digestApi.sendDigest(date);
+      await digestApi.sendDigest(fromDate);
       setSendSuccessMessage(`Daily digest successfully dispatched to administrator recipients!`);
     } catch (err) {
       setError(err.message || 'Failed to send daily digest email.');
@@ -75,19 +99,10 @@ export default function DailyDigestPage() {
     }
   };
 
-  const handleToday = () => {
-    setDate(new Date().toISOString().split('T')[0]);
-  };
-
-  const handleYesterday = () => {
-    const yest = new Date(Date.now() - 86400000);
-    setDate(yest.toISOString().split('T')[0]);
-  };
-
   // ── Excel Export ────────────────────────────────────────────────────────
   const handleExportExcel = () => {
     if (!digestData) return;
-    const filename = `Rainbow_Daily_Digest_${date}.xls`;
+    const filename = `Rainbow_Daily_Digest_${displayDateStr.replace(/\s+/g, '_')}.xls`;
 
     const breakdownRows = Object.entries(digestData.quality_breakdown || {}).map(([quality, weight]) => `
       <tr>
@@ -121,8 +136,8 @@ export default function DailyDigestPage() {
         </style>
       </head>
       <body>
-        <div class="header">RAINBOW PACKAGES - DAILY INVENTORY & USAGE DIGEST REPORT</div>
-        <p><b>Report Date:</b> ${formatDate(date)} | <b>Export Timestamp:</b> ${new Date().toLocaleString()}</p>
+        <div class="header">RAINBOW PACKAGES - INVENTORY & USAGE DIGEST REPORT</div>
+        <p><b>Report Period:</b> ${displayFormattedDate} | <b>Export Timestamp:</b> ${new Date().toLocaleString()}</p>
 
         <div class="section-title">1. KEY PERFORMANCE INDICATORS</div>
         <table>
@@ -141,7 +156,7 @@ export default function DailyDigestPage() {
         <div class="section-title">2. CONSUMPTION BREAKDOWN BY QUALITY</div>
         <table>
           <thead><tr><th>Quality Grade / Specification</th><th style="text-align:right;">Total Consumed Weight</th></tr></thead>
-          <tbody>${breakdownRows || '<tr><td colspan="2">No usage logged for this date.</td></tr>'}</tbody>
+          <tbody>${breakdownRows || '<tr><td colspan="2">No usage logged for this period.</td></tr>'}</tbody>
         </table>
 
         <div class="section-title">3. DETAILED LOGGED REEL USAGE ITEMS</div>
@@ -191,7 +206,7 @@ export default function DailyDigestPage() {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Rainbow Packages - Daily Digest (${date})</title>
+        <title>Rainbow Packages - Inventory Digest (${displayDateStr})</title>
         <style>
           body { font-family: system-ui, -apple-system, sans-serif; color: #0f172a; padding: 24px; line-height: 1.4; }
           .brand-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 16px; margin-bottom: 24px; }
@@ -213,9 +228,9 @@ export default function DailyDigestPage() {
         <div class="brand-header">
           <div>
             <div class="title">Rainbow Packages</div>
-            <div class="subtitle">Daily Inventory & Paper Usage Digest Report</div>
+            <div class="subtitle">Inventory & Paper Usage Digest Report</div>
           </div>
-          <div class="date-badge">${formatDate(date)}</div>
+          <div class="date-badge">${displayFormattedDate}</div>
         </div>
 
         <div class="kpi-grid">
@@ -236,7 +251,7 @@ export default function DailyDigestPage() {
         <div class="section-title">Consumption Breakdown by Paper Quality</div>
         <table>
           <thead><tr><th>Quality Specification</th><th style="text-align:right;">Total Weight Consumed</th></tr></thead>
-          <tbody>${breakdownRows || '<tr><td colspan="2">No usage logged for this date.</td></tr>'}</tbody>
+          <tbody>${breakdownRows || '<tr><td colspan="2">No usage logged for this period.</td></tr>'}</tbody>
         </table>
 
         <div class="section-title">Individual Reel Usage Logged Entries</div>
@@ -261,48 +276,40 @@ export default function DailyDigestPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <FileSpreadsheet className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-            Daily Inventory & Usage Digest
+            Inventory & Usage Digest
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            Summary report of total paper consumption, newly added stock, and depleted reels by date.
+            Summary report of total paper consumption, newly added stock, and depleted reels across selected date range.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-            <button
-              type="button"
-              onClick={handleToday}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-                date === new Date().toISOString().split('T')[0]
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              onClick={handleYesterday}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-                date === new Date(Date.now() - 86400000).toISOString().split('T')[0]
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
-            >
-              Yesterday
-            </button>
+          {/* From Date Picker */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">From:</span>
+            <CustomDatePicker
+              date={fromDate}
+              onChange={(newDate) => setFromDate(newDate)}
+              align="left"
+            />
           </div>
 
-          {/* Project Custom Styled DatePicker */}
-          <CustomDatePicker date={date} onChange={(newDate) => setDate(newDate)} />
+          {/* To Date Picker */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">To:</span>
+            <CustomDatePicker
+              date={toDate}
+              onChange={(newDate) => setToDate(newDate)}
+              align="right"
+            />
+          </div>
 
           <button
-            onClick={() => fetchDigest(date)}
+            onClick={() => fetchDigest(fromDate, toDate)}
             className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl border border-slate-300 dark:border-slate-700 transition shadow-sm"
             title="Refresh Report"
           >
@@ -358,7 +365,7 @@ export default function DailyDigestPage() {
       </div>
 
       {/* Error alert */}
-      {error && <ErrorAlert message={error} onRetry={() => fetchDigest(date)} />}
+      {error && <ErrorAlert message={error} onRetry={() => fetchDigest(fromDate, toDate)} />}
 
       {/* Success banner */}
       {sendSuccessMessage && (
@@ -370,170 +377,281 @@ export default function DailyDigestPage() {
 
       {/* Content */}
       {loading ? (
-        <LoadingState message="Calculating daily digest breakdown..." />
+        <LoadingState message="Calculating inventory digest breakdown..." />
       ) : !digestData ? (
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 text-center">
-          <p className="text-slate-500 dark:text-slate-400">No digest data available for {formatDate(date)}.</p>
+          <p className="text-slate-500 dark:text-slate-400">No digest data available for {displayFormattedDate}.</p>
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Total Consumption */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
-              <div className="flex items-center justify-between text-slate-500">
-                <span className="text-xs font-semibold uppercase tracking-wider">Total Paper Used Today</span>
-                <Scale className="w-5 h-5 text-indigo-500" />
-              </div>
-              <div className="text-3xl font-extrabold text-slate-900 dark:text-white" style={{ fontFamily: 'var(--font-family-display)' }}>
-                {formatWeight(digestData.total_weight_consumed_kg || 0)}
-              </div>
-              <p className="text-xs text-slate-400">Recorded across active production shifts</p>
-            </div>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Total Consumption */}
+                <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span className="text-xs font-semibold uppercase tracking-wider">Total Paper Used Today</span>
+                    <Scale className="w-5 h-5 text-indigo-500" />
+                  </div>
+                  <div className="text-3xl font-extrabold text-slate-900 dark:text-white" style={{ fontFamily: 'var(--font-family-display)' }}>
+                    {formatWeight(digestData.total_weight_consumed_kg || 0)}
+                  </div>
+                  <p className="text-xs text-slate-400">Recorded across active production shifts</p>
+                </div>
 
-            {/* Reels Issued */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
-              <div className="flex items-center justify-between text-slate-500">
-                <span className="text-xs font-semibold uppercase tracking-wider">New Reels Created</span>
-                <Package className="w-5 h-5 text-emerald-500" />
-              </div>
-              <div className="text-3xl font-extrabold text-slate-900 dark:text-white" style={{ fontFamily: 'var(--font-family-display)' }}>
-                {digestData.reels_created_count || 0}
-              </div>
-              <p className="text-xs text-slate-400">Reels checked into warehouse</p>
-            </div>
+                {/* Reels Issued */}
+                <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span className="text-xs font-semibold uppercase tracking-wider">New Reels Created</span>
+                    <Package className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div className="text-3xl font-extrabold text-slate-900 dark:text-white" style={{ fontFamily: 'var(--font-family-display)' }}>
+                    {digestData.reels_created_count || 0}
+                  </div>
+                  <p className="text-xs text-slate-400">Reels checked into warehouse</p>
+                </div>
 
-            {/* Depleted Reels */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
-              <div className="flex items-center justify-between text-slate-500">
-                <span className="text-xs font-semibold uppercase tracking-wider">Fully Depleted Reels</span>
-                <ArrowDownRight className="w-5 h-5 text-rose-500" />
-              </div>
-              <div className="text-3xl font-extrabold text-slate-900 dark:text-white" style={{ fontFamily: 'var(--font-family-display)' }}>
-                {digestData.reels_depleted_count || 0}
-              </div>
-              <p className="text-xs text-slate-400">Reels consumed down to core balance</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Breakdown by Paper Quality - CLICKABLE TO EXPAND */}
-            <div
-              onClick={() => setShowBreakdownModal(true)}
-              className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg hover:border-indigo-400 dark:hover:border-indigo-600 transition-all cursor-pointer space-y-4 group relative overflow-hidden"
-              title="Click to view full breakdown & detailed reel logs"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-indigo-500" />
-                  Consumption Breakdown by Quality
-                </h3>
-                <span className="px-3 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition flex items-center gap-1.5 shadow-xs">
-                  <Maximize2 className="w-3.5 h-3.5" /> Open Full Page
-                </span>
+                {/* Depleted Reels (Interactive Toggle Button) */}
+                <div
+                  onClick={() => setShowDepletedList((prev) => !prev)}
+                  className={`bg-white dark:bg-slate-800 rounded-2xl p-5 border transition-all cursor-pointer shadow-sm relative overflow-hidden group ${showDepletedList
+                    ? 'border-rose-500 ring-2 ring-rose-500/20 dark:ring-rose-500/30 bg-rose-50/20 dark:bg-rose-950/20'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-rose-400 dark:hover:border-rose-600 hover:shadow-md'
+                    }`}
+                  title="Click to view list of fully depleted reels"
+                >
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span className="text-xs font-semibold uppercase tracking-wider">Fully Depleted Reels</span>
+                    <span className={`p-1.5 rounded-xl transition ${showDepletedList ? 'bg-rose-500 text-white' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-500 group-hover:bg-rose-500 group-hover:text-white'}`}>
+                      <ArrowDownRight className="w-5 h-5" />
+                    </span>
+                  </div>
+                  <div className="text-3xl font-extrabold text-slate-900 dark:text-white mt-2" style={{ fontFamily: 'var(--font-family-display)' }}>
+                    {digestData.reels_depleted_count || 0}
+                  </div>
+                  <div className="flex items-center justify-between text-xs mt-2">
+                    <span className="text-slate-400">Reels consumed down to 0 kg</span>
+                    <span className="text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1 group-hover:underline">
+                      {showDepletedList ? 'Hide List ▲' : 'View Reel List ▼'}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {digestData.quality_breakdown && Object.keys(digestData.quality_breakdown).length > 0 ? (
-                <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
-                  {Object.entries(digestData.quality_breakdown).map(([quality, weight]) => (
-                    <div key={quality} className="py-3 flex items-center justify-between group-hover:px-1 transition-all">
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block" />
-                        {quality}
-                      </span>
-                      <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-sm">
-                        {formatWeight(weight)}
+              {/* Fully Depleted Reels List Section */}
+              {showDepletedList && (
+                <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border-2 border-rose-200 dark:border-rose-900/60 shadow-lg space-y-4 animate-fade-in">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 dark:border-slate-700/60 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 rounded-xl">
+                        <ArrowDownRight className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                          Fully Depleted Reels ({depletedReelEntries.length})
+                        </h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Reels fully consumed down to 0 kg balance during {displayFormattedDate}.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          value={depletedSearch}
+                          onChange={(e) => setDepletedSearch(e.target.value)}
+                          placeholder="Search depleted reels..."
+                          className="pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-rose-500 dark:text-white"
+                        />
+                      </div>
+                      <button
+                        onClick={() => setShowDepletedList(false)}
+                        className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition"
+                        title="Close list"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {filteredDepletedEntries.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 text-xs italic">
+                      {depletedReelEntries.length === 0
+                        ? `No reels were fully depleted during ${displayFormattedDate}.`
+                        : 'No depleted reels match your search query.'}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
+                          <tr>
+                            <th className="px-4 py-3">Reel #</th>
+                            <th className="px-4 py-3">Master Code</th>
+                            <th className="px-4 py-3">Supplier</th>
+                            <th className="px-4 py-3">Station</th>
+                            <th className="px-4 py-3 text-right">Final Weight Used</th>
+                            <th className="px-4 py-3">Operator</th>
+                            <th className="px-4 py-3">Logged At</th>
+                            <th className="px-4 py-3 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-slate-700 dark:text-slate-300">
+                          {filteredDepletedEntries.map((log) => (
+                            <tr
+                              key={log.id}
+                              onClick={() => log.reel_id && navigate(`/reels/${log.reel_id}`)}
+                              className="hover:bg-rose-50/50 dark:hover:bg-rose-950/30 transition cursor-pointer"
+                            >
+                              <td className="px-4 py-3 font-mono font-bold text-slate-900 dark:text-white">
+                                Reel #{log.reel_no}
+                              </td>
+                              <td className="px-4 py-3 font-mono font-semibold text-indigo-600 dark:text-indigo-400">
+                                {log.master_code}
+                              </td>
+                              <td className="px-4 py-3 font-medium">{log.supplier_name}</td>
+                              <td className="px-4 py-3">
+                                <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-mono text-[11px]">
+                                  {log.station}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-right font-bold text-rose-600 dark:text-rose-400 font-mono">
+                                {formatWeight(log.weight_used)}
+                              </td>
+                              <td className="px-4 py-3 font-medium">{log.performed_by}</td>
+                              <td className="px-4 py-3 text-slate-400 whitespace-nowrap">
+                                {formatDate(log.performed_at)}
+                              </td>
+                              <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                {log.reel_id && (
+                                  <button
+                                    onClick={() => navigate(`/reels/${log.reel_id}`)}
+                                    className="px-2.5 py-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 rounded-lg transition"
+                                  >
+                                    View Reel
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Breakdown by Paper Quality - CLICKABLE TO OPEN FULL PAGE */}
+                <div
+                  onClick={() => navigate(`/digest/breakdown?fromDate=${fromDate}&toDate=${toDate}`)}
+                  className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg hover:border-indigo-400 dark:hover:border-indigo-600 transition-all cursor-pointer space-y-4 group relative overflow-hidden"
+                  title="Click to open full breakdown page"
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Activity className="w-5 h-5 text-indigo-500" />
+                      Consumption Breakdown by Quality
+                    </h3>
+                    <span className="px-3 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition flex items-center gap-1.5 shadow-xs">
+                      <Maximize2 className="w-3.5 h-3.5" /> Open Full Page
+                    </span>
+                  </div>
+
+                  {digestData.quality_breakdown && Object.keys(digestData.quality_breakdown).length > 0 ? (
+                    <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                      {Object.entries(digestData.quality_breakdown).map(([quality, weight]) => (
+                        <div key={quality} className="py-3 flex items-center justify-between group-hover:px-1 transition-all">
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block" />
+                            {quality}
+                          </span>
+                          <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-sm">
+                            {formatWeight(weight)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400 italic py-4">No paper usage recorded on this date.</p>
+                  )}
+                </div>
+
+                {/* Operational Event Counts */}
+                <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-indigo-500" />
+                    Shift Activity Summary
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                      <span className="text-xs text-slate-500 uppercase block font-semibold mb-1">Usage Logs</span>
+                      <span className="text-xl font-bold text-slate-900 dark:text-white font-mono">
+                        {digestData.counts?.usage || 0}
                       </span>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-400 italic py-4">No paper usage recorded on this date.</p>
-              )}
-            </div>
 
-            {/* Operational Event Counts */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Clock className="w-5 h-5 text-indigo-500" />
-                Shift Activity Summary
-              </h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                  <span className="text-xs text-slate-500 uppercase block font-semibold mb-1">Usage Logs</span>
-                  <span className="text-xl font-bold text-slate-900 dark:text-white font-mono">
-                    {digestData.counts?.usage || 0}
-                  </span>
-                </div>
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                      <span className="text-xs text-slate-500 uppercase block font-semibold mb-1">Confirmed</span>
+                      <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                        {digestData.counts?.confirmed || 0}
+                      </span>
+                    </div>
 
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                  <span className="text-xs text-slate-500 uppercase block font-semibold mb-1">Confirmed</span>
-                  <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                    {digestData.counts?.confirmed || 0}
-                  </span>
-                </div>
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                      <span className="text-xs text-slate-500 uppercase block font-semibold mb-1">Declined</span>
+                      <span className="text-xl font-bold text-rose-600 dark:text-rose-400 font-mono">
+                        {digestData.counts?.declined || 0}
+                      </span>
+                    </div>
 
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                  <span className="text-xs text-slate-500 uppercase block font-semibold mb-1">Declined</span>
-                  <span className="text-xl font-bold text-rose-600 dark:text-rose-400 font-mono">
-                    {digestData.counts?.declined || 0}
-                  </span>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                  <span className="text-xs text-slate-500 uppercase block font-semibold mb-1">Pending Review</span>
-                  <span className="text-xl font-bold text-amber-600 dark:text-amber-400 font-mono">
-                    {digestData.counts?.still_pending || 0}
-                  </span>
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                      <span className="text-xs text-slate-500 uppercase block font-semibold mb-1">Pending Review</span>
+                      <span className="text-xl font-bold text-amber-600 dark:text-amber-400 font-mono">
+                        {digestData.counts?.still_pending || 0}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Recipient Distribution List */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Mail className="w-5 h-5 text-indigo-500" />
-                Digest Email Recipients
-              </h3>
-              {isRoleAdmin && (
-                <button
-                  onClick={() => setShowRecipientsModal(true)}
-                  className="px-3 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 rounded-xl border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 transition cursor-pointer"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  Edit Recipients
-                </button>
-              )}
-            </div>
+              {/* Recipient Distribution List */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-indigo-500" />
+                    Digest Email Recipients
+                  </h3>
+                  {isRoleAdmin && (
+                    <button
+                      onClick={() => setShowRecipientsModal(true)}
+                      className="px-3 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 rounded-xl border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      Edit Recipients
+                    </button>
+                  )}
+                </div>
 
-            {digestData.recipients && digestData.recipients.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {digestData.recipients.map((email) => (
-                  <span
-                    key={email}
-                    className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-mono font-medium flex items-center gap-1.5"
-                  >
-                    <Mail className="w-3 h-3 opacity-60" />
-                    {email}
-                  </span>
-                ))}
+                {digestData.recipients && digestData.recipients.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {digestData.recipients.map((email) => (
+                      <span
+                        key={email}
+                        className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-mono font-medium flex items-center gap-1.5"
+                      >
+                        <Mail className="w-3 h-3 opacity-60" />
+                        {email}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400 italic">No recipient email addresses configured.</p>
+                )}
               </div>
-            ) : (
-              <p className="text-sm text-slate-400 italic">No recipient email addresses configured.</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Quality Breakdown Full Screen Modal */}
-      <QualityBreakdownModal
-        isOpen={showBreakdownModal}
-        onClose={() => setShowBreakdownModal(false)}
-        digestData={digestData}
-        date={date}
-      />
+            </div>
+          )}
 
       {/* Admin Recipient Email Editor Modal */}
       {isRoleAdmin && (
@@ -541,7 +659,7 @@ export default function DailyDigestPage() {
           isOpen={showRecipientsModal}
           onClose={() => setShowRecipientsModal(false)}
           currentRecipients={digestData?.recipients || []}
-          onSaved={() => fetchDigest(date)}
+          onSaved={() => fetchDigest(fromDate, toDate)}
         />
       )}
     </div>
@@ -551,7 +669,7 @@ export default function DailyDigestPage() {
 /**
  * Custom Project-Themed Calendar Component
  */
-function CustomDatePicker({ date, onChange }) {
+function CustomDatePicker({ date, onChange, align = 'right' }) {
   const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef(null);
 
@@ -626,7 +744,7 @@ function CustomDatePicker({ date, onChange }) {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 z-50 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-4 space-y-3">
+        <div className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} mt-2 z-50 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-4 space-y-3`}>
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'var(--font-family-display)' }}>
               {monthNames[month]} {year}
@@ -653,18 +771,16 @@ function CustomDatePicker({ date, onChange }) {
             <button
               type="button"
               onClick={() => { onChange(todayStr); setIsOpen(false); }}
-              className={`flex-1 py-1 text-[11px] font-semibold rounded-lg transition ${
-                date === todayStr ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
-              }`}
+              className={`flex-1 py-1 text-[11px] font-semibold rounded-lg transition ${date === todayStr ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
+                }`}
             >
               Today
             </button>
             <button
               type="button"
               onClick={() => { onChange(yesterdayStr); setIsOpen(false); }}
-              className={`flex-1 py-1 text-[11px] font-semibold rounded-lg transition ${
-                date === yesterdayStr ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
-              }`}
+              className={`flex-1 py-1 text-[11px] font-semibold rounded-lg transition ${date === yesterdayStr ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
+                }`}
             >
               Yesterday
             </button>
@@ -883,242 +999,4 @@ function EditRecipientsModal({ isOpen, onClose, currentRecipients = [], onSaved 
   );
 }
 
-/**
- * Project-Themed Full Breakdown Modal Component
- */
-function QualityBreakdownModal({ isOpen, onClose, digestData, date }) {
-  const [filterQuery, setFilterQuery] = useState('');
-  if (!isOpen || !digestData) return null;
 
-  const totalWeight = digestData.total_weight_consumed_kg || 0;
-  const breakdownMap = digestData.quality_breakdown || {};
-  const detailsMap = digestData.quality_details || {};
-
-  const entriesList = Object.entries(breakdownMap).map(([quality, weight]) => {
-    const details = detailsMap[quality] || {};
-    const percent = totalWeight > 0 ? Math.round((weight / totalWeight) * 1000) / 10 : 0;
-    return {
-      quality,
-      weight,
-      percent,
-      details,
-    };
-  });
-
-  const totalLogsCount = entriesList.reduce((acc, item) => acc + (item.details.entries?.length || 0), 0);
-
-  const filtered = entriesList.filter((item) => {
-    if (!filterQuery) return true;
-    const q = filterQuery.toLowerCase();
-    return (
-      item.quality.toLowerCase().includes(q) ||
-      (item.details.entries &&
-        item.details.entries.some(
-          (e) =>
-            e.reel_no.toLowerCase().includes(q) ||
-            e.supplier_name.toLowerCase().includes(q) ||
-            e.master_code.toLowerCase().includes(q) ||
-            e.station.toLowerCase().includes(q) ||
-            e.performed_by.toLowerCase().includes(q)
-        ))
-    );
-  });
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-5xl overflow-hidden flex flex-col max-h-[92vh]">
-        {/* Modal Header */}
-        <div className="p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <ReelMark size={32} />
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold tracking-tight" style={{ fontFamily: 'var(--font-family-display)' }}>
-                  Paper Consumption Breakdown by Quality
-                </h2>
-                <span className="px-2.5 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-full text-xs font-mono font-semibold">
-                  {formatDate(date)}
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 mt-0.5">
-                Detailed paper grade consumption metrics, share percentages, and individual reel usage entries.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* Modal Top KPI Summary Row */}
-        <div className="p-5 bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3">
-            <div className="p-3 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl">
-              <Scale className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Consumed</p>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white" style={{ fontFamily: 'var(--font-family-display)' }}>
-                {formatWeight(totalWeight)}
-              </p>
-            </div>
-          </div>
-
-          <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3">
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-xl">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Quality Grades Active</p>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white" style={{ fontFamily: 'var(--font-family-display)' }}>
-                {entriesList.length} Grades
-              </p>
-            </div>
-          </div>
-
-          <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3">
-            <div className="p-3 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 rounded-xl">
-              <Activity className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Usage Entries Logged</p>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white" style={{ fontFamily: 'var(--font-family-display)' }}>
-                {totalLogsCount} Logs
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Modal Search Bar */}
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
-              placeholder="Search quality spec, reel #, master code, supplier, station..."
-              className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white"
-            />
-          </div>
-          {filterQuery && (
-            <button
-              onClick={() => setFilterQuery('')}
-              className="px-3 py-2 text-xs text-rose-500 font-semibold hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl border border-rose-200 dark:border-rose-900 transition"
-            >
-              Clear Search
-            </button>
-          )}
-        </div>
-
-        {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-slate-50/50 dark:bg-slate-950/40">
-          {filtered.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 text-sm italic">
-              No matching paper quality records found for {formatDate(date)}.
-            </div>
-          ) : (
-            filtered.map((item) => (
-              <div
-                key={item.quality}
-                className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4"
-              >
-                {/* Quality Bar & Stats */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2" style={{ fontFamily: 'var(--font-family-display)' }}>
-                      <span className="w-3 h-3 rounded-full bg-indigo-500 inline-block ring-4 ring-indigo-100 dark:ring-indigo-950" />
-                      {item.quality}
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      {item.details.entries?.length || 0} production usage entries logged on {formatDate(date)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4 text-right">
-                    <div className="bg-indigo-50 dark:bg-indigo-950/60 px-3.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800">
-                      <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider block">Total Weight</span>
-                      <span className="font-mono font-extrabold text-indigo-700 dark:text-indigo-300 text-base">
-                        {formatWeight(item.weight)}
-                      </span>
-                    </div>
-                    <div className="bg-slate-100 dark:bg-slate-800 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Share</span>
-                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-base">
-                        {item.percent}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Dual-Tone Visual Progress Bar */}
-                <div className="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700/60">
-                  <div
-                    className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-400 h-full rounded-full transition-all duration-500 shadow-sm"
-                    style={{ width: `${Math.min(100, Math.max(2, item.percent))}%` }}
-                  />
-                </div>
-
-                {/* Individual Logs List Table */}
-                {item.details.entries && item.details.entries.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-500" /> Reel Usage Logged Details:
-                    </p>
-                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
-                            <th className="py-2.5 px-3.5 font-bold">Reel #</th>
-                            <th className="py-2.5 px-3.5 font-bold">Master Code</th>
-                            <th className="py-2.5 px-3.5 font-bold">Supplier</th>
-                            <th className="py-2.5 px-3.5 font-bold">Station</th>
-                            <th className="py-2.5 px-3.5 font-bold text-right">Used Weight</th>
-                            <th className="py-2.5 px-3.5 font-bold">Operator</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-slate-700 dark:text-slate-300">
-                          {item.details.entries.map((log) => (
-                            <tr key={log.id} className="hover:bg-indigo-50/40 dark:hover:bg-slate-800/60 transition">
-                              <td className="py-2.5 px-3.5 font-bold text-slate-900 dark:text-white">#{log.reel_no}</td>
-                              <td className="py-2.5 px-3.5">
-                                <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-[10px] rounded-md border border-indigo-200 dark:border-indigo-800">
-                                  {log.master_code}
-                                </span>
-                              </td>
-                              <td className="py-2.5 px-3.5 font-medium">{log.supplier_name}</td>
-                              <td className="py-2.5 px-3.5">
-                                <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold rounded-md text-[10px]">
-                                  {log.station}
-                                </span>
-                              </td>
-                              <td className="py-2.5 px-3.5 font-mono font-extrabold text-indigo-600 dark:text-indigo-400 text-right">{formatWeight(log.weight_used)}</td>
-                              <td className="py-2.5 px-3.5 text-slate-500 dark:text-slate-400">{log.performed_by}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Modal Footer */}
-        <div className="p-4 bg-slate-900 text-white border-t border-slate-800 flex justify-between items-center text-xs">
-          <span className="text-slate-400">Full paper consumption summary report for {formatDate(date)}</span>
-          <button
-            onClick={onClose}
-            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition shadow-sm"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}

@@ -18,7 +18,7 @@ export async function getSummary({ actor }) {
 
   const [facetResults, pending_confirmations] = await Promise.all([
     Reel.aggregate([
-      { $match: { record_status: RECORD_STATUS.ACTIVE } },
+      { $match: { record_status: RECORD_STATUS.ACTIVE, pending_count: 0 } },
       {
         $facet: {
           totals: [
@@ -27,6 +27,14 @@ export async function getSummary({ actor }) {
                 _id: null,
                 total_reels: { $sum: 1 },
                 weight_in_stock: { $sum: '$previous_weight' },
+                total_stock_value: {
+                  $sum: {
+                    $multiply: [
+                      '$previous_weight',
+                      { $cond: [{ $gt: ['$rate_per_kg', 0] }, '$rate_per_kg', 55] },
+                    ],
+                  },
+                },
               },
             },
           ],
@@ -57,6 +65,9 @@ export async function getSummary({ actor }) {
   const total_reels = facet.totals?.[0]?.total_reels || 0;
   const rawWeight = facet.totals?.[0]?.weight_in_stock || 0;
   const weight_in_stock = Math.round(rawWeight * 100) / 100;
+  const rawStockValue = facet.totals?.[0]?.total_stock_value || Math.round(weight_in_stock * 55);
+  const total_stock_value = Math.round(rawStockValue * 100) / 100;
+  const price_per_kg = weight_in_stock > 0 ? Math.round((total_stock_value / weight_in_stock) * 100) / 100 : 55;
   const unused_reels = facet.unused_reels?.[0]?.count || 0;
 
   const byStatusMap = { REEL: 0, CUT: 0, NILL: 0 };
@@ -71,7 +82,9 @@ export async function getSummary({ actor }) {
   return {
     total_reels,
     weight_in_stock,
-    total_stock_value: Math.round(weight_in_stock * 55),
+    price_per_kg,
+    avg_price_per_kg: price_per_kg,
+    total_stock_value,
     pending_confirmations,
     unused_reels,
     aging_threshold_days: agingThresholdDays,

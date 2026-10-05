@@ -20,17 +20,23 @@ import { ERROR_CODES } from '../constants/errorCodes.js';
  * @returns {Promise<object>}
  */
 export async function previewDigest({ query = {}, actor }) {
-  const dateStr = query.date || new Date().toISOString().split('T')[0];
-  const [year, month, day] = dateStr.split('-').map(Number);
+  const defaultDate = new Date().toISOString().split('T')[0];
+  const fromDateStr = query.from_date || query.fromDate || query.date || defaultDate;
+  const toDateStr = query.to_date || query.toDate || query.date || fromDateStr;
 
-  const localStart = new Date(year, month - 1, day, 0, 0, 0, 0);
-  const localEnd = new Date(year, month - 1, day, 23, 59, 59, 999);
+  const [fromY, fromM, fromD] = fromDateStr.split('-').map(Number);
+  const [toY, toM, toD] = toDateStr.split('-').map(Number);
 
-  const utcStart = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
-  const utcEnd = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+  const localStart = new Date(fromY, fromM - 1, fromD, 0, 0, 0, 0);
+  const localEnd = new Date(toY, toM - 1, toD, 23, 59, 59, 999);
+
+  const utcStart = new Date(Date.UTC(fromY, fromM - 1, fromD, 0, 0, 0, 0));
+  const utcEnd = new Date(Date.UTC(toY, toM - 1, toD, 23, 59, 59, 999));
 
   const start = localStart < utcStart ? localStart : utcStart;
   const end = localEnd > utcEnd ? localEnd : utcEnd;
+
+  const displayDateStr = fromDateStr === toDateStr ? fromDateStr : `${fromDateStr} to ${toDateStr}`;
 
   const [
     createdEvents,
@@ -121,7 +127,7 @@ export async function previewDigest({ query = {}, actor }) {
   const configuredRecipients = appSetting?.digest?.recipients || [];
   const adminEmails = admins.map((a) => a.email).filter(Boolean);
   const recipients = Array.from(new Set([...configuredRecipients, ...adminEmails]));
-  const deep_link = `${env.FRONTEND_URL}/admin/audit?date=${dateStr}`;
+  const deep_link = `${env.FRONTEND_URL}/admin/audit?date=${fromDateStr}`;
 
   // Fetch detailed usage log events for modal breakdown on frontend
   const usageEvents = await ReelEvent.find({
@@ -152,6 +158,7 @@ export async function previewDigest({ query = {}, actor }) {
     quality_details[label].total_weight = Math.round((quality_details[label].total_weight + weightUsed) * 100) / 100;
     quality_details[label].entries.push({
       id: log._id.toString(),
+      reel_id: reel._id ? reel._id.toString() : (log.reel_id ? log.reel_id.toString() : null),
       reel_no: reel.reel_no || 'N/A',
       master_code: reel.master_code || reel.master_key || 'N/A',
       supplier_name: reel.supplier_name || 'N/A',
@@ -159,13 +166,16 @@ export async function previewDigest({ query = {}, actor }) {
       weight_used: weightUsed,
       previous_weight: log.payload?.previous_weight ?? null,
       current_weight: log.payload?.current_weight_entered ?? null,
+      is_depleted: log.payload?.current_weight_entered === 0,
       performed_by: log.performed_by_name || 'Operator',
       performed_at: log.performed_at,
     });
   }
 
   return {
-    date: dateStr,
+    date: displayDateStr,
+    from_date: fromDateStr,
+    to_date: toDateStr,
     total_weight_consumed_kg: Math.round(total_weight_consumed_kg * 100) / 100,
     reels_created_count: created,
     reels_depleted_count: depletedCount,

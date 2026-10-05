@@ -26,6 +26,7 @@ export default function AuditLogsPage() {
     action: '',
     user: '',
     reel_no: '',
+    master_code: '',
     startDate: '',
     endDate: ''
   });
@@ -67,7 +68,7 @@ export default function AuditLogsPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, filters]);
+  }, [pagination.page, pagination.limit, filters.action, filters.user, filters.reel_no, filters.startDate, filters.endDate]);
 
   useEffect(() => {
     fetchLogs();
@@ -84,6 +85,7 @@ export default function AuditLogsPage() {
       action: '',
       user: '',
       reel_no: '',
+      master_code: '',
       startDate: '',
       endDate: ''
     });
@@ -95,9 +97,28 @@ export default function AuditLogsPage() {
     setShowJsonRaw(false);
   };
 
+  const displayedLogs = logs.filter(log => {
+    if (!filters.master_code.trim()) return true;
+    const mc = String(log.master_code || log.payload?.master_code || log.payload?.master_key || '').toLowerCase();
+    return mc.includes(filters.master_code.trim().toLowerCase());
+  });
+
   const renderPayloadSummary = (log) => {
     const payload = log.payload || {};
     const parts = [];
+
+    // Reversion / Weight changes
+    if (payload.reverted_from !== undefined && payload.reverted_to !== undefined) {
+      parts.push(`Reverted: ${payload.reverted_from} kg → ${payload.reverted_to} kg`);
+    } else if (payload.previous_weight !== undefined && payload.current_weight_entered !== undefined) {
+      parts.push(`Bal: ${payload.previous_weight} kg → ${payload.current_weight_entered} kg`);
+    } else if (payload.previous_weight !== undefined && payload.new_weight !== undefined) {
+      parts.push(`Adj: ${payload.previous_weight} kg → ${payload.new_weight} kg`);
+    }
+
+    if (payload.reel_voided) {
+      parts.push(`Reel Voided`);
+    }
 
     if (payload.station) {
       parts.push(`Station: ${payload.station}`);
@@ -105,21 +126,52 @@ export default function AuditLogsPage() {
     if (payload.used_this_time !== undefined) {
       parts.push(`Used: ${payload.used_this_time} kg`);
     }
-    if (payload.previous_weight !== undefined && payload.current_weight_entered !== undefined) {
-      parts.push(`Bal: ${payload.previous_weight} kg → ${payload.current_weight_entered} kg`);
+
+    if (payload.quality) {
+      const specs = [
+        payload.quality,
+        payload.gsm ? `${payload.gsm} GSM` : null,
+        payload.bf ? `${payload.bf} BF` : null,
+        payload.size ? `${payload.size} cm` : null,
+      ].filter(Boolean).join(' · ');
+      parts.push(`Specs: ${specs}`);
     }
-    if (log.decline_reason) {
-      parts.push(`Reason: ${log.decline_reason}`);
+
+    if (payload.supplier_name) {
+      parts.push(`Supplier: ${payload.supplier_name}`);
     }
-    if (payload.reason) {
-      parts.push(`Reason: ${payload.reason}`);
+
+    if (payload.initial_weight !== undefined || payload.max_weight !== undefined) {
+      parts.push(`Initial: ${payload.initial_weight ?? payload.max_weight} kg`);
     }
+
+    const reason = log.decline_reason || payload.decline_reason || payload.reason || payload.notes;
+    if (reason) {
+      parts.push(`Reason: ${reason}`);
+    }
+
+    // Keys handled explicitly above
+    const handledKeys = new Set([
+      'reverted_from', 'reverted_to', 'previous_weight', 'current_weight_entered',
+      'new_weight', 'reel_voided', 'station', 'used_this_time', 'quality',
+      'gsm', 'bf', 'size', 'supplier_name', 'initial_weight', 'max_weight',
+      'decline_reason', 'reason', 'notes', 'master_code', 'master_key'
+    ]);
+
+    // Format any remaining payload keys cleanly as "Key: Value"
+    Object.entries(payload).forEach(([k, v]) => {
+      if (!handledKeys.has(k) && v !== null && v !== undefined && v !== '') {
+        const label = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const valStr = typeof v === 'object' ? JSON.stringify(v) : String(v);
+        parts.push(`${label}: ${valStr}`);
+      }
+    });
 
     if (parts.length > 0) {
       return (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5 max-w-md">
           {parts.map((part, idx) => (
-            <span key={idx} className="inline-block px-2 py-0.5 text-[11px] font-mono rounded bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            <span key={idx} className="inline-block px-2.5 py-1 text-[11px] font-mono rounded-lg bg-slate-100 dark:bg-slate-700/60 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-medium shadow-xs">
               {part}
             </span>
           ))}
@@ -127,12 +179,7 @@ export default function AuditLogsPage() {
       );
     }
 
-    const jsonStr = JSON.stringify(payload);
-    return jsonStr !== '{}' ? (
-      <span className="font-mono text-xs text-slate-500 truncate block max-w-xs">{jsonStr}</span>
-    ) : (
-      <span className="text-slate-400 text-xs italic">-</span>
-    );
+    return <span className="text-slate-400 text-xs italic">-</span>;
   };
 
   return (
@@ -166,7 +213,7 @@ export default function AuditLogsPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <div>
           <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Reel Number</label>
           <input
@@ -175,6 +222,18 @@ export default function AuditLogsPage() {
             value={filters.reel_no}
             onChange={handleFilterChange}
             placeholder="e.g. R-1001"
+            className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:text-white"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Master Code</label>
+          <input
+            type="text"
+            name="master_code"
+            value={filters.master_code}
+            onChange={handleFilterChange}
+            placeholder="e.g. MC-100"
             className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:text-white"
           />
         </div>
@@ -203,7 +262,7 @@ export default function AuditLogsPage() {
             name="user"
             value={filters.user}
             onChange={handleFilterChange}
-            placeholder="Search by user name..."
+            placeholder="Search by user..."
             className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:text-white"
           />
         </div>
@@ -237,7 +296,7 @@ export default function AuditLogsPage() {
       {/* Audit Logs Table */}
       {loading ? (
         <LoadingState message="Loading audit trail events..." />
-      ) : logs.length === 0 ? (
+      ) : displayedLogs.length === 0 ? (
         <EmptyState
           title="No Audit Events Found"
           message="No activity records match your criteria. Try adjusting the search filters."
@@ -250,6 +309,7 @@ export default function AuditLogsPage() {
                 <tr>
                   <th className="px-6 py-3">Timestamp</th>
                   <th className="px-6 py-3">Reel No</th>
+                  <th className="px-6 py-3">Master Code</th>
                   <th className="px-6 py-3">Action</th>
                   <th className="px-6 py-3">Performed By</th>
                   <th className="px-6 py-3">Status</th>
@@ -258,11 +318,12 @@ export default function AuditLogsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
-                {logs.map((log) => {
+                {displayedLogs.map((log) => {
                   const eventMeta = EVENT_TYPE_LABELS[log.event_type] || {
                     label: log.event_type || 'UNKNOWN',
                     color: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200 border-slate-200'
                   };
+                  const masterCode = log.master_code || log.payload?.master_code || log.payload?.master_key;
 
                   return (
                     <tr
@@ -275,6 +336,15 @@ export default function AuditLogsPage() {
                       </td>
                       <td className="px-6 py-4 font-mono font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
                         {log.reel_no || log.resource_id || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {masterCode ? (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/80 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60">
+                            {masterCode}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs italic">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2.5 py-1 text-xs font-semibold rounded-md border ${eventMeta.color}`}>
@@ -371,7 +441,7 @@ export default function AuditLogsPage() {
             {/* Modal Body */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* Event Overview Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
                   <span className="text-xs text-slate-500 uppercase font-semibold block">Reel Number</span>
                   <span className="font-mono font-extrabold text-indigo-600 dark:text-indigo-400 text-base">
@@ -380,8 +450,15 @@ export default function AuditLogsPage() {
                 </div>
 
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
+                  <span className="text-xs text-slate-500 uppercase font-semibold block">Master Code</span>
+                  <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-xs inline-block px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800">
+                    {selectedAudit.master_code || selectedAudit.payload?.master_code || selectedAudit.payload?.master_key || 'N/A'}
+                  </span>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
                   <span className="text-xs text-slate-500 uppercase font-semibold block">Timestamp</span>
-                  <span className="font-mono font-medium text-slate-800 dark:text-slate-200 text-sm">
+                  <span className="font-mono font-medium text-slate-800 dark:text-slate-200 text-xs">
                     {formatDate(selectedAudit.performed_at)}
                   </span>
                 </div>
@@ -389,7 +466,7 @@ export default function AuditLogsPage() {
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
                   <span className="text-xs text-slate-500 uppercase font-semibold block">Performed By</span>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-900 dark:text-white">
+                    <span className="font-bold text-slate-900 dark:text-white text-xs">
                       {selectedAudit.performed_by_name}
                     </span>
                     {selectedAudit.performed_by_role && (
@@ -404,22 +481,31 @@ export default function AuditLogsPage() {
                   <span className="text-xs text-slate-500 uppercase font-semibold block">Approval Status</span>
                   <div>
                     {selectedAudit.approval_status === 'PENDING' ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                        <Clock className="w-3.5 h-3.5" /> Pending Review
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                        <Clock className="w-3.5 h-3.5" /> Pending
                       </span>
                     ) : selectedAudit.approval_status === 'CONFIRMED' ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                         <CheckCircle2 className="w-3.5 h-3.5" /> Confirmed
                       </span>
                     ) : selectedAudit.approval_status === 'DECLINED' ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-rose-50 text-rose-700 border border-rose-200">
                         <XCircle className="w-3.5 h-3.5" /> Declined
                       </span>
                     ) : (
-                      <span className="text-slate-500 italic text-sm">Automated / N/A</span>
+                      <span className="text-slate-500 italic text-xs">N/A</span>
                     )}
                   </div>
                 </div>
+
+                {selectedAudit.reel_specs && (
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
+                    <span className="text-xs text-slate-500 uppercase font-semibold block">Specifications</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200 text-xs">
+                      {selectedAudit.reel_specs.quality} ({selectedAudit.reel_specs.gsm} GSM · {selectedAudit.reel_specs.bf} BF · {selectedAudit.reel_specs.size} cm)
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Reviewed By & Reasons */}
@@ -467,7 +553,7 @@ export default function AuditLogsPage() {
                     {Object.entries(selectedAudit.payload || {}).length > 0 ? (
                       Object.entries(selectedAudit.payload).map(([key, val]) => (
                         <div key={key} className="px-4 py-2.5 flex items-center justify-between text-sm">
-                          <span className="font-mono text-xs text-slate-500 uppercase">{key}</span>
+                          <span className="font-mono text-xs text-slate-500 uppercase">{key.replace(/_/g, ' ')}</span>
                           <span className="font-mono font-semibold text-slate-900 dark:text-white">
                             {typeof val === 'object' ? JSON.stringify(val) : String(val)}
                           </span>

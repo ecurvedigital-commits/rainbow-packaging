@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { reelApi } from '../../api/reelApi';
 import { Search, Save, X, AlertTriangle, Loader2, Weight } from 'lucide-react';
-import { formatWeight } from '../../utils/formatters';
+import { formatWeight, formatDate } from '../../utils/formatters';
 
 const inputClass = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue transition-shadow';
 const labelClass = 'block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1';
@@ -17,7 +17,12 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
 
   useEffect(() => {
     if (reel) {
-      setSelectedReel(reel);
+      if (reel.pending_count > 0 || reel.approval_status === 'PENDING') {
+        const dateStr = reel.created_at || reel.purchase_date ? formatDate(reel.created_at || reel.purchase_date) : '';
+        setError(`Reel #${reel.reel_no} is awaiting Admin approval${dateStr ? ` (created on ${dateStr})` : ''} and cannot be used until approved.`);
+      } else {
+        setSelectedReel(reel);
+      }
     }
   }, [reel]);
 
@@ -44,6 +49,11 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
           setError(`Reel #${exact.reel_no} has been voided.`);
           return;
         }
+        if (exact.pending_count > 0 || exact.approval_status === 'PENDING') {
+          const dateStr = exact.created_at || exact.purchase_date ? formatDate(exact.created_at || exact.purchase_date) : '';
+          setError(`Reel #${exact.reel_no} is awaiting Admin approval${dateStr ? ` (created on ${dateStr})` : ''} and cannot be used until approved.`);
+          return;
+        }
         setSelectedReel(exact);
       } else {
         setError(`No active reel found with Reel No "${search.trim()}".`);
@@ -57,6 +67,12 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedReel) return;
+
+    if (selectedReel.pending_count > 0 || selectedReel.approval_status === 'PENDING') {
+      const dateStr = selectedReel.created_at || selectedReel.purchase_date ? formatDate(selectedReel.created_at || selectedReel.purchase_date) : '';
+      setError(`Reel #${selectedReel.reel_no} is awaiting Admin approval${dateStr ? ` (created on ${dateStr})` : ''} and cannot be used until approved.`);
+      return;
+    }
 
     setError('');
     const weightVal = Number(currentWeight);
@@ -168,6 +184,9 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
                   <option value="E-Flute">E-Flute</option>
                   <option value="Narrow-Flute">Narrow-Flute</option>
                   <option value="Sheater">Sheater</option>
+                  <option value="Sold to revaty">Sold to revaty</option>
+                  <option value="Return">Return</option>
+                  <option value="Others">Others</option>
                 </select>
               </div>
 

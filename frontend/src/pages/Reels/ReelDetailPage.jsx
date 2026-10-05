@@ -6,7 +6,7 @@ import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';
 import Pagination from '../../components/Common/Pagination';
 import Toast from '../../components/Common/Toast';
-import { formatDate, formatDateTime, formatWeight, getStatusBadgeStyle, getApprovalBadgeStyle } from '../../utils/formatters';
+import { formatDate, formatDateTime, formatWeight, formatCurrency, getStatusBadgeStyle, getApprovalBadgeStyle } from '../../utils/formatters';
 import { ArrowLeft, CheckCircle2, AlertTriangle, PlusCircle, Activity, ShieldAlert, Check, X, XCircle } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { RecordUsageModal } from './RecordUsageModal';
@@ -158,21 +158,31 @@ export const ReelDetailPage = () => {
           <div className="flex items-center gap-2 flex-wrap">
             {/* Record Usage (Operator & Admin) */}
             {(isRoleOperator || isRoleAdmin) && reel.status !== 'NILL' && (
-              <button
-                onClick={() => setShowUsageModal(true)}
-                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
-              >
-                Record Usage
-              </button>
+              (reel.pending_count > 0 || reel.approval_status === 'PENDING') ? (
+                <button
+                  disabled
+                  className="px-3.5 py-2 bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-slate-700 rounded-xl text-xs font-semibold cursor-not-allowed"
+                  title={`Locked: Not approved by Admin (Since ${formatDate(reel.created_at || reel.purchase_date)})`}
+                >
+                  Record Usage (Locked)
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowUsageModal(true)}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
+                >
+                  Record Usage
+                </button>
+              )
             )}
 
-            {/* Master Correction (Admin Only) */}
-            {isRoleAdmin && (
+            {/* Master Correction / Edit Details (Supervisor & Admin) */}
+            {(isRoleAdmin || isRoleSupervisor) && (
               <button
                 onClick={() => setShowCorrectionModal(true)}
                 className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
               >
-                Master Correction
+                Edit Reel Details
               </button>
             )}
 
@@ -189,6 +199,31 @@ export const ReelDetailPage = () => {
         )}
       </div>
 
+      {/* Unapproved Warning Banner */}
+      {(reel.pending_count > 0 || reel.approval_status === 'PENDING') && (
+        <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3 text-amber-900 dark:text-amber-200 text-xs">
+            <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
+            <div>
+              <span className="font-bold text-amber-950 dark:text-amber-100 text-sm block">
+                Not approved by Admin (Since {formatDate(reel.created_at || reel.purchase_date)})
+              </span>
+              <p className="text-amber-800 dark:text-amber-300 mt-0.5">
+                This inward reel is awaiting Admin approval. Weight usage and alterations are locked until approved.
+              </p>
+            </div>
+          </div>
+          {canApprove && (
+            <button
+              onClick={() => navigate('/approvals')}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shadow-xs shrink-0"
+            >
+              Review in Approvals
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Main Specs Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Physical Specs */}
@@ -199,12 +234,14 @@ export const ReelDetailPage = () => {
           <SpecRow label="Bursting Factor (BF)" value={reel.bf} />
           <SpecRow label="GSM" value={reel.gsm} />
           <SpecRow label="Size / Width" value={`${reel.size} cm`} />
+          <SpecRow label="Rate / KG" value={reel.rate_per_kg ? `₹${reel.rate_per_kg}/kg` : 'N/A'} />
         </div>
 
         {/* Inventory Weight Status */}
         <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-xs space-y-3">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Inventory Weight</h3>
+          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Inventory Weight & Value</h3>
           <SpecRow label="Current Balance" value={formatWeight(currentWeight)} highlight />
+          <SpecRow label="Current Stock Value" value={formatCurrency(Math.round((currentWeight || 0) * (reel.rate_per_kg || 55)))} bold />
           <SpecRow label="Initial Max Weight" value={formatWeight(reel.max_weight)} />
           <SpecRow label="Consumed Stock" value={formatWeight(reel.consumed_weight || Math.max(reel.max_weight - currentWeight, 0))} />
           <SpecRow label="Status" value={reel.status} />

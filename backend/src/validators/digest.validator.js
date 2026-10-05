@@ -4,6 +4,10 @@ import { paginationQuerySchema, dateOnlySchema } from './common.validator.js';
 export const previewDigestSchema = z.object({
   query: z.object({
     date: dateOnlySchema.optional(),
+    from_date: dateOnlySchema.optional(),
+    to_date: dateOnlySchema.optional(),
+    fromDate: dateOnlySchema.optional(),
+    toDate: dateOnlySchema.optional(),
   }),
 });
 

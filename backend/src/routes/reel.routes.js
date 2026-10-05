@@ -41,9 +41,9 @@ router.get('/', validate(listReelsSchema), listReels);
 router.get('/:id', validate(getReelSchema), getReel);
 router.get('/:id/journey', validate(getReelJourneySchema), getReelJourney);
 
-router.post('/', authorizeRoles(ROLES.OPERATOR, ROLES.ADMIN), validate(createReelSchema), createReel);
-router.post('/:id/usage', authorizeRoles(ROLES.OPERATOR, ROLES.ADMIN), validate(recordUsageSchema), recordUsage);
-router.patch('/:id', authorizeRoles(ROLES.ADMIN), validate(updateReelSchema), updateReel);
+router.post('/', authorizeRoles(ROLES.OPERATOR, ROLES.SUPERVISOR, ROLES.ADMIN), validate(createReelSchema), createReel);
+router.post('/:id/usage', authorizeRoles(ROLES.OPERATOR, ROLES.SUPERVISOR, ROLES.ADMIN), validate(recordUsageSchema), recordUsage);
+router.patch('/:id', authorizeRoles(ROLES.SUPERVISOR, ROLES.ADMIN), validate(updateReelSchema), updateReel);
 router.post('/:id/void', authorizeRoles(ROLES.ADMIN), validate(voidReelSchema), voidReel);
 
 export const reelRoutes = router;

@@ -8,6 +8,7 @@ import { NOTIFICATION_TYPES } from '../constants/notificationTypes.js';
 import { deriveReelStatus } from '../utils/reelStatus.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { withTransaction } from '../config/db.js';
+import { ROLES } from '../constants/roles.js';
 import { createApiError } from '../utils/ApiError.js';
 import { ERROR_CODES } from '../constants/errorCodes.js';
 
@@ -137,7 +138,11 @@ export async function listPendingApprovals({ filters = {}, actor }) {
  */
 export async function listMyEntries({ filters = {}, actor }) {
   const { page, limit, skip } = parsePagination(filters);
-  const query = { performed_by: actor.id };
+  const query = {};
+
+  if (actor.role === ROLES.OPERATOR) {
+    query.performed_by = actor.id;
+  }
 
   if (filters.status) {
     query.approval_status = filters.status.toUpperCase();
@@ -169,6 +174,8 @@ export async function listMyEntries({ filters = {}, actor }) {
     const searchConditions = [
       { reel_no: regex },
       { performed_by_name: regex },
+      { approved_by_name: regex },
+      { decline_reason: regex },
       { event_type: regex },
       { reel_id: { $in: matchingReelIds } },
     ];
@@ -181,34 +188,52 @@ export async function listMyEntries({ filters = {}, actor }) {
   }
 
   const sortDir = filters.sort === 'oldest' || filters.sort === 'performed_at' ? 1 : -1;
+  const countQueryBase = actor.role === ROLES.OPERATOR ? { performed_by: actor.id } : {};
 
   const [rawEvents, total, pendingCount, confirmedCount, declinedCount] = await Promise.all([
     ReelEvent.find(query).sort({ performed_at: sortDir, _id: sortDir }).skip(skip).limit(limit).lean(),
     ReelEvent.countDocuments(query),
-    ReelEvent.countDocuments(query),
-    ReelEvent.countDocuments({ performed_by: actor.id, approval_status: APPROVAL_STATUS.PENDING }),
-    ReelEvent.countDocuments({ performed_by: actor.id, approval_status: APPROVAL_STATUS.CONFIRMED }),
-    ReelEvent.countDocuments({ performed_by: actor.id, approval_status: APPROVAL_STATUS.DECLINED }),
+    ReelEvent.countDocuments({ ...countQueryBase, approval_status: APPROVAL_STATUS.PENDING }),
+    ReelEvent.countDocuments({ ...countQueryBase, approval_status: APPROVAL_STATUS.CONFIRMED }),
+    ReelEvent.countDocuments({ ...countQueryBase, approval_status: APPROVAL_STATUS.DECLINED }),
   ]);
+
+  const reelIds = [...new Set(rawEvents.map((e) => (e.reel_id ? e.reel_id.toString() : null)).filter(Boolean))];
+  const reels = await Reel.find({ _id: { $in: reelIds } }).lean();
+  const reelMap = new Map(reels.map((r) => [r._id.toString(), r]));
 
   const items = rawEvents.map((event) => {
     const reelIdStr = event.reel_id ? event.reel_id.toString() : null;
+    const reelObj = reelIdStr ? reelMap.get(reelIdStr) : null;
+
     const item = {
       id: event._id.toString(),
       reel_id: reelIdStr,
       event_type: event.event_type,
       approval_status: event.approval_status,
-      reel_no: event.reel_no,
-      reel: {
-        id: reelIdStr,
-        reel_no: event.reel_no,
-      },
-      performed_at: event.performed_at,
-      payload: event.payload || {},
-      decision: event.approved_by_name
+      reel_no: event.reel_no || (reelObj ? reelObj.reel_no : 'N/A'),
+      reel: reelObj
         ? {
-            by_name: event.approved_by_name,
-            at: event.approved_at,
+            id: reelObj._id.toString(),
+            reel_no: reelObj.reel_no,
+            quality: reelObj.quality,
+            supplier_name: reelObj.supplier_name,
+            master_key: reelObj.master_key,
+            master_code: reelObj.master_code || reelObj.master_key,
+            previous_weight: reelObj.previous_weight,
+          }
+        : {
+            id: reelIdStr,
+            reel_no: event.reel_no,
+          },
+      performed_by_name: event.performed_by_name || 'Operator',
+      performed_at: event.performed_at,
+      decline_reason: event.decline_reason || null,
+      payload: event.payload || {},
+      decision: (event.approved_by_name || event.decline_reason)
+        ? {
+            by_name: event.approved_by_name || 'Supervisor / Admin',
+            at: event.approved_at || event.performed_at,
             reason: event.decline_reason || null,
           }
         : null,

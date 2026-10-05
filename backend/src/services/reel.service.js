@@ -7,6 +7,7 @@ import { ROLES } from '../constants/roles.js';
 import { EVENT_TYPES } from '../constants/eventTypes.js';
 import { APPROVAL_STATUS } from '../constants/approvalStatus.js';
 import { RECORD_STATUS } from '../constants/reelStatus.js';
+import { STATIONS } from '../constants/stations.js';
 import { deriveReelStatus } from '../utils/reelStatus.js';
 import { generateMasterKey } from '../utils/masterKeyGenerator.js';
 import { buildReelFilter } from '../utils/buildReelFilter.js';
@@ -17,6 +18,69 @@ import { resolveMasterProduct } from './masterProduct.service.js';
 import { withTransaction } from '../config/db.js';
 import { createApiError } from '../utils/ApiError.js';
 import { ERROR_CODES } from '../constants/errorCodes.js';
+
+/**
+ * Helper to match a reel's physical properties to a MasterCode bucket.
+ */
+export function matchReelToMasterCode(reel, mc) {
+  if (!mc) return false;
+  if (reel.master_code && (String(reel.master_code) === String(mc.master_code) || String(reel.master_code) === `Master Code ${mc.master_code}`)) {
+    return true;
+  }
+  if (reel.master_code_id && String(reel.master_code_id) === String(mc._id || mc.id || mc.master_code_id)) {
+    return true;
+  }
+
+  const reelQ = String(reel.quality || '').trim().toUpperCase();
+  const mcQ = String(mc.quality || '').trim().toUpperCase();
+  const mcBf = String(mc.bf || '').trim().toUpperCase();
+  const mcName = String(mc.master_code_name || '').trim().toUpperCase();
+
+  let qualityMatches = false;
+  if (mcQ === 'DUPLEX' || !mcQ) {
+    if (mcBf === 'ULTRA' || mcName.includes('ULTRA')) {
+      qualityMatches = reelQ === 'ULTRA' || reelQ === 'DUPLEX';
+    } else if (mcBf === 'DCB' || mcName.includes('DCB')) {
+      qualityMatches = reelQ === 'DCB' || reelQ === 'DUPLEX';
+    } else if (mcBf === 'SPECTRA' || mcName.includes('SPECTRA')) {
+      qualityMatches = reelQ === 'SPECTRA' || reelQ === 'DUPLEX';
+    } else {
+      qualityMatches = reelQ === 'DUPLEX' || reelQ === 'DCB' || reelQ === 'ULTRA' || reelQ === 'SPECTRA';
+    }
+  } else if (mcQ === 'IMPORT KRAFT' || mcQ === 'IMPORTANT') {
+    qualityMatches = reelQ === 'IMPORT KRAFT' || reelQ === 'IMPORTANT';
+  } else {
+    qualityMatches = reelQ === mcQ;
+  }
+
+  if (!qualityMatches) return false;
+
+  const numericMcBf = Number(mc.bf);
+  if (!isNaN(numericMcBf) && numericMcBf > 0) {
+    if (Number(reel.bf) !== numericMcBf) return false;
+  }
+
+  const mcGsmStr = String(mc.gsm || '').trim();
+  const reelGsm = Number(reel.gsm);
+  if (mcGsmStr) {
+    if (mcGsmStr.includes('/')) {
+      const parts = mcGsmStr.split('/').map((p) => Number(p.trim())).filter((n) => !isNaN(n));
+      if (!parts.includes(reelGsm)) return false;
+    } else if (mcGsmStr.endsWith('+')) {
+      const minGsm = Number(mcGsmStr.replace('+', '').trim());
+      if (reelGsm < minGsm) return false;
+    } else if (!isNaN(Number(mcGsmStr)) && Number(mcGsmStr) > 0) {
+      if (reelGsm !== Number(mcGsmStr)) return false;
+    }
+  }
+
+  const numericMcSize = Number(mc.size);
+  if (!isNaN(numericMcSize) && numericMcSize > 0) {
+    if (Number(reel.size) !== numericMcSize) return false;
+  }
+
+  return true;
+}
 
 /**
  * Lists reels with filters, pagination, and sorting (docs/routes/reels.md).
@@ -66,20 +130,57 @@ export async function listReels({ filters = {}, actor }) {
     });
 
     matchedMasterCodeDocs.forEach((mc) => {
-      if (mc.quality && mc.gsm && mc.bf && mc.size) {
-        try {
-          const gen = generateMasterKey({ quality: mc.quality, gsm: mc.gsm, bf: mc.bf, size: mc.size });
-          if (gen?.master_key) {
-            mcOrConditions.push({ master_key: gen.master_key });
-          }
-        } catch {}
-        mcOrConditions.push({
-          quality: String(mc.quality).trim().toUpperCase(),
-          gsm: Number(mc.gsm),
-          bf: Number(mc.bf),
-          size: Number(mc.size),
-        });
+      if (mc._id) mcOrConditions.push({ master_code_id: mc._id });
+      if (mc.master_code) {
+        mcOrConditions.push({ master_code: mc.master_code });
+        mcOrConditions.push({ master_code: `Master Code ${mc.master_code}` });
       }
+
+      const mcQ = String(mc.quality || '').trim().toUpperCase();
+      const mcBf = String(mc.bf || '').trim().toUpperCase();
+      const mcName = String(mc.master_code_name || '').trim().toUpperCase();
+      const cond = {};
+
+      if (mcQ === 'DUPLEX' || !mcQ) {
+        if (mcBf === 'ULTRA' || mcName.includes('ULTRA')) {
+          cond.quality = { $in: ['ULTRA', 'DUPLEX', 'ultra', 'duplex'] };
+        } else if (mcBf === 'DCB' || mcName.includes('DCB')) {
+          cond.quality = { $in: ['DCB', 'DUPLEX', 'dcb', 'duplex'] };
+        } else if (mcBf === 'SPECTRA' || mcName.includes('SPECTRA')) {
+          cond.quality = { $in: ['SPECTRA', 'DUPLEX', 'spectra', 'duplex'] };
+        } else {
+          cond.quality = { $in: ['DUPLEX', 'DCB', 'ULTRA', 'SPECTRA', 'duplex', 'dcb', 'ultra', 'spectra'] };
+        }
+      } else if (mcQ === 'IMPORT KRAFT' || mcQ === 'IMPORTANT') {
+        cond.quality = { $in: ['IMPORT KRAFT', 'IMPORTANT', 'import kraft', 'important'] };
+      } else {
+        cond.quality = new RegExp(`^${mc.quality}$`, 'i');
+      }
+
+      const numBf = Number(mc.bf);
+      if (!isNaN(numBf) && numBf > 0) {
+        cond.bf = numBf;
+      }
+
+      const gsmStr = String(mc.gsm || '').trim();
+      if (gsmStr) {
+        if (gsmStr.includes('/')) {
+          const parts = gsmStr.split('/').map((p) => Number(p.trim())).filter((n) => !isNaN(n));
+          cond.gsm = { $in: parts };
+        } else if (gsmStr.endsWith('+')) {
+          const minGsm = Number(gsmStr.replace('+', '').trim());
+          cond.gsm = { $gte: minGsm };
+        } else if (!isNaN(Number(gsmStr)) && Number(gsmStr) > 0) {
+          cond.gsm = Number(gsmStr);
+        }
+      }
+
+      const numSize = Number(mc.size);
+      if (!isNaN(numSize) && numSize > 0) {
+        cond.size = numSize;
+      }
+
+      mcOrConditions.push(cond);
     });
 
     delete query.master_code;
@@ -98,38 +199,23 @@ export async function listReels({ filters = {}, actor }) {
   const [reels, total, masterCodeDocs, masterProductDocs] = await Promise.all([
     Reel.find(query).sort(sortOption).skip(skip).limit(limit).lean(),
     Reel.countDocuments(query),
-    MasterCode.find({ status: 'ACTIVE' }).select('master_code quality gsm bf size').lean(),
+    MasterCode.find({ status: 'ACTIVE' }).lean(),
     MasterProduct.find({ is_active: true, master_code: { $ne: null } }).select('master_key master_code quality gsm bf size').lean(),
   ]);
 
-  const masterCodeMap = new Map();
-  const masterKeyToCodeMap = new Map();
-
-  if (masterCodeDocs && masterCodeDocs.length > 0) {
-    masterCodeDocs.forEach((mc) => {
-      if (mc.master_code) {
-        const key = `${String(mc.quality).toUpperCase().trim()}-${Number(mc.gsm)}-${Number(mc.bf)}-${Number(mc.size)}`;
-        masterCodeMap.set(key, mc.master_code);
-      }
-    });
-  }
-
-  if (masterProductDocs && masterProductDocs.length > 0) {
-    masterProductDocs.forEach((mp) => {
-      if (mp.master_code) {
-        if (mp.master_key) masterKeyToCodeMap.set(mp.master_key, mp.master_code);
-        const key = `${String(mp.quality).toUpperCase().trim()}-${Number(mp.gsm)}-${Number(mp.bf)}-${Number(mp.size)}`;
-        if (!masterCodeMap.has(key)) masterCodeMap.set(key, mp.master_code);
-      }
-    });
-  }
-
   const items = reels.map((reel) => {
-    const specKey = `${String(reel.quality || '').toUpperCase().trim()}-${Number(reel.gsm)}-${Number(reel.bf)}-${Number(reel.size)}`;
-    const isDirectMasterCode = reel.master_code && reel.master_code !== reel.master_key;
-    const resolvedMasterCode = isDirectMasterCode
-      ? reel.master_code
-      : (masterCodeMap.get(specKey) || (reel.master_key ? masterKeyToCodeMap.get(reel.master_key) : null) || null);
+    let resolvedMasterCode = null;
+    if (reel.master_code && reel.master_code !== reel.master_key) {
+      resolvedMasterCode = reel.master_code;
+    } else if (reel.master_code_id) {
+      const mcDoc = masterCodeDocs.find((m) => String(m._id) === String(reel.master_code_id));
+      if (mcDoc) resolvedMasterCode = mcDoc.master_code;
+    }
+
+    if (!resolvedMasterCode) {
+      const matched = masterCodeDocs.find((mc) => matchReelToMasterCode(reel, mc));
+      if (matched) resolvedMasterCode = matched.master_code;
+    }
 
     const json = {
       id: reel._id.toString(),
@@ -145,10 +231,13 @@ export async function listReels({ filters = {}, actor }) {
       supplier_name: reel.supplier_name,
       size: reel.size,
       gsm: reel.gsm,
+      rate_per_kg: reel.rate_per_kg ?? 0,
+      total_cost: Math.round(((reel.rate_per_kg || 0) * (reel.previous_weight ?? reel.max_weight)) * 100) / 100,
       max_weight: reel.max_weight,
       previous_weight: reel.previous_weight,
       consumed_weight: Math.round((reel.max_weight - reel.previous_weight) * 100) / 100,
       status: reel.status,
+      pending_count: reel.pending_count || 0,
       approval_status: reel.pending_count > 0 ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED,
       custom_fields: reel.custom_fields || {},
       stations_used: reel.stations_used || [],
@@ -230,6 +319,8 @@ export async function searchReels({ query = {}, actor }) {
     previous_weight: reel.previous_weight,
     max_weight: reel.max_weight,
     status: reel.status,
+    pending_count: reel.pending_count || 0,
+    created_at: reel.created_at || reel.purchase_date,
     approval_status: reel.pending_count > 0 ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED,
   }));
 }
@@ -246,6 +337,19 @@ export async function getReel({ id, actor }) {
     throw createApiError(404, ERROR_CODES.NOT_FOUND, 'Reel not found.');
   }
 
+  let resolvedMasterCode = reel.master_code || null;
+  if (!resolvedMasterCode || resolvedMasterCode === reel.master_key) {
+    const masterCodeDocs = await MasterCode.find({ status: 'ACTIVE' }).lean();
+    if (reel.master_code_id) {
+      const mcDoc = masterCodeDocs.find((m) => String(m._id) === String(reel.master_code_id));
+      if (mcDoc) resolvedMasterCode = mcDoc.master_code;
+    }
+    if (!resolvedMasterCode) {
+      const matched = masterCodeDocs.find((mc) => matchReelToMasterCode(reel, mc));
+      if (matched) resolvedMasterCode = matched.master_code;
+    }
+  }
+
   return {
     id: reel._id.toString(),
     sr_no: reel.sr_no,
@@ -253,17 +357,20 @@ export async function getReel({ id, actor }) {
     master_product_id: reel.master_product_id ? reel.master_product_id.toString() : null,
     master_key: reel.master_key || null,
     master_code_id: reel.master_code_id ? reel.master_code_id.toString() : null,
-    master_code: reel.master_code || null,
+    master_code: resolvedMasterCode || null,
     quality: reel.quality,
     bf: reel.bf,
     purchase_date: reel.purchase_date,
     supplier_name: reel.supplier_name,
     size: reel.size,
     gsm: reel.gsm,
+    rate_per_kg: reel.rate_per_kg ?? 0,
+    total_cost: Math.round(((reel.rate_per_kg || 0) * (reel.previous_weight ?? reel.max_weight)) * 100) / 100,
     max_weight: reel.max_weight,
     previous_weight: reel.previous_weight,
     consumed_weight: Math.round((reel.max_weight - reel.previous_weight) * 100) / 100,
     status: reel.status,
+    pending_count: reel.pending_count || 0,
     approval_status: reel.pending_count > 0 ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED,
     custom_fields: reel.custom_fields || {},
     stations_used: reel.stations_used || [],
@@ -377,9 +484,17 @@ export async function createReel({ input, actor }) {
     }
 
     const sr_no = await getNextSequence('reel_sr_no', session);
-    const isOperator = actor.role === ROLES.OPERATOR;
-    const initialApprovalStatus = isOperator ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED;
-    const pendingCount = isOperator ? 1 : 0;
+    
+    // -------------------------------------------------------------
+    // PREVIOUS CODE (Approval Workflow for Reel Creation):
+    // const isOperator = actor.role === ROLES.OPERATOR;
+    // const initialApprovalStatus = isOperator ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED;
+    // const pendingCount = isOperator ? 1 : 0;
+    // -------------------------------------------------------------
+
+    // CURRENT FLOW: Approval dismantled/bypassed — reel creation is automatically confirmed immediately
+    const initialApprovalStatus = APPROVAL_STATUS.CONFIRMED;
+    const pendingCount = 0;
     const status = deriveReelStatus({ previous_weight: input.max_weight, max_weight: input.max_weight });
 
     const masterProduct = await resolveMasterProduct({
@@ -408,6 +523,7 @@ export async function createReel({ input, actor }) {
           supplier_name: input.supplier_name.trim(),
           size: input.size,
           gsm: input.gsm,
+          rate_per_kg: input.rate_per_kg !== undefined && input.rate_per_kg !== null ? Number(input.rate_per_kg) : 0,
           max_weight: input.max_weight,
           previous_weight: input.max_weight,
           status,
@@ -427,15 +543,18 @@ export async function createReel({ input, actor }) {
       event_type: EVENT_TYPES.CREATED,
       approval_status: initialApprovalStatus,
       performed_by: actor,
-      approved_by: isOperator ? null : actor,
+      // PREVIOUS CODE: approved_by: isOperator ? null : actor,
+      approved_by: actor,
       payload: {
         max_weight: input.max_weight,
+        rate_per_kg: reel.rate_per_kg,
         fields: {
           reel_no: reel.reel_no,
           quality: reel.quality,
           bf: reel.bf,
           gsm: reel.gsm,
           size: reel.size,
+          rate_per_kg: reel.rate_per_kg,
           supplier_name: reel.supplier_name,
           purchase_date: reel.purchase_date,
           custom_fields: reel.custom_fields,
@@ -507,6 +626,10 @@ export async function updateReel({ id, input, actor }) {
       changes.push({ field: 'bf', from: reel.bf, to: input.bf });
       reel.bf = input.bf;
     }
+    if (input.rate_per_kg !== undefined && Number(input.rate_per_kg) !== reel.rate_per_kg) {
+      changes.push({ field: 'rate_per_kg', from: reel.rate_per_kg, to: Number(input.rate_per_kg) });
+      reel.rate_per_kg = Number(input.rate_per_kg);
+    }
 
     // Re-resolve MasterProduct if specification changed
     const masterProduct = await resolveMasterProduct({
@@ -531,6 +654,13 @@ export async function updateReel({ id, input, actor }) {
     if (input.custom_fields !== undefined) {
       changes.push({ field: 'custom_fields', from: reel.custom_fields, to: input.custom_fields });
       reel.custom_fields = input.custom_fields;
+    }
+    if (input.station && input.station.trim()) {
+      const stationTrim = input.station.trim();
+      if (!reel.stations_used.includes(stationTrim)) {
+        reel.stations_used.push(stationTrim);
+        changes.push({ field: 'station', from: null, to: stationTrim });
+      }
     }
 
     reel.status = deriveReelStatus({ previous_weight: reel.previous_weight, max_weight: reel.max_weight });
@@ -706,7 +836,7 @@ export async function getFilterOptions() {
     master_keys: masterKeys.filter(Boolean).sort(),
     master_codes: cleanMasterCodes,
     statuses: statuses.filter(Boolean).sort(),
-    stations: stations.filter(Boolean).sort(),
+    stations: Array.from(new Set([...STATIONS, ...stations.filter(Boolean)])).sort(),
     custom_fields: fieldDefs.map((f) => ({ key: f.key, name: f.name, type: f.field_type, options: f.options || [] })),
   };
 }

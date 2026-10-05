@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Plus, Search, RefreshCw, Eye, Scale, Edit3, Trash2,
-  X, RotateCcw, Check, ChevronDown, ChevronUp, Calendar, IndianRupee
+  X, RotateCcw, Check, ChevronDown, ChevronUp, Calendar, IndianRupee, Clock, Printer, ArrowUpDown
 } from 'lucide-react';
 import { reelApi } from '../../api/reelApi';
 import { useAuth } from '../../auth/AuthContext';
@@ -29,15 +29,20 @@ const formatMasterCodeBadge = (code) => {
 };
 
 const BASE_FIELDS = [
-  { key: 'supplier',       label: 'Supplier Name',        apiKey: 'supplier' },
-  { key: 'master_code',    label: 'Master Code',          apiKey: 'master_code' },
-  { key: 'paper_quality',  label: 'Paper Quality',        apiKey: 'quality' },
-  { key: 'gsm',            label: 'GSM',                  apiKey: 'gsm' },
-  { key: 'bf',             label: 'Bursting Factor (BF)', apiKey: 'bf' },
-  { key: 'width_mm',       label: 'Size / Width (cm)',    apiKey: 'size' },
-  { key: 'status',         label: 'Reel Status',          apiKey: 'status' },
-  { key: 'station',        label: 'Station Used',         apiKey: 'station' },
+  { key: 'supplier', label: 'Supplier Name', apiKey: 'supplier' },
+  { key: 'master_code', label: 'Master Code', apiKey: 'master_code' },
+  { key: 'paper_quality', label: 'Paper Quality', apiKey: 'quality' },
+  { key: 'gsm', label: 'GSM', apiKey: 'gsm' },
+  { key: 'bf', label: 'Bursting Factor (BF)', apiKey: 'bf' },
+  { key: 'width_mm', label: 'Size / Width (cm)', apiKey: 'size' },
+  { key: 'status', label: 'Reel Status', apiKey: 'status' },
+  { key: 'station', label: 'Station Used', apiKey: 'station' },
 ];
+
+const SORT_LABELS = {
+  reel: 'Reel No.', specs: 'Specifications', supplier: 'Supplier',
+  weight: 'Net Weight', price: 'Price / KG', status: 'Status', created: 'Created',
+};
 
 const EMPTY_FILTER_VALUES = {
   supplier: [], master_code: [], paper_quality: [], gsm: [],
@@ -50,17 +55,19 @@ export default function ReelListPage() {
   const [searchParams] = useSearchParams();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [usageReel,      setUsageReel]        = useState(null);
-  const [correctionReel, setCorrectionReel]   = useState(null);
-  const [voidReel,       setVoidReel]         = useState(null);
+  const [usageReel, setUsageReel] = useState(null);
+  const [correctionReel, setCorrectionReel] = useState(null);
+  const [voidReel, setVoidReel] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [sortConfig, setSortConfig] = useState([]); // [{ key, dir }] in priority order
 
-  const [reels,   setReels]   = useState([]);
+  const [reels, setReels] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
+  const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({
-    page:       parseInt(searchParams.get('page')  || '1',  10),
-    limit:      parseInt(searchParams.get('limit') || '15', 10),
-    total:      0,
+    page: parseInt(searchParams.get('page') || '1', 10),
+    limit: parseInt(searchParams.get('limit') || '15', 10),
+    total: 0,
     totalPages: 1,
   });
 
@@ -94,7 +101,7 @@ export default function ReelListPage() {
 
   // Creation Date Filters
   const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo]     = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   // Dropdown options from backend
   const [filterOptions, setFilterOptions] = useState({
@@ -140,15 +147,15 @@ export default function ReelListPage() {
         console.log('[ReelListPage] Loaded Filter Options:', res?.data);
         if (res.success && res.data) {
           setFilterOptions({
-            qualities:     res.data.qualities     || [],
-            gsms:          res.data.gsms          || [],
-            bfs:           res.data.bfs           || [],
-            sizes:         res.data.sizes         || [],
-            suppliers:     res.data.suppliers     || [],
-            master_codes:  (res.data.master_codes || [])
+            qualities: res.data.qualities || [],
+            gsms: res.data.gsms || [],
+            bfs: res.data.bfs || [],
+            sizes: res.data.sizes || [],
+            suppliers: res.data.suppliers || [],
+            master_codes: (res.data.master_codes || [])
               .filter((code) => Boolean(code) && !/^[A-Z]+-G\d+-BF\d+-S\d+/.test(code)),
-            statuses:      res.data.statuses      || [],
-            stations:      res.data.stations      || [],
+            statuses: res.data.statuses || [],
+            stations: res.data.stations || [],
             custom_fields: res.data.custom_fields || [],
           });
         }
@@ -161,18 +168,18 @@ export default function ReelListPage() {
     const params = { page: pagination.page, limit: pagination.limit };
     if (searchQ.trim()) params.q = searchQ.trim();
     if (dateFrom) params.purchase_date_from = dateFrom;
-    if (dateTo)   params.purchase_date_to   = dateTo;
+    if (dateTo) params.purchase_date_to = dateTo;
 
     const csv = (arr) => (Array.isArray(arr) && arr.length ? arr.join(',') : undefined);
 
-    if (csv(filterValues.supplier))       params.supplier     = csv(filterValues.supplier);
-    if (csv(filterValues.master_code))    params.master_code  = csv(filterValues.master_code);
-    if (csv(filterValues.paper_quality))  params.quality      = csv(filterValues.paper_quality);
-    if (csv(filterValues.gsm))            params.gsm          = csv(filterValues.gsm);
-    if (csv(filterValues.bf))             params.bf           = csv(filterValues.bf);
-    if (csv(filterValues.width_mm))       params.size         = csv(filterValues.width_mm);
-    if (csv(filterValues.status))         params.status       = csv(filterValues.status);
-    if (csv(filterValues.station))        params.station      = csv(filterValues.station);
+    if (csv(filterValues.supplier)) params.supplier = csv(filterValues.supplier);
+    if (csv(filterValues.master_code)) params.master_code = csv(filterValues.master_code);
+    if (csv(filterValues.paper_quality)) params.quality = csv(filterValues.paper_quality);
+    if (csv(filterValues.gsm)) params.gsm = csv(filterValues.gsm);
+    if (csv(filterValues.bf)) params.bf = csv(filterValues.bf);
+    if (csv(filterValues.width_mm)) params.size = csv(filterValues.width_mm);
+    if (csv(filterValues.status)) params.status = csv(filterValues.status);
+    if (csv(filterValues.station)) params.station = csv(filterValues.station);
 
     if (searchParams.get('aging')) {
       params.aging_days = searchParams.get('aging');
@@ -195,7 +202,7 @@ export default function ReelListPage() {
     console.log('[ReelListPage] Fetching Reels with API Params:', params);
     try {
       const response = await reelApi.getReels(params);
-      const items    = response.data || [];
+      const items = response.data || [];
       console.log(`[ReelListPage] Received ${items.length} Reels:`, items);
       setReels(items);
       const meta = response.meta?.pagination || response.meta || {};
@@ -203,9 +210,9 @@ export default function ReelListPage() {
         console.log('[ReelListPage] Pagination Meta:', meta);
         setPagination((prev) => ({
           ...prev,
-          page:       meta.page       || prev.page,
-          limit:      meta.limit      || prev.limit,
-          total:      meta.total      !== undefined ? meta.total : items.length,
+          page: meta.page || prev.page,
+          limit: meta.limit || prev.limit,
+          total: meta.total !== undefined ? meta.total : items.length,
           totalPages: meta.totalPages || 1,
         }));
       }
@@ -218,6 +225,282 @@ export default function ReelListPage() {
   }, [buildApiParams]);
 
   useEffect(() => { fetchReels(); }, [fetchReels]);
+
+  // ── Print / PDF report ──────────────────────────────────────────────────
+  // The inventory table is paginated, so the report fetches every page that
+  // matches the current search/filter state before opening the print dialog.
+  const fetchAllReportReels = useCallback(async () => {
+    const baseParams = buildApiParams();
+    const pageSize = 100;
+    const results = [];
+    let page = 1;
+    let totalPages = null;
+
+    while (page <= (totalPages || 500)) {
+      const response = await reelApi.getReels({ ...baseParams, page, limit: pageSize });
+      const items = Array.isArray(response?.data) ? response.data : [];
+      const meta = response?.meta?.pagination || response?.meta || {};
+      if (totalPages === null) {
+        const reportedTotalPages = Number(meta.totalPages);
+        totalPages = Number.isFinite(reportedTotalPages) && reportedTotalPages > 0
+          ? reportedTotalPages
+          : null;
+      }
+
+      results.push(...items);
+      if (items.length === 0) break;
+      if (totalPages === null && items.length < pageSize) break;
+      page += 1;
+    }
+
+    return results;
+  }, [buildApiParams]);
+
+  const escapeReportHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  // ── Sorting (applies to the table AND the printed report) ───────────────
+  const getSortValue = (reel, key) => {
+    switch (key) {
+      case 'reel': {
+        const n = String(reel.reel_no || reel.reel_number || '');
+        const num = parseFloat(n.replace(/[^\d.]/g, ''));
+        return Number.isFinite(num) ? num : n.toLowerCase();
+      }
+      case 'specs': return String(reel.quality || reel.paper_quality || '').toLowerCase();
+      case 'supplier': return String(reel.supplier_name || reel.supplier || '').toLowerCase();
+      case 'weight': return Number(reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight ?? 0);
+      case 'price': return reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 55;
+      case 'status': return String(reel.status || '').toLowerCase();
+      case 'created': {
+        const t = new Date(reel.purchase_date || reel.created_at || reel.createdAt).getTime();
+        return Number.isFinite(t) ? t : 0;
+      }
+      default: return '';
+    }
+  };
+
+  const applySort = (list) => {
+    if (!sortConfig.length) return list;
+    return [...list].sort((x, y) => {
+      for (const { key, dir } of sortConfig) {
+        const factor = dir === 'asc' ? 1 : -1;
+        const vx = getSortValue(x, key);
+        const vy = getSortValue(y, key);
+        let diff;
+        if (typeof vx === 'number' && typeof vy === 'number') diff = vx - vy;
+        else diff = String(vx).localeCompare(String(vy), undefined, { numeric: true });
+        if (diff !== 0) return diff * factor;
+      }
+      return 0;
+    });
+  };
+
+  // Each click cycles a column: ascending -> descending -> removed.
+  // Other columns keep their place, so users can build a multi-level sort.
+  const handleSort = (key) => {
+    setSortConfig((prev) => {
+      const existing = prev.find((c) => c.key === key);
+      if (!existing) return [...prev, { key, dir: 'asc' }];
+      if (existing.dir === 'asc') return prev.map((c) => (c.key === key ? { ...c, dir: 'desc' } : c));
+      return prev.filter((c) => c.key !== key);
+    });
+  };
+
+  const sortSummaryText = () => sortConfig
+    .map((c, i) => `${i + 1}. ${SORT_LABELS[c.key]} (${c.dir === 'asc' ? 'Asc' : 'Desc'})`)
+    .join(', ');
+
+  // Human-readable list of the filters in force, printed on the report.
+  const buildFilterSummary = () => {
+    const parts = [];
+    if (searchQ.trim()) parts.push(`Search: ${searchQ.trim()}`);
+    if (dateFrom || dateTo) parts.push(`Date: ${dateFrom || 'Start'} to ${dateTo || 'Today'}`);
+    if (searchParams.get('aging')) parts.push(`Unused: ${searchParams.get('aging')}+ days`);
+    allFields.forEach((f) => {
+      const vals = Array.isArray(filterValues[f.key]) ? filterValues[f.key] : [];
+      if (vals.length) parts.push(`${f.label}: ${vals.join(', ')}`);
+    });
+    return parts;
+  };
+
+  const openPrintReport = async () => {
+    // Open synchronously from the click event so browsers do not treat the
+    // report window as an unsolicited popup after the async API requests.
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      setError('The report window was blocked. Please allow pop-ups and try again.');
+      return;
+    }
+
+    setReportLoading(true);
+    setError(null);
+    printWindow.document.write('<p style="font-family:Arial,sans-serif;padding:24px">Preparing reel report...</p>');
+
+    try {
+      const reportReels = applySort(await fetchAllReportReels());
+
+      let totalWeight = 0;
+      const rows = reportReels.map((reel, index) => {
+        const currentWeight = reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight ?? 0;
+        totalWeight += Number(currentWeight) || 0;
+        const itemRate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 55;
+        const createdDate = formatDate(reel.purchase_date || reel.created_at || reel.createdAt);
+        const specifications = [
+          reel.quality || reel.paper_quality || '',
+          reel.gsm ? `${reel.gsm} GSM` : '',
+          reel.bf ? `${reel.bf} BF` : '',
+          (reel.size || reel.width_mm) ? `${reel.size || reel.width_mm} cm` : '',
+        ].filter(Boolean).join(' | ');
+
+        return `
+          <tr>
+            <td class="center">${index + 1}</td>
+            <td class="nowrap">Reel #${escapeReportHtml(reel.reel_no || reel.reel_number || 'N/A')}</td>
+            <td>${escapeReportHtml(specifications || 'N/A')}</td>
+            <td>${escapeReportHtml(reel.supplier_name || reel.supplier || 'N/A')}</td>
+            <td class="right nowrap">${escapeReportHtml(formatWeight(currentWeight))}</td>
+            <td class="right nowrap">Rs ${escapeReportHtml(itemRate.toLocaleString('en-IN'))}/kg</td>
+            <td class="center">${escapeReportHtml(reel.status || 'N/A')}</td>
+            <td class="center nowrap">${escapeReportHtml(createdDate || 'N/A')}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const filterParts = buildFilterSummary();
+      const filterText = filterParts.length
+        ? filterParts.map(escapeReportHtml).join(' &nbsp;|&nbsp; ')
+        : 'None (all reels)';
+      const printedOn = new Date().toLocaleString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true,
+      });
+
+      printWindow.document.open();
+      printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Reel Inventory Report</title>
+  <style>
+    /* Zero page margin removes the browser's own header/footer text
+       (date, URL, title). Real margins are created by .report padding and
+       the repeating spacer rows below, so every page gets equal space. */
+    @page { size: A4 landscape; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #111827; background: #fff; }
+
+    .report { width: 100%; padding: 0 14mm; }
+    .spacer { height: 12mm; }
+
+    .letterhead { text-align: center; padding-bottom: 8px; border-bottom: 2.5px solid #111827; }
+    .company { font-size: 24px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin: 0; }
+    .title { font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #374151; margin: 4px 0 0; }
+
+    .meta { width: 100%; border-collapse: collapse; margin: 10px 0 12px; font-size: 10.5px; }
+    .meta td { border: none; padding: 2px 0; vertical-align: top; }
+    .meta .label { font-weight: 700; width: 90px; white-space: nowrap; }
+    .meta .right { text-align: right; }
+
+    table.data { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10.5px; }
+    table.data thead { display: table-header-group; }
+    table.data th { background: #e5e7eb; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; font-size: 10px; }
+    table.data th, table.data td { border: 1px solid #6b7280; padding: 7px 9px; vertical-align: middle; word-break: break-word; }
+    table.data tbody tr { break-inside: avoid; page-break-inside: avoid; }
+    table.data tbody tr:nth-child(even) { background: #f9fafb; }
+    table.data tfoot td.total { font-weight: 800; background: #e5e7eb; }
+
+    .sign { display: flex; justify-content: space-between; gap: 40px; margin-top: 36px; break-inside: avoid; page-break-inside: avoid; }
+    .sign div { flex: 1; border-top: 1px solid #111827; padding-top: 5px; text-align: center; font-size: 10.5px; font-weight: 700; }
+
+    .layout { width: 100%; border-collapse: collapse; }
+    .layout > thead > tr > td, .layout > tfoot > tr > td, .layout > tbody > tr > td { border: none; padding: 0; }
+
+    .center { text-align: center; }
+    .right { text-align: right; }
+    .nowrap { white-space: nowrap; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  </style>
+</head>
+<body>
+  <table class="layout">
+    <thead><tr><td><div class="spacer"></div></td></tr></thead>
+    <tfoot><tr><td><div class="spacer"></div></td></tr></tfoot>
+    <tbody><tr><td>
+      <div class="report">
+        <div class="letterhead">
+          <h1 class="company">Rainbow Packages</h1>
+          <p class="title">Reel Inventory Report</p>
+        </div>
+
+        <table class="meta">
+          <tr>
+            <td class="label">Report Date:</td><td>${escapeReportHtml(printedOn)}</td>
+            <td class="label right">Total Reels:</td><td class="right" style="width:90px">${reportReels.length}</td>
+          </tr>
+          <tr>
+            <td class="label">Filters:</td><td>${filterText}</td>
+            <td class="label right">Total Net Weight:</td><td class="right">${escapeReportHtml(formatWeight(totalWeight))}</td>
+          </tr>
+          ${sortConfig.length ? `<tr><td class="label">Sorted By:</td><td colspan="3">${escapeReportHtml(sortSummaryText())}</td></tr>` : ''}
+        </table>
+
+        <table class="data">
+          <colgroup>
+            <col style="width:5%" />
+            <col style="width:11%" />
+            <col style="width:24%" />
+            <col style="width:19%" />
+            <col style="width:11%" />
+            <col style="width:10%" />
+            <col style="width:8%" />
+            <col style="width:12%" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Sr.</th>
+              <th>Reel No.</th>
+              <th>Specifications</th>
+              <th>Supplier</th>
+              <th>Net Weight</th>
+              <th>Price / KG</th>
+              <th>Status</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows || '<tr><td colspan="8" class="center">No reels found for the selected filters.</td></tr>'}
+          </tbody>
+        </table>
+
+        <div class="sign">
+          <div>Prepared By</div>
+          <div>Checked By</div>
+          <div>Approved By</div>
+        </div>
+      </div>
+    </td></tr></tbody>
+  </table>
+</body>
+</html>`);
+      printWindow.document.close();
+      printWindow.focus();
+
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    } catch (err) {
+      printWindow.close();
+      console.error('[ReelListPage] Failed to generate print report:', err);
+      setError(err.message || 'Failed to generate report.');
+    } finally {
+      setReportLoading(false);
+    }
+  };
 
   // ── Field chip toggle (open/close the sub-value panel) ─────────────────
   const toggleFieldOpen = (fieldKey) => {
@@ -237,7 +520,7 @@ export default function ReelListPage() {
     console.log(`[ReelListPage] Toggling Filter [${fieldKey}]:`, value);
     setFilterValues((prev) => {
       const current = Array.isArray(prev[fieldKey]) ? prev[fieldKey] : [];
-      const exists  = current.includes(String(value));
+      const exists = current.includes(String(value));
       return {
         ...prev,
         [fieldKey]: exists ? current.filter((v) => v !== String(value)) : [...current, String(value)],
@@ -262,13 +545,13 @@ export default function ReelListPage() {
   const getOptionsForField = (fieldKey) => {
     switch (fieldKey) {
       case 'paper_quality': return filterOptions.qualities;
-      case 'gsm':           return filterOptions.gsms;
-      case 'bf':            return filterOptions.bfs;
-      case 'width_mm':      return filterOptions.sizes;
-      case 'supplier':      return filterOptions.suppliers;
-      case 'master_code':   return filterOptions.master_codes;
-      case 'status':        return filterOptions.statuses;
-      case 'station':       return filterOptions.stations;
+      case 'gsm': return filterOptions.gsms;
+      case 'bf': return filterOptions.bfs;
+      case 'width_mm': return filterOptions.sizes;
+      case 'supplier': return filterOptions.suppliers;
+      case 'master_code': return filterOptions.master_codes;
+      case 'status': return filterOptions.statuses;
+      case 'station': return filterOptions.stations;
       default:
         if (fieldKey.startsWith('cf.')) {
           const cf = filterOptions.custom_fields.find((c) => c.key === fieldKey.replace('cf.', ''));
@@ -281,11 +564,25 @@ export default function ReelListPage() {
   const allFields = [
     ...BASE_FIELDS,
     ...filterOptions.custom_fields.map((cf) => ({
-      key:    `cf.${cf.key}`,
-      label:  `${cf.name} (Custom)`,
+      key: `cf.${cf.key}`,
+      label: `${cf.name} (Custom)`,
       apiKey: `cf.${cf.key}`,
     })),
   ];
+
+  const renderSortIcon = (key) => {
+    const idx = sortConfig.findIndex((c) => c.key === key);
+    if (idx === -1) return <ArrowUpDown className="w-3 h-3 opacity-50" />;
+    const Icon = sortConfig[idx].dir === 'asc' ? ChevronUp : ChevronDown;
+    return (
+      <span className="inline-flex items-center gap-0.5 text-indigo-600 dark:text-indigo-400">
+        <Icon className="w-3.5 h-3.5" />
+        {sortConfig.length > 1 && (
+          <span className="text-[10px] font-bold leading-none bg-indigo-100 dark:bg-indigo-900/60 rounded-full px-1.5 py-0.5">{idx + 1}</span>
+        )}
+      </span>
+    );
+  };
 
   const canAction = isRoleAdmin || isRoleSupervisor || isRoleOperator;
 
@@ -293,7 +590,14 @@ export default function ReelListPage() {
     .reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0);
 
   const filteredTotalWeight = reels.reduce((sum, r) => sum + (r.previous_weight ?? r.current_weight_kg ?? r.max_weight ?? 0), 0);
-  const filteredTotalPrice = Math.round(filteredTotalWeight * 55);
+  const filteredTotalPrice = Math.round(
+    reels.reduce((sum, r) => {
+      const w = r.previous_weight ?? r.current_weight_kg ?? r.max_weight ?? 0;
+      const rate = r.rate_per_kg && Number(r.rate_per_kg) > 0 ? Number(r.rate_per_kg) : 55;
+      return sum + (w * rate);
+    }, 0)
+  );
+  const filteredAvgPricePerKg = filteredTotalWeight > 0 ? Math.round((filteredTotalPrice / filteredTotalWeight) * 100) / 100 : 55;
 
   return (
     <div className="space-y-6">
@@ -306,14 +610,23 @@ export default function ReelListPage() {
             Manage paper reels, track weights, record usage, and apply master corrections across database.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap justify-end">
+          <button
+            onClick={openPrintReport}
+            disabled={reportLoading}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium rounded-lg shadow-sm transition"
+            title="Print the complete reel report using the current filters"
+          >
+            <Printer className={reportLoading ? 'w-4 h-4 animate-pulse' : 'w-4 h-4'} />
+            {reportLoading ? 'Preparing Report...' : 'Print / PDF Report'}
+          </button>
           <button onClick={fetchReels}
             className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-700 transition"
             title="Refresh list">
             <RefreshCw className="w-4 h-4" />
           </button>
           {canAction && (
-            <button onClick={() => setShowCreateModal(true)}
+            <button onClick={() => navigate('/reels/create')}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm transition">
               <Plus className="w-4 h-4" />
               Create New Reel
@@ -324,7 +637,7 @@ export default function ReelListPage() {
 
       {/* ── Inventory Live Summary Card ───────────────────────────────── */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 rounded-2xl shadow-md border border-slate-800 flex flex-wrap items-center justify-between gap-6">
-        <div className="flex flex-wrap items-center gap-6 sm:gap-10">
+        <div className="flex flex-wrap items-center gap-6 sm:gap-8">
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Reels in View</p>
             <p className="text-2xl font-extrabold text-white" style={{ fontFamily: 'var(--font-family-display)' }}>
@@ -341,10 +654,19 @@ export default function ReelListPage() {
           <div className="h-8 w-px bg-slate-700/60 hidden sm:block" />
           <div>
             <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
-              <IndianRupee className="w-3.5 h-3.5" /> Total Stock Price Value
+              <IndianRupee className="w-3.5 h-3.5" /> Total Stock Value
             </p>
             <p className="text-2xl font-extrabold text-emerald-400" style={{ fontFamily: 'var(--font-family-display)' }}>
               {formatCurrency(filteredTotalPrice)}
+            </p>
+          </div>
+          <div className="h-8 w-px bg-slate-700/60 hidden sm:block" />
+          <div>
+            <p className="text-[11px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1">
+              <IndianRupee className="w-3.5 h-3.5" /> Price / KG (Avg)
+            </p>
+            <p className="text-2xl font-extrabold text-purple-300" style={{ fontFamily: 'var(--font-family-display)' }}>
+              ₹{filteredAvgPricePerKg.toFixed(2)}/kg
             </p>
           </div>
         </div>
@@ -415,8 +737,8 @@ export default function ReelListPage() {
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {allFields.map((f) => {
-              const isOpen    = openFields.has(f.key);
-              const vals      = Array.isArray(filterValues[f.key]) ? filterValues[f.key] : [];
+              const isOpen = openFields.has(f.key);
+              const vals = Array.isArray(filterValues[f.key]) ? filterValues[f.key] : [];
               const hasFilter = vals.length > 0;
 
               return (
@@ -445,7 +767,7 @@ export default function ReelListPage() {
                     </span>
                   )}
                   {isOpen
-                    ? <ChevronUp   className="w-3 h-3 opacity-60" />
+                    ? <ChevronUp className="w-3 h-3 opacity-60" />
                     : <ChevronDown className="w-3 h-3 opacity-40" />
                   }
                 </button>
@@ -460,7 +782,7 @@ export default function ReelListPage() {
             {allFields
               .filter((f) => openFields.has(f.key))
               .map((f) => {
-                const options  = getOptionsForField(f.key);
+                const options = getOptionsForField(f.key);
                 const selected = Array.isArray(filterValues[f.key]) ? filterValues[f.key] : [];
 
                 return (
@@ -507,7 +829,7 @@ export default function ReelListPage() {
                         </button>
 
                         {options.map((opt) => {
-                          const strOpt  = String(opt);
+                          const strOpt = String(opt);
                           const isChosen = selected.includes(strOpt);
                           return (
                             <button
@@ -577,183 +899,281 @@ export default function ReelListPage() {
       {error && <ErrorAlert message={error} onRetry={fetchReels} />}
 
       {/* ── Table ───────────────────────────────────────────────────────── */}
-      {loading ? (
-        <LoadingState message="Loading reel inventory..." />
-      ) : reels.length === 0 ? (
-        <EmptyState
-          title="No Reels Found"
-          message="No paper reels match your current filter criteria or search query."
-          actionText={canAction ? 'Create Reel' : null}
-          onAction={canAction ? () => setShowCreateModal(true) : null}
-        />
-      ) : (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-700 uppercase tracking-wider text-xs">
-                <tr>
-                  <th className="px-6 py-3">Reel / Barcode</th>
-                  <th className="px-6 py-3">Specifications</th>
-                  <th className="px-6 py-3">Supplier / Location</th>
-                  <th className="px-6 py-3 text-right">Net Weight</th>
-                  <th className="px-6 py-3 text-right">Stock Price</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3">Created</th>
-                  <th className="px-6 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
-                {reels.map((reel) => {
-                  const reelId        = reel.id || reel._id;
-                  const isVoided      = reel.status === 'VOIDED' || reel.record_status === 'VOIDED';
-                  const currentWeight = reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight;
-                  const initialWeight = reel.max_weight ?? reel.initial_weight_kg;
-                  const itemPrice     = Math.round((currentWeight || 0) * 55);
-
-                  const statusStr = (reel.status || '').toUpperCase();
-                  const rowAccent =
-                    statusStr === 'REEL' || statusStr === 'FULL' || statusStr === 'AVAILABLE'
-                      ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-l-4 border-l-emerald-500 hover:bg-emerald-100/90 dark:hover:bg-emerald-900/60'
-                      : statusStr === 'CUT' || statusStr === 'IN_USE'
-                      ? 'bg-amber-50/80 dark:bg-amber-950/40 border-l-4 border-l-amber-500 hover:bg-amber-100/90 dark:hover:bg-amber-900/60'
-                      : statusStr === 'NILL' || statusStr === 'DEPLETED'
-                      ? 'bg-rose-50/80 dark:bg-rose-950/40 border-l-4 border-l-rose-500 hover:bg-rose-100/90 dark:hover:bg-rose-900/60'
-                      : 'bg-slate-50 dark:bg-slate-800 border-l-4 border-l-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50';
-
-                  return (
-                    <tr key={reelId || reel.sr_no}
-                      className={`${rowAccent} transition cursor-pointer`}
-                      onClick={() => navigate(`/reels/${reelId}`)}>
-
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-900 dark:text-white">
-                          Reel #{reel.reel_no || reel.reel_number}
-                        </div>
-                        {reel.master_code && (
-                          <div className="mt-1">
-                            <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-[10px] rounded-md tracking-wider border border-indigo-200 dark:border-indigo-800">
-                              {formatMasterCodeBadge(reel.master_code)}
-                            </span>
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-slate-800 dark:text-slate-200">
-                          {reel.quality || reel.paper_quality}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">
-                          {reel.gsm} GSM • {reel.bf} BF • {reel.size || reel.width_mm} cm
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <div className="text-slate-800 dark:text-slate-200">
-                          {reel.supplier_name || reel.supplier || 'N/A'}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">
-                          SRNO: #{reel.sr_no}
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4 text-right">
-                        <div className="font-semibold text-slate-900 dark:text-white">
-                          {formatWeight(currentWeight)}
-                        </div>
-                        <div className="text-xs text-slate-400">
-                          Orig: {formatWeight(initialWeight)}
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4 text-right">
-                        <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
-                          {formatCurrency(itemPrice)}
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${getStatusBadgeClass(reel.status)}`}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-80" />
-                          {reel.status}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                        {formatDate(reel.purchase_date || reel.created_at || reel.createdAt)}
-                      </td>
-
-                      <td className="px-6 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => navigate(`/reels/${reelId}`)}
-                            className="p-1.5 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                            title="View Reel Details">
-                            <Eye className="w-4 h-4" />
-                          </button>
-
-                          {!isVoided && canAction && reel.status !== 'NILL' && reel.status !== 'DEPLETED' && (
-                            <button onClick={() => setUsageReel(reel)}
-                              className="p-1.5 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                              title="Record Weight Usage">
-                              <Scale className="w-4 h-4" />
-                            </button>
-                          )}
-
-                          {isRoleAdmin && !isVoided && (
-                            <button onClick={() => setCorrectionReel(reel)}
-                              className="p-1.5 text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                              title="Master Correction">
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-                          )}
-
-                          {isRoleAdmin && !isVoided && (
-                            <button onClick={() => setVoidReel(reel)}
-                              className="p-1.5 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                              title="Void Reel">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <Pagination
-            page={pagination.page}
-            limit={pagination.limit}
-            total={pagination.total}
-            totalPages={pagination.totalPages}
-            onPageChange={(p) => setPagination((prev) => ({ ...prev, page: p }))}
-            onLimitChange={(l) => setPagination((prev) => ({ ...prev, limit: l, page: 1 }))}
+      {
+        loading ? (
+          <LoadingState message="Loading reel inventory..." />
+        ) : reels.length === 0 ? (
+          <EmptyState
+            title="No Reels Found"
+            message="No paper reels match your current filter criteria or search query."
+            actionText={canAction ? 'Create Reel' : null}
+            onAction={canAction ? () => navigate('/reels/create') : null}
           />
-        </div>
-      )}
+        ) : (
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            {sortConfig.length > 0 && (
+              <div className="px-4 py-2 border-b border-slate-200 dark:border-slate-700 bg-indigo-50/60 dark:bg-indigo-950/30 flex flex-wrap items-center gap-2 text-xs">
+                <span className="font-bold text-slate-500 uppercase tracking-wider">Sorted by:</span>
+                <span className="font-semibold text-indigo-700 dark:text-indigo-300">{sortSummaryText()}</span>
+                <button type="button" onClick={() => setSortConfig([])}
+                  className="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded-md text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-600 transition">
+                  <X className="w-3 h-3" /> Clear sort
+                </button>
+              </div>
+            )}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-700 uppercase tracking-wider text-xs">
+                  <tr>
+                    <th className="px-6 py-3">
+                      <button type="button" onClick={() => handleSort('reel')}
+                        className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
+                        title="Click to sort; click more columns to sort by several fields">
+                        {SORT_LABELS.reel}
+                        {renderSortIcon('reel')}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3">
+                      <button type="button" onClick={() => handleSort('specs')}
+                        className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
+                        title="Click to sort; click more columns to sort by several fields">
+                        {SORT_LABELS.specs}
+                        {renderSortIcon('specs')}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3">
+                      <button type="button" onClick={() => handleSort('supplier')}
+                        className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
+                        title="Click to sort; click more columns to sort by several fields">
+                        {SORT_LABELS.supplier}
+                        {renderSortIcon('supplier')}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-right">
+                      <button type="button" onClick={() => handleSort('weight')}
+                        className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition justify-end"
+                        title="Click to sort; click more columns to sort by several fields">
+                        {SORT_LABELS.weight}
+                        {renderSortIcon('weight')}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-right">
+                      <button type="button" onClick={() => handleSort('price')}
+                        className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition justify-end"
+                        title="Click to sort; click more columns to sort by several fields">
+                        {SORT_LABELS.price}
+                        {renderSortIcon('price')}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3">
+                      <button type="button" onClick={() => handleSort('status')}
+                        className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
+                        title="Click to sort; click more columns to sort by several fields">
+                        {SORT_LABELS.status}
+                        {renderSortIcon('status')}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3">
+                      <button type="button" onClick={() => handleSort('created')}
+                        className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
+                        title="Click to sort; click more columns to sort by several fields">
+                        {SORT_LABELS.created}
+                        {renderSortIcon('created')}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
+                  {applySort(reels).map((reel) => {
+                    const reelId = reel.id || reel._id;
+                    const isVoided = reel.status === 'VOIDED' || reel.record_status === 'VOIDED';
+                    const currentWeight = reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight;
+                    const initialWeight = reel.max_weight ?? reel.initial_weight_kg;
+                    const itemRate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 55;
+                    const itemPrice = Math.round((currentWeight || 0) * itemRate);
+
+                    const statusStr = (reel.status || '').toUpperCase();
+                    const rowAccent =
+                      statusStr === 'REEL' || statusStr === 'FULL' || statusStr === 'AVAILABLE'
+                        ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-l-4 border-l-emerald-500 hover:bg-emerald-100/90 dark:hover:bg-emerald-900/60'
+                        : statusStr === 'CUT' || statusStr === 'IN_USE'
+                          ? 'bg-amber-50/80 dark:bg-amber-950/40 border-l-4 border-l-amber-500 hover:bg-amber-100/90 dark:hover:bg-amber-900/60'
+                          : statusStr === 'NILL' || statusStr === 'DEPLETED'
+                            ? 'bg-rose-50/80 dark:bg-rose-950/40 border-l-4 border-l-rose-500 hover:bg-rose-100/90 dark:hover:bg-rose-900/60'
+                            : 'bg-slate-50 dark:bg-slate-800 border-l-4 border-l-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50';
+
+                    return (
+                      <tr key={reelId || reel.sr_no}
+                        className={`${rowAccent} transition cursor-pointer`}
+                        onClick={() => navigate(`/reels/${reelId}`)}>
+
+                        <td className="px-6 py-4">
+                          <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                            <span>Reel #{reel.reel_no || reel.reel_number}</span>
+                          </div>
+                          {reel.master_code && (
+                            <div className="mt-1">
+                              <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-[10px] rounded-md tracking-wider border border-indigo-200 dark:border-indigo-800">
+                                {formatMasterCodeBadge(reel.master_code)}
+                              </span>
+                            </div>
+                          )}
+                          {(reel.pending_count > 0 || reel.approval_status === 'PENDING') && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 font-semibold text-[10px] rounded-md border border-amber-300 dark:border-amber-700">
+                                <Clock className="w-3 h-3 text-amber-600 animate-pulse shrink-0" />
+                                Not approved by Admin (Since {formatDate(reel.created_at || reel.purchase_date)})
+                              </span>
+                            </div>
+                          )}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-slate-800 dark:text-slate-200">
+                            {reel.quality || reel.paper_quality}
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">
+                            {reel.gsm} GSM • {reel.bf} BF • {reel.size || reel.width_mm} cm
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div className="text-slate-800 dark:text-slate-200">
+                            {reel.supplier_name || reel.supplier || 'N/A'}
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">
+                            SRNO: #{reel.sr_no}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4 text-right">
+                          <div className="font-semibold text-slate-900 dark:text-white">
+                            {formatWeight(currentWeight)}
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            Orig: {formatWeight(initialWeight)}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4 text-right">
+                          <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                            {reel.rate_per_kg > 0 ? `₹${reel.rate_per_kg}/kg` : `₹55/kg`}
+                          </div>
+                          <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                            Total: {formatCurrency(itemPrice)}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col items-start gap-1">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${getStatusBadgeClass(reel.status)}`}>
+                              <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-80" />
+                              {reel.status}
+                            </span>
+                            {(reel.pending_count > 0 || reel.approval_status === 'PENDING') && (
+                              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                                Pending Inward
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                          {formatDate(reel.purchase_date || reel.created_at || reel.createdAt)}
+                        </td>
+
+                        <td className="px-6 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => navigate(`/reels/${reelId}`)}
+                              className="p-1.5 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                              title="View Reel Details">
+                              <Eye className="w-4 h-4" />
+                            </button>
+
+                            {!isVoided && canAction && reel.status !== 'NILL' && reel.status !== 'DEPLETED' && (
+                              (reel.pending_count > 0 || reel.approval_status === 'PENDING') ? (
+                                <button
+                                  disabled
+                                  className="p-1.5 text-slate-300 dark:text-slate-600 cursor-not-allowed rounded"
+                                  title={`Locked: Not approved by Admin (Since ${formatDate(reel.created_at || reel.purchase_date)})`}
+                                >
+                                  <Scale className="w-4 h-4" />
+                                </button>
+                              ) : (
+                                <button onClick={() => setUsageReel(reel)}
+                                  className="p-1.5 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                                  title="Record Weight Usage">
+                                  <Scale className="w-4 h-4" />
+                                </button>
+                              )
+                            )}
+
+                            {(isRoleAdmin || isRoleSupervisor) && !isVoided && (
+                              <button onClick={() => setCorrectionReel(reel)}
+                                className="p-1.5 text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                                title="Edit Reel Details / Correction">
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {isRoleAdmin && !isVoided && (
+                              <button onClick={() => setVoidReel(reel)}
+                                className="p-1.5 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                                title="Void Reel">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <Pagination
+              page={pagination.page}
+              limit={pagination.limit}
+              total={pagination.total}
+              totalPages={pagination.totalPages}
+              onPageChange={(p) => setPagination((prev) => ({ ...prev, page: p }))}
+              onLimitChange={(l) => setPagination((prev) => ({ ...prev, limit: l, page: 1 }))}
+            />
+          </div>
+        )
+      }
 
       {/* Modals */}
-      {showCreateModal && (
-        <CreateReelModal isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={() => { setShowCreateModal(false); fetchReels(); }} />
-      )}
-      {usageReel && (
-        <RecordUsageModal isOpen={Boolean(usageReel)} reel={usageReel}
-          onClose={() => setUsageReel(null)}
-          onSuccess={() => { setUsageReel(null); fetchReels(); }} />
-      )}
-      {correctionReel && (
-        <MasterCorrectionModal isOpen={Boolean(correctionReel)} reel={correctionReel}
-          onClose={() => setCorrectionReel(null)}
-          onSuccess={() => { setCorrectionReel(null); fetchReels(); }} />
-      )}
-      {voidReel && (
-        <VoidReelModal isOpen={Boolean(voidReel)} reel={voidReel}
-          onClose={() => setVoidReel(null)}
-          onSuccess={() => { setVoidReel(null); fetchReels(); }} />
-      )}
-    </div>
+      {
+        showCreateModal && (
+          <CreateReelModal isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onSuccess={() => { setShowCreateModal(false); fetchReels(); }} />
+        )
+      }
+      {
+        usageReel && (
+          <RecordUsageModal isOpen={Boolean(usageReel)} reel={usageReel}
+            onClose={() => setUsageReel(null)}
+            onSuccess={() => { setUsageReel(null); fetchReels(); }} />
+        )
+      }
+      {
+        correctionReel && (
+          <MasterCorrectionModal isOpen={Boolean(correctionReel)} reel={correctionReel}
+            onClose={() => setCorrectionReel(null)}
+            onSuccess={() => { setCorrectionReel(null); fetchReels(); }} />
+        )
+      }
+      {
+        voidReel && (
+          <VoidReelModal isOpen={Boolean(voidReel)} reel={voidReel}
+            onClose={() => setVoidReel(null)}
+            onSuccess={() => { setVoidReel(null); fetchReels(); }} />
+        )
+      }
+    </div >
   );
 }

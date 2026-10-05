@@ -25,6 +25,7 @@ export default function ApprovalsPage() {
   const [filters, setFilters] = useState({
     q: '',
     event_type: '',
+    status: '',
     sort: 'newest',
   });
 
@@ -88,6 +89,7 @@ export default function ApprovalsPage() {
       };
       if (filters.q.trim()) params.q = filters.q.trim();
       if (filters.event_type) params.event_type = filters.event_type;
+      if (filters.status) params.status = filters.status;
 
       const response = await approvalApi.getHistory(params);
       const items = response.data || response.items || [];
@@ -183,21 +185,23 @@ export default function ApprovalsPage() {
 
       {/* Search & Filter Bar */}
       <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Search Query */}
-          <div className="relative col-span-1 sm:col-span-2">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              name="q"
-              value={filters.q}
-              onChange={(e) => {
-                setFilters(prev => ({ ...prev, q: e.target.value }));
-                setPagination(prev => ({ ...prev, page: 1 }));
-              }}
-              placeholder="Search reel #, operator, supplier, master code..."
-              className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:text-white"
-            />
+          <div>
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                name="q"
+                value={filters.q}
+                onChange={(e) => {
+                  setFilters(prev => ({ ...prev, q: e.target.value }));
+                  setPagination(prev => ({ ...prev, page: 1 }));
+                }}
+                placeholder="Search reel #, operator, supplier..."
+                className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:text-white"
+              />
+            </div>
           </div>
 
           {/* Event Type Filter */}
@@ -214,6 +218,23 @@ export default function ApprovalsPage() {
               <option value="CREATED">CREATED</option>
               <option value="USAGE_LOGGED">USAGE LOGGED</option>
               <option value="ADMIN_CORRECTED">ADMIN CORRECTED</option>
+            </select>
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <select
+              value={filters.status}
+              onChange={(e) => {
+                setFilters(prev => ({ ...prev, status: e.target.value }));
+                setPagination(prev => ({ ...prev, page: 1 }));
+              }}
+              className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:text-white font-medium"
+            >
+              <option value="">All Statuses (Confirmed & Declined)</option>
+              <option value="DECLINED">Declined Only</option>
+              <option value="CONFIRMED">Confirmed Only</option>
+              <option value="PENDING">Pending Only</option>
             </select>
           </div>
 
@@ -268,7 +289,7 @@ export default function ApprovalsPage() {
           }`}
         >
           <CheckCircle className="w-4 h-4" />
-          <span>My Entry History</span>
+          <span>Approval & Decision History</span>
         </button>
       </div>
 
@@ -345,6 +366,11 @@ export default function ApprovalsPage() {
                     ) : (
                       <div className="text-sm text-slate-700 dark:text-slate-300">
                         <span>Max Weight: <strong>{formatWeight(item.payload?.max_weight)}</strong></span>
+                        {item.payload?.rate_per_kg > 0 && (
+                          <span className="ml-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            Rate: ₹{item.payload.rate_per_kg}/kg
+                          </span>
+                        )}
                         {item.payload?.fields?.supplier_name && (
                           <span className="ml-3 text-xs text-slate-500">Supplier: {item.payload.fields.supplier_name}</span>
                         )}
@@ -428,7 +454,8 @@ export default function ApprovalsPage() {
                   <tr>
                     <th className="px-6 py-3">Event Type</th>
                     <th className="px-6 py-3">Reel #</th>
-                    <th className="px-6 py-3">Approval Status</th>
+                    <th className="px-6 py-3">Approval Status & Reason</th>
+                    <th className="px-6 py-3">Submitted By</th>
                     <th className="px-6 py-3">Reviewed By</th>
                     <th className="px-6 py-3">Date</th>
                     <th className="px-6 py-3 text-right">Action</th>
@@ -437,9 +464,12 @@ export default function ApprovalsPage() {
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
                   {historyItems.map((item) => {
                     const itemId = item.id || item._id;
-                    const reelId = item.reel_id || item.reel?.id || item.reel?._id;
                     const reelNo = item.reel_no || item.reel_number || item.reel?.reel_no || 'N/A';
                     const status = item.approval_status || item.status || 'CONFIRMED';
+                    const declineReason = item.decline_reason || item.decision?.reason;
+                    const submittedBy = item.performed_by_name || item.requested_by?.username || 'Operator';
+                    const reviewedBy = item.decision?.by_name || item.reviewed_by?.username || 'N/A';
+
                     return (
                       <tr 
                         key={itemId} 
@@ -447,9 +477,17 @@ export default function ApprovalsPage() {
                         className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition"
                       >
                         <td className="px-6 py-4 font-semibold text-xs uppercase">
-                          {item.event_type || item.type || item.action}
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                            item.event_type === 'CREATED'
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800'
+                              : item.event_type === 'USAGE_LOGGED'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800'
+                              : 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800'
+                          }`}>
+                            {item.event_type || item.type || item.action}
+                          </span>
                         </td>
-                        <td className="px-6 py-4 font-mono font-bold text-indigo-600">
+                        <td className="px-6 py-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">
                           Reel #{reelNo}
                         </td>
                         <td className="px-6 py-4">
@@ -462,9 +500,17 @@ export default function ApprovalsPage() {
                           }`}>
                             {status}
                           </span>
+                          {status === 'DECLINED' && declineReason && (
+                            <div className="text-[11px] text-rose-600 dark:text-rose-400 mt-1 italic font-medium max-w-xs">
+                              Reason: &ldquo;{declineReason}&rdquo;
+                            </div>
+                          )}
                         </td>
-                        <td className="px-6 py-4 text-xs text-slate-600">
-                          {item.decision?.by_name || item.reviewed_by?.username || 'N/A'}
+                        <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300">
+                          {submittedBy}
+                        </td>
+                        <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400">
+                          {reviewedBy}
                         </td>
                         <td className="px-6 py-4 text-xs text-slate-500 whitespace-nowrap">
                           {formatDate(item.performed_at || item.created_at)}
@@ -475,7 +521,7 @@ export default function ApprovalsPage() {
                               e.stopPropagation();
                               setSelectedDetailItem(item);
                             }}
-                            className="px-2.5 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-lg transition inline-flex items-center gap-1"
+                            className="px-2.5 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-lg transition inline-flex items-center gap-1"
                           >
                             <Eye className="w-3.5 h-3.5" />
                             <span>Details</span>

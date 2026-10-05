@@ -56,26 +56,44 @@ export async function listAuditEvents({ filters = {}, actor }) {
   }
 
   const [rawEvents, total] = await Promise.all([
-    ReelEvent.find(query).sort({ performed_at: -1, _id: -1 }).skip(skip).limit(limit).lean(),
+    ReelEvent.find(query)
+      .populate('reel_id', 'master_code master_key quality gsm bf size supplier_name reel_no')
+      .sort({ performed_at: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
     ReelEvent.countDocuments(query),
   ]);
 
-  const items = rawEvents.map((e) => ({
-    id: e._id.toString(),
-    event_type: e.event_type,
-    approval_status: e.approval_status,
-    reel_id: e.reel_id ? e.reel_id.toString() : null,
-    reel_no: e.reel_no,
-    performed_by_name: e.performed_by_name,
-    performed_by_role: e.performed_by_role,
-    performed_at: e.performed_at,
-    approved_by_name: e.approved_by_name || null,
-    approved_at: e.approved_at || null,
-    decline_reason: e.decline_reason || null,
-    ref_event_id: e.ref_event_id ? e.ref_event_id.toString() : null,
-    cascaded_from_event_id: e.cascaded_from_event_id ? e.cascaded_from_event_id.toString() : null,
-    payload: e.payload || {},
-  }));
+  const items = rawEvents.map((e) => {
+    const reelObj = e.reel_id && typeof e.reel_id === 'object' ? e.reel_id : null;
+    const masterCode = e.payload?.master_code || e.payload?.master_key || reelObj?.master_code || reelObj?.master_key || null;
+
+    return {
+      id: e._id.toString(),
+      event_type: e.event_type,
+      approval_status: e.approval_status,
+      reel_id: reelObj ? reelObj._id.toString() : (e.reel_id ? e.reel_id.toString() : null),
+      reel_no: e.reel_no || reelObj?.reel_no,
+      master_code: masterCode,
+      reel_specs: reelObj ? {
+        quality: reelObj.quality,
+        gsm: reelObj.gsm,
+        bf: reelObj.bf,
+        size: reelObj.size,
+        supplier_name: reelObj.supplier_name,
+      } : null,
+      performed_by_name: e.performed_by_name,
+      performed_by_role: e.performed_by_role,
+      performed_at: e.performed_at,
+      approved_by_name: e.approved_by_name || null,
+      approved_at: e.approved_at || null,
+      decline_reason: e.decline_reason || null,
+      ref_event_id: e.ref_event_id ? e.ref_event_id.toString() : null,
+      cascaded_from_event_id: e.cascaded_from_event_id ? e.cascaded_from_event_id.toString() : null,
+      payload: e.payload || {},
+    };
+  });
 
   return {
     items,
@@ -89,17 +107,30 @@ export async function listAuditEvents({ filters = {}, actor }) {
  * @returns {Promise<object>}
  */
 export async function getAuditEventById({ id, actor }) {
-  const e = await ReelEvent.findById(id).lean();
+  const e = await ReelEvent.findById(id)
+    .populate('reel_id', 'master_code master_key quality gsm bf size supplier_name reel_no')
+    .lean();
   if (!e) {
     throw createApiError(404, ERROR_CODES.NOT_FOUND, `Audit event with ID ${id} not found.`);
   }
+
+  const reelObj = e.reel_id && typeof e.reel_id === 'object' ? e.reel_id : null;
+  const masterCode = e.payload?.master_code || e.payload?.master_key || reelObj?.master_code || reelObj?.master_key || null;
 
   return {
     id: e._id.toString(),
     event_type: e.event_type,
     approval_status: e.approval_status,
-    reel_id: e.reel_id ? e.reel_id.toString() : null,
-    reel_no: e.reel_no,
+    reel_id: reelObj ? reelObj._id.toString() : (e.reel_id ? e.reel_id.toString() : null),
+    reel_no: e.reel_no || reelObj?.reel_no,
+    master_code: masterCode,
+    reel_specs: reelObj ? {
+      quality: reelObj.quality,
+      gsm: reelObj.gsm,
+      bf: reelObj.bf,
+      size: reelObj.size,
+      supplier_name: reelObj.supplier_name,
+    } : null,
     performed_by: e.performed_by ? e.performed_by.toString() : null,
     performed_by_name: e.performed_by_name,
     performed_by_role: e.performed_by_role,

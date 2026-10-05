@@ -36,11 +36,11 @@ export async function recordUsage({ id, input, actor }) {
       );
     }
 
-    if (actor.role === ROLES.ADMIN && reel.pending_count > 0) {
+    if (reel.pending_count > 0) {
       throw createApiError(
         409,
         ERROR_CODES.REEL_HAS_PENDING_EVENTS,
-        'Cannot record Admin usage while entries are pending confirmation on this reel.'
+        'This reel is awaiting Admin approval and cannot be used until approved.'
       );
     }
 
@@ -65,12 +65,17 @@ export async function recordUsage({ id, input, actor }) {
     }
     reel.last_activity_at = new Date();
 
-    const isOperator = actor.role === ROLES.OPERATOR;
-    const eventApprovalStatus = isOperator ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED;
+    // -------------------------------------------------------------
+    // PREVIOUS CODE (Approval Workflow for Reel Usage):
+    // const isOperator = actor.role === ROLES.OPERATOR;
+    // const eventApprovalStatus = isOperator ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED;
+    // if (isOperator) {
+    //   reel.pending_count += 1;
+    // }
+    // -------------------------------------------------------------
 
-    if (isOperator) {
-      reel.pending_count += 1;
-    }
+    // CURRENT FLOW: Reel usage is recorded directly into the project database as confirmed without waiting for approval
+    const eventApprovalStatus = APPROVAL_STATUS.CONFIRMED;
 
     await reel.save({ session });
 
@@ -80,7 +85,8 @@ export async function recordUsage({ id, input, actor }) {
       event_type: EVENT_TYPES.USAGE_LOGGED,
       approval_status: eventApprovalStatus,
       performed_by: actor,
-      approved_by: isOperator ? null : actor,
+      // PREVIOUS CODE: approved_by: isOperator ? null : actor,
+      approved_by: actor,
       payload: {
         station: input.station,
         previous_weight,

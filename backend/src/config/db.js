@@ -12,11 +12,9 @@ function configureDns() {
     try {
       const output = execSync('powershell -NoProfile -Command "(Get-DnsClientServerAddress -AddressFamily IPv4).ServerAddresses"', { encoding: 'utf8' });
       const ips = output.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-      if (ips.length > 0) {
-        dns.setServers(ips);
-      }
+      dns.setServers(Array.from(new Set([...ips, '8.8.8.8', '1.1.1.1', '8.8.4.4'])));
     } catch {
-      // Ignore if DNS fallback cannot be fetched
+      dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
     }
   }
 }
