@@ -6,7 +6,7 @@ import { ErrorAlert } from '../../components/Common/ErrorAlert';
 import { Pagination } from '../../components/Common/Pagination';
 import { getStatusBadgeStyle, formatWeight, formatDate, formatCurrency } from '../../utils/formatters';
 import { useAuth } from '../../auth/AuthContext';
-import { Layers, Weight, AlertCircle, Clock, TrendingUp, RefreshCw, ArrowRight, IndianRupee } from 'lucide-react';
+import { Layers, Weight, AlertCircle, Clock, TrendingUp, RefreshCw, ArrowRight, IndianRupee, Download, Smartphone } from 'lucide-react';
 
 const TILE_COLOR = {
   blue: 'bg-blue-50 text-blue-600 border-blue-100',
@@ -31,6 +31,27 @@ export const DashboardPage = () => {
   const [agingPage, setAgingPage] = useState(1);
 
   const [activeTab, setActiveTab] = useState('board');
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -141,6 +162,29 @@ export const DashboardPage = () => {
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
         </button>
       </div>
+
+      {/* Mobile App Install Prompt */}
+      {deferredPrompt && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-blue-600 to-indigo-600 p-5 rounded-2xl shadow-md border border-indigo-700 text-white animate-fade-in">
+          <div className="flex items-start gap-4">
+            <div className="bg-white/20 p-2.5 rounded-xl shrink-0">
+              <Smartphone size={24} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold" style={{ fontFamily: 'var(--font-family-display)' }}>Install Rainbow Packages App</h2>
+              <p className="text-xs text-blue-100 mt-1">Get quick access to the inventory dashboard from your mobile home screen.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
+            <button onClick={() => setDeferredPrompt(null)} className="text-xs font-semibold text-blue-100 hover:text-white transition-colors">
+              Dismiss
+            </button>
+            <button onClick={handleInstallApp} className="px-4 py-2 bg-white text-indigo-700 hover:bg-gray-50 text-xs font-bold rounded-xl flex items-center gap-2 transition-colors shadow-sm">
+              <Download size={14} /> Install App
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* KPI Tiles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 min-[1000px]:grid-cols-2 min-[1331px]:grid-cols-5 gap-4">

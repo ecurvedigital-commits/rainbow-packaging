@@ -922,10 +922,10 @@ export default function ReelListPage() {
               </div>
             )}
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="w-full min-w-[1100px] text-left text-sm">
                 <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-700 uppercase tracking-wider text-xs">
                   <tr>
-                    <th className="px-6 py-3">
+                    <th className="px-4 py-3 whitespace-nowrap min-w-[210px]">
                       <button type="button" onClick={() => handleSort('reel')}
                         className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                         title="Click to sort; click more columns to sort by several fields">
@@ -933,7 +933,7 @@ export default function ReelListPage() {
                         {renderSortIcon('reel')}
                       </button>
                     </th>
-                    <th className="px-6 py-3">
+                    <th className="px-4 py-3 whitespace-nowrap min-w-[210px]">
                       <button type="button" onClick={() => handleSort('specs')}
                         className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                         title="Click to sort; click more columns to sort by several fields">
@@ -941,7 +941,7 @@ export default function ReelListPage() {
                         {renderSortIcon('specs')}
                       </button>
                     </th>
-                    <th className="px-6 py-3">
+                    <th className="px-4 py-3 whitespace-nowrap min-w-[170px]">
                       <button type="button" onClick={() => handleSort('supplier')}
                         className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                         title="Click to sort; click more columns to sort by several fields">
@@ -949,7 +949,7 @@ export default function ReelListPage() {
                         {renderSortIcon('supplier')}
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-right">
+                    <th className="px-4 py-3 whitespace-nowrap text-right">
                       <button type="button" onClick={() => handleSort('weight')}
                         className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition justify-end"
                         title="Click to sort; click more columns to sort by several fields">
@@ -957,7 +957,7 @@ export default function ReelListPage() {
                         {renderSortIcon('weight')}
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-right">
+                    <th className="px-4 py-3 whitespace-nowrap text-right">
                       <button type="button" onClick={() => handleSort('price')}
                         className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition justify-end"
                         title="Click to sort; click more columns to sort by several fields">
@@ -965,7 +965,7 @@ export default function ReelListPage() {
                         {renderSortIcon('price')}
                       </button>
                     </th>
-                    <th className="px-6 py-3">
+                    <th className="px-4 py-3 whitespace-nowrap">
                       <button type="button" onClick={() => handleSort('status')}
                         className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                         title="Click to sort; click more columns to sort by several fields">
@@ -973,7 +973,7 @@ export default function ReelListPage() {
                         {renderSortIcon('status')}
                       </button>
                     </th>
-                    <th className="px-6 py-3">
+                    <th className="px-4 py-3 whitespace-nowrap">
                       <button type="button" onClick={() => handleSort('created')}
                         className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                         title="Click to sort; click more columns to sort by several fields">
@@ -981,7 +981,7 @@ export default function ReelListPage() {
                         {renderSortIcon('created')}
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-right">Actions</th>
+                    <th className="px-4 py-3 whitespace-nowrap text-right sticky right-0 z-10 bg-slate-50 dark:bg-slate-900 shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.18)]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
@@ -1003,12 +1003,22 @@ export default function ReelListPage() {
                             ? 'bg-rose-50/80 dark:bg-rose-950/40 border-l-4 border-l-rose-500 hover:bg-rose-100/90 dark:hover:bg-rose-900/60'
                             : 'bg-slate-50 dark:bg-slate-800 border-l-4 border-l-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50';
 
+                    // Solid (non-transparent) version of the row colour for the sticky Actions cell
+                    const actionAccent =
+                      statusStr === 'REEL' || statusStr === 'FULL' || statusStr === 'AVAILABLE'
+                        ? 'bg-emerald-50 dark:bg-emerald-950 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900'
+                        : statusStr === 'CUT' || statusStr === 'IN_USE'
+                          ? 'bg-amber-50 dark:bg-amber-950 group-hover:bg-amber-100 dark:group-hover:bg-amber-900'
+                          : statusStr === 'NILL' || statusStr === 'DEPLETED'
+                            ? 'bg-rose-50 dark:bg-rose-950 group-hover:bg-rose-100 dark:group-hover:bg-rose-900'
+                            : 'bg-slate-50 dark:bg-slate-800 group-hover:bg-slate-100 dark:group-hover:bg-slate-700';
+
                     return (
                       <tr key={reelId || reel.sr_no}
-                        className={`${rowAccent} transition cursor-pointer`}
+                        className={`group ${rowAccent} transition cursor-pointer`}
                         onClick={() => navigate(`/reels/${reelId}`)}>
 
-                        <td className="px-6 py-4">
+                        <td className="align-middle px-4 py-3.5">
                           <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                             <span>Reel #{reel.reel_no || reel.reel_number}</span>
                           </div>
@@ -1021,25 +1031,25 @@ export default function ReelListPage() {
                           )}
                           {(reel.pending_count > 0 || reel.approval_status === 'PENDING') && (
                             <div className="mt-1">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 font-semibold text-[10px] rounded-md border border-amber-300 dark:border-amber-700">
-                                <Clock className="w-3 h-3 text-amber-600 animate-pulse shrink-0" />
-                                Not approved by Admin (Since {formatDate(reel.created_at || reel.purchase_date)})
+                              <span className="inline-flex items-start gap-1 px-2 py-0.5 max-w-[190px] leading-snug bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 font-semibold text-[10px] rounded-md border border-amber-300 dark:border-amber-700">
+                                <Clock className="w-3 h-3 mt-px text-amber-600 animate-pulse shrink-0" />
+                                <span>Not approved by Admin<br />(Since {formatDate(reel.created_at || reel.purchase_date)})</span>
                               </span>
                             </div>
                           )}
                         </td>
 
-                        <td className="px-6 py-4">
+                        <td className="align-middle px-4 py-3.5">
                           <div className="font-medium text-slate-800 dark:text-slate-200">
                             {reel.quality || reel.paper_quality}
                           </div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">
+                          <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                             {reel.gsm} GSM • {reel.bf} BF • {reel.size || reel.width_mm} cm
                           </div>
                         </td>
 
-                        <td className="px-6 py-4">
-                          <div className="text-slate-800 dark:text-slate-200">
+                        <td className="align-middle px-4 py-3.5">
+                          <div className="text-slate-800 dark:text-slate-200 break-words">
                             {reel.supplier_name || reel.supplier || 'N/A'}
                           </div>
                           <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -1047,7 +1057,7 @@ export default function ReelListPage() {
                           </div>
                         </td>
 
-                        <td className="px-6 py-4 text-right">
+                        <td className="align-middle px-4 py-3.5 text-right whitespace-nowrap tabular-nums">
                           <div className="font-semibold text-slate-900 dark:text-white">
                             {formatWeight(currentWeight)}
                           </div>
@@ -1056,7 +1066,7 @@ export default function ReelListPage() {
                           </div>
                         </td>
 
-                        <td className="px-6 py-4 text-right">
+                        <td className="align-middle px-4 py-3.5 text-right whitespace-nowrap tabular-nums">
                           <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
                             {reel.rate_per_kg > 0 ? `₹${reel.rate_per_kg}/kg` : `₹55/kg`}
                           </div>
@@ -1065,9 +1075,9 @@ export default function ReelListPage() {
                           </div>
                         </td>
 
-                        <td className="px-6 py-4">
+                        <td className="align-middle px-4 py-3.5">
                           <div className="flex flex-col items-start gap-1">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${getStatusBadgeClass(reel.status)}`}>
+                            <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-bold border ${getStatusBadgeClass(reel.status)}`}>
                               <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-80" />
                               {reel.status}
                             </span>
@@ -1079,11 +1089,11 @@ export default function ReelListPage() {
                           </div>
                         </td>
 
-                        <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                        <td className="align-middle px-4 py-3.5 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
                           {formatDate(reel.purchase_date || reel.created_at || reel.createdAt)}
                         </td>
 
-                        <td className="px-6 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <td className={`align-middle px-4 py-3.5 text-right whitespace-nowrap sticky right-0 z-10 transition shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.18)] ${actionAccent}`} onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-2">
                             <button onClick={() => navigate(`/reels/${reelId}`)}
                               className="p-1.5 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition"
