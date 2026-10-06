@@ -1485,7 +1485,7 @@ export default function ReelListPage() {
         usageReel && (
           <RecordUsageModal isOpen={Boolean(usageReel)} reel={usageReel}
             onClose={() => setUsageReel(null)}
-            onSuccess={() => { setUsageReel(null); fetchReels(); }} />
+            onSuccess={() => { fetchReels(); }} />
         )
       }
       {

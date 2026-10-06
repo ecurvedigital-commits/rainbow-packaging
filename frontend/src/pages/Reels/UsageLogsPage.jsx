@@ -369,7 +369,6 @@ export default function UsageLogsPage() {
           isOpen={showUsageModal}
           onClose={() => setShowUsageModal(false)}
           onSuccess={() => {
-            setShowUsageModal(false);
             fetchLogs();
           }}
         />

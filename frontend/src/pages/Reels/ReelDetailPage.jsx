@@ -414,7 +414,6 @@ export const ReelDetailPage = () => {
           isOpen={showUsageModal}
           onClose={() => setShowUsageModal(false)}
           onSuccess={() => {
-            setShowUsageModal(false);
             fetchReelDetails();
           }}
         />

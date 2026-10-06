@@ -75,14 +75,13 @@ export default function LoginQuickActionsModal({ isOpen, onClose }) {
   };
 
   const handleSelectReelForUsage = (reel) => {
-    onClose();
     setSelectedReelForUsage(reel);
   };
 
   return (
     <>
       {/* ── Main 3-Option Quick Action Modal ─────────────────────────────── */}
-      {isOpen && (
+      {isOpen && !selectedReelForUsage && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden my-8 animate-scale-in border border-gray-200">
             {/* Modal Header */}
@@ -264,11 +263,6 @@ export default function LoginQuickActionsModal({ isOpen, onClose }) {
                               <span className="font-bold text-gray-900 text-sm group-hover:text-brand-blue transition-colors">
                                 #{reel.reel_no}
                               </span>
-                              {/* {reel.master_key && (
-                                <span className="px-2 py-0.5 bg-blue-50 text-brand-blue text-[10px] font-mono font-bold rounded border border-blue-200">
-                                  {reel.master_key}
-                                </span>
-                              )} */}
                               {reel.master_code && (
                                 <span className="px-2 py-0.5 bg-blue-50 text-brand-blue text-[10px] font-mono font-bold rounded border border-blue-200">
                                   {reel.master_code}
@@ -308,11 +302,12 @@ export default function LoginQuickActionsModal({ isOpen, onClose }) {
         <RecordUsageModal
           isOpen={Boolean(selectedReelForUsage)}
           reel={selectedReelForUsage}
-          onClose={() => setSelectedReelForUsage(null)}
-          onSuccess={() => {
-            const reelId = selectedReelForUsage.id || selectedReelForUsage._id;
+          onClose={() => {
             setSelectedReelForUsage(null);
-            navigate(reelId ? `/reels/${reelId}` : '/reels');
+            setActiveStep('menu');
+          }}
+          onSuccess={() => {
+            // Usage recorded inside RecordUsageModal
           }}
         />
       )}
