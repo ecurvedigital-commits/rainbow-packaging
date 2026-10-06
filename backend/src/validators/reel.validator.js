@@ -76,6 +76,8 @@ export const recordUsageSchema = z.object({
     station: z.enum(STATIONS),
     current_weight_entered: z.coerce.number().min(0),
     expected_previous_weight: z.coerce.number().optional(),
+    usage_date: dateOnlySchema.optional(),
+    performed_at: z.string().optional(),
   }),
 });
 

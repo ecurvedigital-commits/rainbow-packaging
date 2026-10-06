@@ -62,10 +62,12 @@ export async function recordUsage({ id, input, actor }) {
     reel.previous_weight = current_weight_entered;
     reel.status = deriveReelStatus({ previous_weight: reel.previous_weight, max_weight: reel.max_weight });
 
+    const usageDate = input.usage_date || input.performed_at ? new Date(input.usage_date || input.performed_at) : new Date();
+
     if (!reel.stations_used.includes(input.station)) {
       reel.stations_used.push(input.station);
     }
-    reel.last_activity_at = new Date();
+    reel.last_activity_at = usageDate;
 
     // Approval Workflow for Reel Usage / Updations: Operator logs enter pending approval queue
     const isOperator = actor.role === ROLES.OPERATOR;
@@ -83,11 +85,13 @@ export async function recordUsage({ id, input, actor }) {
       approval_status: eventApprovalStatus,
       performed_by: actor,
       approved_by: isOperator ? null : actor,
+      performed_at: usageDate,
       payload: {
         station: input.station,
         previous_weight,
         current_weight_entered,
         used_this_time,
+        usage_date: usageDate.toISOString().slice(0, 10),
       },
       session,
     });

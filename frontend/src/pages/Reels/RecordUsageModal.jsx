@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { reelApi } from '../../api/reelApi';
 import { Search, Save, X, AlertTriangle, Loader2, Weight } from 'lucide-react';
 import { formatWeight, formatDate } from '../../utils/formatters';
+import CustomDatePicker from '../../components/Common/CustomDatePicker';
 
 const inputClass = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue transition-shadow';
 const labelClass = 'block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1';
@@ -12,6 +13,7 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
   const [selectedReel, setSelectedReel] = useState(reel || null);
   const [station, setStation] = useState('E-Flute');
   const [currentWeight, setCurrentWeight] = useState('');
+  const [usageDate, setUsageDate] = useState(new Date().toISOString().slice(0, 10));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -89,6 +91,7 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
         station,
         current_weight_entered: weightVal,
         expected_previous_weight: prevWeight,
+        usage_date: usageDate || new Date().toISOString().slice(0, 10),
       };
 
       const reelId = selectedReel.id || selectedReel._id;
@@ -110,9 +113,9 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden my-8 animate-scale-in">
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl my-8 animate-scale-in relative overflow-visible">
+        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center rounded-t-2xl">
           <div className="flex items-center gap-2">
             <Weight size={20} className="text-brand-green" />
             <h2 className="text-lg font-bold text-gray-900" style={{ fontFamily: 'var(--font-family-display)' }}>
@@ -181,16 +184,29 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
                 </button>
               </div>
 
-              <div>
-                <label className={labelClass}>Machine Station *</label>
-                <select className={inputClass} value={station} onChange={(e) => setStation(e.target.value)}>
-                  <option value="E-Flute">E-Flute</option>
-                  <option value="Narrow-Flute">Narrow-Flute</option>
-                  <option value="Sheater">Sheater</option>
-                  <option value="Sold to Revati">Sold to Revati</option>
-                  <option value="Return">Return</option>
-                  <option value="Others">Others</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>Machine Station *</label>
+                  <select className={inputClass} value={station} onChange={(e) => setStation(e.target.value)}>
+                    <option value="E-Flute">E-Flute</option>
+                    <option value="Narrow-Flute">Narrow-Flute</option>
+                    <option value="Sheater">Sheater</option>
+                    <option value="Sold to Revati">Sold to Revati</option>
+                    <option value="Return">Return</option>
+                    <option value="Others">Others</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Usage / Recording Date *</label>
+                  <CustomDatePicker
+                    date={usageDate}
+                    onChange={(d) => setUsageDate(d || new Date().toISOString().slice(0, 10))}
+                    allowClear={false}
+                    align="right"
+                    className="w-full"
+                    iconColor="text-brand-blue"
+                  />
+                </div>
               </div>
 
               <div>
