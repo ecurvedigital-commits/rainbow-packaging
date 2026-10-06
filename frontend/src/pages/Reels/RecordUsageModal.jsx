@@ -161,7 +161,10 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
                 <div>
                   <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">Selected Reel</p>
                   <p className="text-xl font-bold text-blue-950">#{selectedReel.reel_no}</p>
-                  <p className="text-xs text-blue-700">Quality: {selectedReel.quality || '-'} · Supplier: {selectedReel.supplier_name || 'N/A'}</p>
+                  <p className="text-xs text-blue-700">
+                    Quality: {selectedReel.quality || '-'} · Supplier: {selectedReel.supplier_name || 'N/A'}
+                    {selectedReel.mill_name ? ` · Mill: ${selectedReel.mill_name}` : ''}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">Current Balance</p>

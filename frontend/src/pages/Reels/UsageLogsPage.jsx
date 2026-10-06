@@ -4,6 +4,7 @@ import {
   Weight, Search, RefreshCw, Plus, Clock, CheckCircle2, XCircle, ArrowRight, Filter
 } from 'lucide-react';
 import { reelApi } from '../../api/reelApi';
+import { masterCodeApi } from '../../api/masterCodeApi';
 import { RecordUsageModal } from './RecordUsageModal';
 import Pagination from '../../components/Common/Pagination';
 import LoadingState from '../../components/Common/LoadingState';
@@ -16,6 +17,7 @@ export default function UsageLogsPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [masterCodeMap, setMasterCodeMap] = useState({});
 
   const [filters, setFilters] = useState({
     q: '',
@@ -29,6 +31,26 @@ export default function UsageLogsPage() {
     total: 0,
     totalPages: 1,
   });
+
+  useEffect(() => {
+    masterCodeApi.list({ status: 'ACTIVE' })
+      .then((res) => {
+        if (res.success && Array.isArray(res.data)) {
+          const map = {};
+          res.data.forEach((mc) => {
+            if (mc.master_code) {
+              map[mc.master_code] = mc.master_code_name || mc.master_code;
+              map[`Master Code ${mc.master_code}`] = mc.master_code_name || mc.master_code;
+            }
+            if (mc.master_code_id || mc.id) {
+              map[mc.master_code_id || mc.id] = mc.master_code_name || mc.master_code;
+            }
+          });
+          setMasterCodeMap(map);
+        }
+      })
+      .catch((err) => console.error('Failed to load master code map in usage logs:', err));
+  }, []);
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
@@ -229,6 +251,12 @@ export default function UsageLogsPage() {
                           <span>Supplier: <strong className="text-slate-700 dark:text-slate-300">{item.supplier_name}</strong></span>
                         </>
                       )}
+                      {item.mill_name && (
+                        <>
+                          <span>•</span>
+                          <span>Mill: <strong className="text-slate-700 dark:text-slate-300">{item.mill_name}</strong></span>
+                        </>
+                      )}
                     </div>
 
                     {/* Decline Reason notice */}
@@ -238,6 +266,18 @@ export default function UsageLogsPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Right Side: Master Code on top, Name below */}
+                  {(item.master_code || item.master_code_name) && (
+                    <div className="flex flex-row md:flex-col items-start md:items-end justify-between md:justify-center border-t md:border-t-0 pt-3 md:pt-0 border-slate-100 dark:border-slate-700/60 shrink-0">
+                      <span className="px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-[11px] rounded-md tracking-wider border border-indigo-200 dark:border-indigo-800">
+                        {item.master_code ? (/^\d+$/.test(String(item.master_code).trim()) ? `Master Code ${item.master_code}` : item.master_code) : 'Master Code'}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-1">
+                        {item.master_code_name || (masterCodeMap[item.master_code] || item.master_code)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               );
             })}

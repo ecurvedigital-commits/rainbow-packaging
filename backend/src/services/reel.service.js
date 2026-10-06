@@ -237,6 +237,7 @@ export async function listReels({ filters = {}, actor }) {
       bf: reel.bf,
       purchase_date: reel.purchase_date,
       supplier_name: reel.supplier_name,
+      mill_name: reel.mill_name || '',
       size: reel.size,
       gsm: reel.gsm,
       rate_per_kg: reel.rate_per_kg ?? 0,
@@ -279,6 +280,7 @@ export async function searchReels({ query = {}, actor }) {
   const orConditions = [
     { reel_no: regex },
     { supplier_name: regex },
+    { mill_name: regex },
     { master_key: regex },
     { master_code: regex },
     { quality: regex },
@@ -324,6 +326,7 @@ export async function searchReels({ query = {}, actor }) {
     bf: reel.bf,
     size: reel.size,
     supplier_name: reel.supplier_name || null,
+    mill_name: reel.mill_name || '',
     previous_weight: reel.previous_weight,
     max_weight: reel.max_weight,
     status: reel.status,
@@ -376,6 +379,7 @@ export async function getReel({ id, actor }) {
     bf: reel.bf,
     purchase_date: reel.purchase_date,
     supplier_name: reel.supplier_name,
+    mill_name: reel.mill_name || '',
     size: reel.size,
     gsm: reel.gsm,
     rate_per_kg: reel.rate_per_kg ?? 0,
@@ -554,6 +558,7 @@ export const bulkCreateReels = async ({ input, actor }) => withTransaction(async
     bf: row.bf,
     purchase_date: row.purchase_date ? new Date(row.purchase_date) : now,
     supplier_name: row.supplier_name.trim(),
+    mill_name: row.mill_name ? String(row.mill_name).trim() : '',
     size: row.size,
     gsm: row.gsm,
     rate_per_kg: row.rate_per_kg ?? 0,
@@ -592,6 +597,7 @@ export const bulkCreateReels = async ({ input, actor }) => withTransaction(async
         size: reel.size,
         rate_per_kg: reel.rate_per_kg,
         supplier_name: reel.supplier_name,
+        mill_name: reel.mill_name,
         purchase_date: reel.purchase_date,
         custom_fields: reel.custom_fields,
       },
@@ -656,6 +662,7 @@ export async function createReel({ input, actor }) {
           bf: input.bf,
           purchase_date: input.purchase_date ? new Date(input.purchase_date) : new Date(),
           supplier_name: input.supplier_name.trim(),
+          mill_name: input.mill_name ? input.mill_name.trim() : '',
           size: input.size,
           gsm: input.gsm,
           rate_per_kg: input.rate_per_kg !== undefined && input.rate_per_kg !== null ? Number(input.rate_per_kg) : 0,
@@ -691,6 +698,7 @@ export async function createReel({ input, actor }) {
           size: reel.size,
           rate_per_kg: reel.rate_per_kg,
           supplier_name: reel.supplier_name,
+          mill_name: reel.mill_name,
           purchase_date: reel.purchase_date,
           custom_fields: reel.custom_fields,
         },
@@ -748,6 +756,10 @@ export async function updateReel({ id, input, actor }) {
     if (input.supplier_name !== undefined && input.supplier_name.trim() !== reel.supplier_name) {
       changes.push({ field: 'supplier_name', from: reel.supplier_name, to: input.supplier_name.trim() });
       reel.supplier_name = input.supplier_name.trim();
+    }
+    if (input.mill_name !== undefined && input.mill_name.trim() !== (reel.mill_name || '')) {
+      changes.push({ field: 'mill_name', from: reel.mill_name || '', to: input.mill_name.trim() });
+      reel.mill_name = input.mill_name.trim();
     }
     if (input.gsm !== undefined && input.gsm !== reel.gsm) {
       changes.push({ field: 'gsm', from: reel.gsm, to: input.gsm });
@@ -956,6 +968,7 @@ export async function getFilterOptions() {
     bfs,
     sizes,
     suppliers,
+    millNames,
     masterKeys,
     reelMasterCodes,
     definedMasterCodesDocs,
@@ -968,6 +981,7 @@ export async function getFilterOptions() {
     Reel.distinct('bf', { record_status: RECORD_STATUS.ACTIVE }),
     Reel.distinct('size', { record_status: RECORD_STATUS.ACTIVE }),
     Reel.distinct('supplier_name', { record_status: RECORD_STATUS.ACTIVE }),
+    Reel.distinct('mill_name', { record_status: RECORD_STATUS.ACTIVE }),
     Reel.distinct('master_key', { record_status: RECORD_STATUS.ACTIVE }),
     Reel.distinct('master_code', { record_status: RECORD_STATUS.ACTIVE }),
     MasterCode.find({ status: 'ACTIVE' }).select('master_code').lean(),
@@ -996,6 +1010,7 @@ export async function getFilterOptions() {
     bfs: bfs.filter(Boolean).sort((a, b) => a - b),
     sizes: sizes.filter(Boolean).sort((a, b) => a - b),
     suppliers: suppliers.filter(Boolean).sort(),
+    mill_names: millNames.filter(Boolean).sort(),
     master_keys: masterKeys.filter(Boolean).sort(),
     master_codes: cleanMasterCodes,
     statuses: statuses.filter(Boolean).sort(),

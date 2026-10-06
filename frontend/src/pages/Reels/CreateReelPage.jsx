@@ -30,6 +30,7 @@ const BASE_FIELDS = [
   { key: 'reel_no', label: 'Reel Number', type: 'text', required: true },
   { key: 'quality', label: 'Quality', type: 'text', required: true },
   { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true },
+  { key: 'mill_name', label: 'Mill Name', type: 'text', required: false },
   { key: 'max_weight', label: 'Reel Weight (kg)', type: 'number', required: true },
   { key: 'rate_per_kg', label: 'Rate / KG (₹)', type: 'number', required: false },
   { key: 'gsm', label: 'GSM', type: 'number', required: true },
@@ -42,6 +43,7 @@ const DEFAULT_ROW = {
   reel_no: '',
   quality: 'VK',
   supplier_name: '',
+  mill_name: '',
   max_weight: 1000,
   rate_per_kg: '',
   gsm: 150,
@@ -107,6 +109,7 @@ const buildRowFromExcel = (raw, fieldDefs, fallback) => {
   row.reel_no = String(getCell(raw, ['reel_no', 'reelno', 'reelnumber', 'reel']) || '').trim();
   row.quality = String(getCell(raw, ['quality']) || row.quality).trim();
   row.supplier_name = String(getCell(raw, ['supplier_name', 'supplier', 'suppliername']) || '').trim();
+  row.mill_name = String(getCell(raw, ['mill_name', 'mill', 'millname', 'papermill']) || '').trim();
   row.max_weight = toNumberOrBlank(getCell(raw, ['max_weight', 'weight', 'reelweight', 'reelweightkg']));
   row.rate_per_kg = toNumberOrBlank(getCell(raw, ['rate_per_kg', 'rate', 'ratekg', 'rateperkg']));
   row.gsm = toNumberOrBlank(getCell(raw, ['gsm']));
@@ -362,6 +365,7 @@ export default function CreateReelPage() {
     quality: String(row.quality || '').trim(),
     bf: Number(row.bf),
     supplier_name: String(row.supplier_name || '').trim(),
+    mill_name: String(row.mill_name || '').trim(),
     size: Number(row.size),
     gsm: Number(row.gsm),
     rate_per_kg: row.rate_per_kg === '' ? 0 : Number(row.rate_per_kg),
@@ -444,7 +448,7 @@ export default function CreateReelPage() {
     try {
       const payload = bulkRows.map(row => buildPayload(row));
       const res = await reelApi.bulkCreate(payload);
-      
+
       if (!res.success) {
         throw new Error(res.message || 'Bulk creation failed');
       }
@@ -517,6 +521,7 @@ export default function CreateReelPage() {
       reel_no: nextReelNo || 'R-1001',
       quality: selectedMasterCode?.quality || 'VK',
       supplier_name: 'Example Supplier',
+      mill_name: 'Example Paper Mill',
       max_weight: 1000,
       rate_per_kg: 55,
       gsm: selectedMasterCode?.gsm || 150,
@@ -685,7 +690,7 @@ export default function CreateReelPage() {
         </form>
       ) : (
         <div className="space-y-4">
-        <section className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+          <section className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
             <div className="p-5 border-b border-gray-200 bg-gray-50">
               <div className="flex flex-col gap-4">
                 {/* Row 1: Count + Generate */}

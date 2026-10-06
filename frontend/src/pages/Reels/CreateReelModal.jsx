@@ -21,6 +21,7 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
     quality: 'VK',
     bf: 18,
     supplier_name: '',
+    mill_name: '',
     size: 100,
     gsm: 150,
     rate_per_kg: '',
@@ -135,6 +136,7 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
         quality: formData.quality,
         bf: Number(formData.bf),
         supplier_name: formData.supplier_name.trim(),
+        mill_name: formData.mill_name ? formData.mill_name.trim() : '',
         size: Number(formData.size),
         gsm: Number(formData.gsm),
         rate_per_kg: formData.rate_per_kg ? Number(formData.rate_per_kg) : 0,
@@ -261,6 +263,17 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
                 placeholder="e.g. Alpha Papers"
                 value={formData.supplier_name}
                 onChange={(e) => setFormData({ ...formData, supplier_name: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Mill Name</label>
+              <input
+                type="text"
+                className={inputClass}
+                placeholder="e.g. Century Paper Mill"
+                value={formData.mill_name}
+                onChange={(e) => setFormData({ ...formData, mill_name: e.target.value })}
               />
             </div>
 

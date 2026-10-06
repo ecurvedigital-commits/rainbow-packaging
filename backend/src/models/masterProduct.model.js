@@ -27,14 +27,14 @@ const masterProductSchema = new mongoose.Schema(
     quality: {
       type: String,
       required: true,
-      enum: QUALITIES,
+      trim: true,
     },
     gsm: {
-      type: Number,
+      type: mongoose.Schema.Types.Mixed,
       required: true,
     },
     bf: {
-      type: Number,
+      type: mongoose.Schema.Types.Mixed,
       required: true,
     },
     size: {

@@ -9,11 +9,12 @@ const reelSchema = new mongoose.Schema(
     sr_no: { type: Number, required: true, unique: true },
     reel_no: { type: String, required: true, trim: true },
     quality: { type: String, required: true, trim: true },
-    bf: { type: Number, required: true },
+    bf: { type: mongoose.Schema.Types.Mixed, required: true },
     purchase_date: { type: Date, required: true, default: Date.now },
     supplier_name: { type: String, required: true, trim: true },
+    mill_name: { type: String, trim: true, default: '' },
     size: { type: Number, required: true },
-    gsm: { type: Number, required: true },
+    gsm: { type: mongoose.Schema.Types.Mixed, required: true },
     rate_per_kg: { type: Number, default: 0, set: roundTwoDecimals },
     max_weight: { type: Number, required: true, set: roundTwoDecimals },
     previous_weight: { type: Number, required: true, set: roundTwoDecimals },
@@ -72,13 +73,7 @@ const reelSchema = new mongoose.Schema(
   }
 );
 
-reelSchema.index(
-  { reel_no: 1 },
-  {
-    unique: true,
-    partialFilterExpression: { record_status: 'ACTIVE' },
-  }
-);
+reelSchema.index({ reel_no: 1 });
 reelSchema.index({ status: 1, quality: 1 });
 reelSchema.index({ supplier_name: 1 });
 reelSchema.index({ purchase_date: -1 });

@@ -231,6 +231,7 @@ export const ReelDetailPage = () => {
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Physical Specs</h3>
           <SpecRow label="Quality" value={reel.quality} bold />
           <SpecRow label="Supplier" value={reel.supplier_name} />
+          {reel.mill_name && <SpecRow label="Mill Name" value={reel.mill_name} />}
           <SpecRow label="Bursting Factor (BF)" value={reel.bf} />
           <SpecRow label="GSM" value={reel.gsm} />
           <SpecRow label="Size / Width" value={`${reel.size} cm`} />

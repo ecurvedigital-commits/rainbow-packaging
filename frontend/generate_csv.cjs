@@ -2,16 +2,17 @@ const fs = require('fs');
 const path = require('path');
 
 const today = new Date().toISOString().slice(0, 10);
-const headers = ['Reel Number', 'Quality', 'Supplier Name', 'Reel Weight (kg)', 'Rate / KG (₹)', 'GSM', 'BF', 'Size (cm)', 'Size/Width (cm)', 'Purchase Date'];
+const headers = ['Reel Number', 'Quality', 'Supplier Name', 'Mill Name', 'Reel Weight (kg)', 'Rate / KG (₹)', 'GSM', 'BF', 'Size (cm)', 'Size/Width (cm)', 'Purchase Date'];
 const rows = [];
 rows.push(headers.join(','));
 
-let startingReelNumber = 10001;
+let startingReelNumber = 20001;
 for (let i = 0; i < 258; i++) {
   const row = [
-    startingReelNumber + i,
+    `R-${startingReelNumber + i}`,
     'VK',
     'Test Supplier',
+    'Century Paper Mill',
     1500 + Math.floor(Math.random() * 100),
     55,
     120,

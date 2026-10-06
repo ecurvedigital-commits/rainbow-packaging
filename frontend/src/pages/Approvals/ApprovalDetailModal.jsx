@@ -36,6 +36,7 @@ export default function ApprovalDetailModal({
 
   const masterKey = reelObj.master_key || payload.fields?.master_key || payload.master_key || 'N/A';
   const supplier = reelObj.supplier_name || payload.fields?.supplier_name || payload.supplier_name || 'N/A';
+  const mill = reelObj.mill_name || payload.fields?.mill_name || payload.mill_name || item.mill_name || 'N/A';
   const quality = reelObj.quality || payload.fields?.quality || 'N/A';
   const gsm = reelObj.gsm || payload.fields?.gsm || 'N/A';
   const bf = reelObj.bf || payload.fields?.bf || 'N/A';
@@ -195,6 +196,10 @@ export default function ApprovalDetailModal({
               <div>
                 <span className="text-slate-500 dark:text-slate-400">Supplier:</span>
                 <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{supplier}</p>
+              </div>
+              <div>
+                <span className="text-slate-500 dark:text-slate-400">Mill Name:</span>
+                <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{mill}</p>
               </div>
               <div>
                 <span className="text-slate-500 dark:text-slate-400">Quality / GSM:</span>

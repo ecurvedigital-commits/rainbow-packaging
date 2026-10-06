@@ -8,6 +8,7 @@ const headers = [
   'Reel Number',
   'Quality',
   'Supplier Name',
+  'Mill Name',
   'Reel Weight (kg)',
   'Rate / KG (₹)',
   'GSM',
@@ -18,13 +19,14 @@ const headers = [
 ];
 
 const data = [];
-let startingReelNumber = 10001;
+let startingReelNumber = 20001;
 
 for (let i = 0; i < 258; i++) {
   data.push({
-    'Reel Number': startingReelNumber + i,
+    'Reel Number': `R-${startingReelNumber + i}`,
     'Quality': 'VK',
     'Supplier Name': 'Test Supplier',
+    'Mill Name': 'Century Paper Mill',
     'Reel Weight (kg)': 1500 + Math.floor(Math.random() * 100),
     'Rate / KG (₹)': 55,
     'GSM': 120,

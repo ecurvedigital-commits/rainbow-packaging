@@ -91,6 +91,18 @@ export function buildReelFilter(filters = {}, actor = {}) {
     query.supplier_name = new RegExp(filters.supplier_q.trim(), 'i');
   }
 
+  // Mill Name exact match (comma-separated) or substring match
+  if (filters.mill_name) {
+    const mills = Array.isArray(filters.mill_name)
+      ? filters.mill_name
+      : String(filters.mill_name).split(',').map((s) => s.trim()).filter(Boolean);
+    if (mills.length === 1) {
+      query.mill_name = mills[0];
+    } else if (mills.length > 1) {
+      query.mill_name = { $in: mills };
+    }
+  }
+
   // GSM — exact multi-value (comma-separated) or range
   if (filters.gsm !== undefined && filters.gsm !== '') {
     const gsmValues = String(filters.gsm).split(',').map((v) => v.trim()).filter(Boolean);

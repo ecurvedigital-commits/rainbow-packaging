@@ -16,6 +16,7 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
     quality: 'VK',
     bf: 18,
     supplier_name: '',
+    mill_name: '',
     size: 100,
     gsm: 150,
     max_weight: 1000,
@@ -102,6 +103,7 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
         quality: reel.quality || 'VK',
         bf: reel.bf || 18,
         supplier_name: reel.supplier_name || '',
+        mill_name: reel.mill_name || '',
         size: reel.size || 100,
         gsm: reel.gsm || 150,
         max_weight: reel.max_weight || 1000,
@@ -157,6 +159,7 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
         quality: formData.quality,
         bf: Number(formData.bf),
         supplier_name: formData.supplier_name.trim(),
+        mill_name: formData.mill_name ? formData.mill_name.trim() : '',
         size: Number(formData.size),
         gsm: Number(formData.gsm),
         max_weight: Number(formData.max_weight),
@@ -247,6 +250,10 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
             <div>
               <label className={labelClass}>Supplier Name</label>
               <input required type="text" className={inputClass} value={formData.supplier_name} onChange={(e) => setFormData({ ...formData, supplier_name: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelClass}>Mill Name</label>
+              <input type="text" className={inputClass} placeholder="e.g. Century Paper Mill" value={formData.mill_name} onChange={(e) => setFormData({ ...formData, mill_name: e.target.value })} />
             </div>
             <div>
               <label className={labelClass}>Max / Initial Weight (kg)</label>

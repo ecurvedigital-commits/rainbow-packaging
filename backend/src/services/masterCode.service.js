@@ -21,6 +21,13 @@ const INITIAL_MASTER_CODES = [
   { master_code: '16', master_code_name: 'Import Kraft', quality: 'import kraft', bf: '', gsm: '', size: '', description: 'Import Kraft' },
   { master_code: '17', master_code_name: 'FBB', quality: 'fbb', bf: '', gsm: '', size: '', description: 'FBB' },
   { master_code: '18', master_code_name: 'SBS', quality: 'sbs', bf: '', gsm: '', size: '', description: 'SBS' },
+  { master_code: '19', master_code_name: 'VK-22-220', quality: 'vk', bf: 22, gsm: 220, size: '', description: 'VK 22 220' },
+  { master_code: '20', master_code_name: 'SK-25-220', quality: 'sk', bf: 25, gsm: 220, size: '', description: 'SK 25 220' },
+  { master_code: '21', master_code_name: 'SK-18-120', quality: 'sk', bf: 18, gsm: 120, size: '', description: 'SK 18 120' },
+  { master_code: '22', master_code_name: 'SK-25-230', quality: 'sk', bf: 25, gsm: 230, size: '', description: 'SK 25 230' },
+  { master_code: '23', master_code_name: 'VK-25-150', quality: 'vk', bf: 25, gsm: 150, size: '', description: 'VK 25 150' },
+  { master_code: '24', master_code_name: 'VK-25-230', quality: 'vk', bf: 25, gsm: 230, size: '', description: 'VK 25 230' },
+  { master_code: '25', master_code_name: 'SK-22-230', quality: 'sk', bf: 22, gsm: 230, size: '', description: 'SK 22 230' },
 ];
 
 /**

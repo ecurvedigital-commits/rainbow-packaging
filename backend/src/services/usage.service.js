@@ -4,8 +4,10 @@ import { ROLES } from '../constants/roles.js';
 import { EVENT_TYPES } from '../constants/eventTypes.js';
 import { APPROVAL_STATUS } from '../constants/approvalStatus.js';
 import { RECORD_STATUS } from '../constants/reelStatus.js';
+import { MasterCode } from '../models/masterCode.model.js';
 import { deriveReelStatus } from '../utils/reelStatus.js';
 import { appendEvent } from './eventLog.service.js';
+import { matchReelToMasterCode } from './reel.service.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { withTransaction } from '../config/db.js';
 import { createApiError } from '../utils/ApiError.js';
@@ -129,6 +131,7 @@ export async function listUsageLogs({ filters = {}, actor }) {
       $or: [
         { reel_no: regex },
         { supplier_name: regex },
+        { mill_name: regex },
         { master_key: regex },
         { quality: regex },
         ...(isObjectId ? [{ _id: qTrim }] : []),
@@ -154,11 +157,36 @@ export async function listUsageLogs({ filters = {}, actor }) {
   ]);
 
   const reelIds = [...new Set(rawEvents.map((e) => e.reel_id.toString()))];
-  const reels = await Reel.find({ _id: { $in: reelIds } }).lean();
+  const [reels, masterCodeDocs] = await Promise.all([
+    Reel.find({ _id: { $in: reelIds } }).lean(),
+    MasterCode.find({ status: 'ACTIVE' }).lean(),
+  ]);
   const reelMap = new Map(reels.map((r) => [r._id.toString(), r]));
 
   const items = rawEvents.map((event) => {
     const reelObj = reelMap.get(event.reel_id.toString());
+    let resolvedMasterCode = null;
+    let resolvedMasterCodeName = null;
+    let mcDoc = null;
+
+    if (reelObj) {
+      if (reelObj.master_code && reelObj.master_code !== reelObj.master_key) {
+        resolvedMasterCode = reelObj.master_code;
+        mcDoc = masterCodeDocs.find((m) => String(m.master_code) === String(reelObj.master_code));
+      } else if (reelObj.master_code_id) {
+        mcDoc = masterCodeDocs.find((m) => String(m._id) === String(reelObj.master_code_id));
+        if (mcDoc) resolvedMasterCode = mcDoc.master_code;
+      }
+
+      if (!resolvedMasterCode && !mcDoc) {
+        mcDoc = masterCodeDocs.find((mc) => matchReelToMasterCode(reelObj, mc));
+        if (mcDoc) resolvedMasterCode = mcDoc.master_code;
+      }
+      if (mcDoc) {
+        resolvedMasterCodeName = mcDoc.master_code_name;
+      }
+    }
+
     return {
       id: event._id.toString(),
       event_type: event.event_type,
@@ -167,7 +195,10 @@ export async function listUsageLogs({ filters = {}, actor }) {
       reel_no: event.reel_no,
       quality: reelObj?.quality || null,
       master_key: reelObj?.master_key || null,
+      master_code: resolvedMasterCode || null,
+      master_code_name: resolvedMasterCodeName || null,
       supplier_name: reelObj?.supplier_name || null,
+      mill_name: reelObj?.mill_name || null,
       performed_by_name: event.performed_by_name,
       performed_by_role: event.performed_by_role,
       performed_at: event.performed_at,

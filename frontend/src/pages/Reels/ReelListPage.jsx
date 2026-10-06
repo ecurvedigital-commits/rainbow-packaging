@@ -29,6 +29,7 @@ const formatMasterCodeBadge = (code, reel = null, map = {}) => {
 
 const BASE_FIELDS = [
   { key: 'supplier', label: 'Supplier Name', apiKey: 'supplier' },
+  { key: 'mill_name', label: 'Mill Name', apiKey: 'mill_name' },
   { key: 'master_code', label: 'Master Code', apiKey: 'master_code' },
   { key: 'paper_quality', label: 'Paper Quality', apiKey: 'quality' },
   { key: 'gsm', label: 'GSM', apiKey: 'gsm' },
@@ -39,12 +40,12 @@ const BASE_FIELDS = [
 ];
 
 const SORT_LABELS = {
-  reel: 'Reel No.', specs: 'Specifications', supplier: 'Supplier',
+  reel: 'Reel No.', specs: 'Specifications', supplier: 'Supplier', mill: 'Mill Name',
   weight: 'Net Weight', price: 'Price / KG', status: 'Status', created: 'Created',
 };
 
 const EMPTY_FILTER_VALUES = {
-  supplier: [], master_code: [], paper_quality: [], gsm: [],
+  supplier: [], mill_name: [], master_code: [], paper_quality: [], gsm: [],
   bf: [], width_mm: [], status: [], station: [],
 };
 
@@ -84,6 +85,7 @@ export default function ReelListPage() {
   const [filterValues, setFilterValues] = useState(() => {
     const statusParam = searchParams.get('status');
     const supplierParam = searchParams.get('supplier');
+    const millNameParam = searchParams.get('mill_name');
     const qualityParam = searchParams.get('quality');
     const bfParam = searchParams.get('bf');
 
@@ -91,6 +93,7 @@ export default function ReelListPage() {
       ...EMPTY_FILTER_VALUES,
       status: statusParam ? statusParam.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean) : [],
       supplier: supplierParam ? supplierParam.split(',').map((s) => s.trim()).filter(Boolean) : [],
+      mill_name: millNameParam ? millNameParam.split(',').map((s) => s.trim()).filter(Boolean) : [],
       paper_quality: qualityParam ? qualityParam.split(',').map((s) => s.trim()).filter(Boolean) : [],
       bf: bfParam ? bfParam.split(',').map((s) => s.trim()).filter(Boolean) : [],
     };
@@ -106,7 +109,7 @@ export default function ReelListPage() {
   // Dropdown options from backend
   const [filterOptions, setFilterOptions] = useState({
     qualities: [], gsms: [], bfs: [], sizes: [],
-    suppliers: [], master_codes: [], statuses: [], stations: [],
+    suppliers: [], mill_names: [], master_codes: [], statuses: [], stations: [],
     custom_fields: [],
   });
 
@@ -170,6 +173,7 @@ export default function ReelListPage() {
             bfs: res.data.bfs || [],
             sizes: res.data.sizes || [],
             suppliers: res.data.suppliers || [],
+            mill_names: res.data.mill_names || [],
             master_codes: (res.data.master_codes || [])
               .filter((code) => Boolean(code) && !/^[A-Z]+-G\d+-BF\d+-S\d+/.test(code)),
             statuses: res.data.statuses || [],
@@ -191,6 +195,7 @@ export default function ReelListPage() {
     const csv = (arr) => (Array.isArray(arr) && arr.length ? arr.join(',') : undefined);
 
     if (csv(filterValues.supplier)) params.supplier = csv(filterValues.supplier);
+    if (csv(filterValues.mill_name)) params.mill_name = csv(filterValues.mill_name);
     if (csv(filterValues.master_code)) params.master_code = csv(filterValues.master_code);
     if (csv(filterValues.paper_quality)) params.quality = csv(filterValues.paper_quality);
     if (csv(filterValues.gsm)) params.gsm = csv(filterValues.gsm);
@@ -291,6 +296,7 @@ export default function ReelListPage() {
       }
       case 'specs': return String(reel.quality || reel.paper_quality || '').toLowerCase();
       case 'supplier': return String(reel.supplier_name || reel.supplier || '').toLowerCase();
+      case 'mill': return String(reel.mill_name || '').toLowerCase();
       case 'weight': return Number(reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight ?? 0);
       case 'price': return reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 55;
       case 'status': return String(reel.status || '').toLowerCase();
@@ -381,6 +387,7 @@ export default function ReelListPage() {
             <td class="nowrap">Reel #${escapeReportHtml(reel.reel_no || reel.reel_number || 'N/A')}</td>
             <td>${escapeReportHtml(specifications || 'N/A')}</td>
             <td>${escapeReportHtml(reel.supplier_name || reel.supplier || 'N/A')}</td>
+            <td>${escapeReportHtml(reel.mill_name || '-')}</td>
             <td class="right nowrap">${escapeReportHtml(formatWeight(currentWeight))}</td>
             <td class="right nowrap">Rs ${escapeReportHtml(itemRate.toLocaleString('en-IN'))}/kg</td>
             <td class="center">${escapeReportHtml(reel.status || 'N/A')}</td>
@@ -469,14 +476,15 @@ export default function ReelListPage() {
 
         <table class="data">
           <colgroup>
-            <col style="width:5%" />
-            <col style="width:11%" />
-            <col style="width:24%" />
-            <col style="width:19%" />
-            <col style="width:11%" />
+            <col style="width:4%" />
             <col style="width:10%" />
+            <col style="width:20%" />
+            <col style="width:15%" />
+            <col style="width:13%" />
+            <col style="width:10%" />
+            <col style="width:9%" />
             <col style="width:8%" />
-            <col style="width:12%" />
+            <col style="width:11%" />
           </colgroup>
           <thead>
             <tr>
@@ -484,6 +492,7 @@ export default function ReelListPage() {
               <th>Reel No.</th>
               <th>Specifications</th>
               <th>Supplier</th>
+              <th>Mill</th>
               <th>Net Weight</th>
               <th>Price / KG</th>
               <th>Status</th>
@@ -491,7 +500,7 @@ export default function ReelListPage() {
             </tr>
           </thead>
           <tbody>
-            ${rows || '<tr><td colspan="8" class="center">No reels found for the selected filters.</td></tr>'}
+            ${rows || '<tr><td colspan="9" class="center">No reels found for the selected filters.</td></tr>'}
           </tbody>
         </table>
 
@@ -567,6 +576,7 @@ export default function ReelListPage() {
       case 'bf': return filterOptions.bfs;
       case 'width_mm': return filterOptions.sizes;
       case 'supplier': return filterOptions.suppliers;
+      case 'mill_name': return filterOptions.mill_names;
       case 'master_code': return filterOptions.master_codes;
       case 'status': return filterOptions.statuses;
       case 'station': return filterOptions.stations;
@@ -967,6 +977,14 @@ export default function ReelListPage() {
                         {renderSortIcon('supplier')}
                       </button>
                     </th>
+                    <th className="px-4 py-3 whitespace-nowrap min-w-[140px]">
+                      <button type="button" onClick={() => handleSort('mill')}
+                        className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
+                        title="Click to sort; click more columns to sort by several fields">
+                        {SORT_LABELS.mill}
+                        {renderSortIcon('mill')}
+                      </button>
+                    </th>
                     <th className="px-4 py-3 whitespace-nowrap text-right">
                       <button type="button" onClick={() => handleSort('weight')}
                         className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition justify-end"
@@ -1067,11 +1085,17 @@ export default function ReelListPage() {
                         </td>
 
                         <td className="align-middle px-4 py-3.5">
-                          <div className="text-slate-800 dark:text-slate-200 break-words">
+                          <div className="text-slate-800 dark:text-slate-200 break-words font-medium">
                             {reel.supplier_name || reel.supplier || 'N/A'}
                           </div>
                           <div className="text-xs text-slate-500 dark:text-slate-400">
                             SRNO: #{reel.sr_no}
+                          </div>
+                        </td>
+
+                        <td className="align-middle px-4 py-3.5">
+                          <div className="text-slate-800 dark:text-slate-200 font-medium">
+                            {reel.mill_name || '-'}
                           </div>
                         </td>
 

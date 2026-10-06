@@ -10,6 +10,7 @@ export const listReelsSchema = z.object({
     quality: z.string().optional(),
     supplier: z.string().optional(),
     supplier_q: z.string().optional(),
+    mill_name: z.string().optional(),
     gsm_min: z.coerce.number().optional(),
     gsm_max: z.coerce.number().optional(),
     size_min: z.coerce.number().optional(),
@@ -21,7 +22,7 @@ export const listReelsSchema = z.object({
     station: z.string().optional(),
     approval_status: z.enum(['PENDING', 'CONFIRMED']).optional(),
     include_voided: booleanString,
-    sort: sortQuery(['sr_no', 'reel_no', 'status', 'quality', 'supplier_name', 'purchase_date', 'gsm', 'size', 'previous_weight', 'last_activity_at']),
+    sort: sortQuery(['sr_no', 'reel_no', 'status', 'quality', 'supplier_name', 'mill_name', 'purchase_date', 'gsm', 'size', 'previous_weight', 'last_activity_at']),
   }).passthrough(),
 });
 
@@ -49,6 +50,7 @@ export const createReelSchema = z.object({
     bf: z.coerce.number().positive(),
     purchase_date: dateOnlySchema.optional(),
     supplier_name: z.string().min(1, 'Supplier name is required').trim(),
+    mill_name: z.string().trim().optional().default(''),
     size: z.coerce.number().positive(),
     gsm: z.coerce.number().positive(),
     rate_per_kg: z.coerce.number().min(0).optional().default(0),
@@ -80,6 +82,7 @@ export const updateReelSchema = z.object({
     bf: z.coerce.number().positive().optional(),
     purchase_date: dateOnlySchema.optional(),
     supplier_name: z.string().trim().optional(),
+    mill_name: z.string().trim().optional(),
     size: z.coerce.number().positive().optional(),
     gsm: z.coerce.number().positive().optional(),
     max_weight: z.coerce.number().positive().optional(),

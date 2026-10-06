@@ -326,6 +326,12 @@ export default function OperatorApprovalsPage() {
                           <span>Supplier: <strong className="text-gray-700">{item.payload.fields.supplier_name}</strong></span>
                         </>
                       )}
+                      {item.payload?.fields?.mill_name && (
+                        <>
+                          <span>•</span>
+                          <span>Mill: <strong className="text-gray-700">{item.payload.fields.mill_name}</strong></span>
+                        </>
+                      )}
                     </div>
 
                     {/* Supervisor Decision Banner */}
