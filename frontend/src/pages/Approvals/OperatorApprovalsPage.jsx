@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   ClipboardCheck, Clock, CheckCircle2, XCircle, Search, 
-  RefreshCw, ArrowRight, Scale, Layers, AlertCircle, FileText, Eye
+  RefreshCw, ArrowRight, Scale, Layers, AlertCircle, FileText, Eye, ExternalLink
 } from 'lucide-react';
 import { approvalApi } from '../../api/approvalApi';
-import ApprovalDetailModal from './ApprovalDetailModal';
 import ReelJourneyModal from './ReelJourneyModal';
 import Pagination from '../../components/Common/Pagination';
 import LoadingState from '../../components/Common/LoadingState';
@@ -13,6 +13,7 @@ import EmptyState from '../../components/Common/EmptyState';
 import { formatWeight, formatDate } from '../../utils/formatters';
 
 export default function OperatorApprovalsPage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -21,7 +22,6 @@ export default function OperatorApprovalsPage() {
   const [eventTypeFilter, setEventTypeFilter] = useState('');
   const [searchQ, setSearchQ] = useState('');
 
-  const [selectedDetailItem, setSelectedDetailItem] = useState(null);
   const [journeyTarget, setJourneyTarget] = useState(null); // { reelId, reelNo }
 
   const [pagination, setPagination] = useState({
@@ -260,10 +260,13 @@ export default function OperatorApprovalsPage() {
               const currW = item.payload?.current_weight_entered;
               const usedW = item.payload?.used_this_time || (prevW !== undefined && currW !== undefined ? Math.max(0, prevW - currW) : null);
 
+              const reelId = item.reel_id || item.reel?.id || item.reel?._id;
+
               return (
                 <div
                   key={itemId}
-                  className="bg-white rounded-2xl p-5 border border-gray-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-gray-300"
+                  onClick={() => reelId && navigate(`/reels/${reelId}`)}
+                  className="bg-white rounded-2xl p-5 border border-gray-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-indigo-300 cursor-pointer group"
                 >
                   <div className="space-y-2.5 min-w-0 flex-1">
                     {/* Top Row: Event Type + Status Badge + Reel No */}
@@ -286,8 +289,9 @@ export default function OperatorApprovalsPage() {
                         {status}
                       </span>
 
-                      <span className="font-bold text-gray-900 text-sm" style={{ fontFamily: 'var(--font-family-display)' }}>
-                        Reel #{reelNo}
+                      <span className="font-bold text-gray-900 group-hover:text-indigo-600 text-sm flex items-center gap-1" style={{ fontFamily: 'var(--font-family-display)' }}>
+                        <span>Reel #{reelNo}</span>
+                        <ExternalLink size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                       </span>
                     </div>
 
@@ -374,12 +378,12 @@ export default function OperatorApprovalsPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedDetailItem(item);
+                        if (reelId) navigate(`/reels/${reelId}`);
                       }}
                       className="px-3.5 py-2 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition flex items-center gap-1.5"
                     >
                       <Eye className="w-3.5 h-3.5" />
-                      <span>Details</span>
+                      <span>View Reel</span>
                     </button>
                   </div>
                 </div>
@@ -396,18 +400,6 @@ export default function OperatorApprovalsPage() {
             onLimitChange={(l) => setPagination((prev) => ({ ...prev, limit: l, page: 1 }))}
           />
         </div>
-      )}
-
-      {/* Detail Modal */}
-      {selectedDetailItem && (
-        <ApprovalDetailModal
-          item={selectedDetailItem}
-          canApprove={false}
-          onClose={() => setSelectedDetailItem(null)}
-          onViewJourney={(reelId, reelNo) => {
-            setJourneyTarget({ reelId, reelNo });
-          }}
-        />
       )}
 
       {/* Reel Journey Modal (Paginated timeline) */}

@@ -7,7 +7,7 @@ import ErrorAlert from '../../components/Common/ErrorAlert';
 import Pagination from '../../components/Common/Pagination';
 import Toast from '../../components/Common/Toast';
 import { formatDate, formatDateTime, formatWeight, formatCurrency, getStatusBadgeStyle, getApprovalBadgeStyle } from '../../utils/formatters';
-import { ArrowLeft, CheckCircle2, AlertTriangle, PlusCircle, Activity, ShieldAlert, Check, X, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, AlertTriangle, PlusCircle, Activity, ShieldAlert, Check, X, XCircle, Wrench, MessageSquarePlus } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { RecordUsageModal } from './RecordUsageModal';
 import { MasterCorrectionModal } from './MasterCorrectionModal';
@@ -176,6 +176,16 @@ export const ReelDetailPage = () => {
               )
             )}
 
+            {/* Request Correction (Operator & All) */}
+            <button
+              onClick={() => navigate(`/messages/compose?mode=CORRECTION&reel_id=${reel.id || id}`)}
+              className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors flex items-center gap-1.5"
+              title="Send a message or correction request about this reel"
+            >
+              <Wrench size={14} />
+              <span>Request Correction</span>
+            </button>
+
             {/* Master Correction / Edit Details (Supervisor & Admin) */}
             {(isRoleAdmin || isRoleSupervisor) && (
               <button
@@ -242,7 +252,7 @@ export const ReelDetailPage = () => {
         <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-xs space-y-3">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Inventory Weight & Value</h3>
           <SpecRow label="Current Balance" value={formatWeight(currentWeight)} highlight />
-          <SpecRow label="Current Stock Value" value={formatCurrency(Math.round((currentWeight || 0) * (reel.rate_per_kg || 55)))} bold />
+          <SpecRow label="Current Stock Value" value={reel.rate_per_kg ? formatCurrency(Math.round((currentWeight || 0) * reel.rate_per_kg)) : 'N/A'} bold />
           <SpecRow label="Initial Max Weight" value={formatWeight(reel.max_weight)} />
           <SpecRow label="Consumed Stock" value={formatWeight(reel.consumed_weight || Math.max(reel.max_weight - currentWeight, 0))} />
           <SpecRow label="Status" value={reel.status} />

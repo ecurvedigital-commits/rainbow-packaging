@@ -15,6 +15,10 @@ export const notificationApi = {
     return notificationApi.list(page, limit);
   },
 
+  getById: async (id) => {
+    return apiFetch(`/notifications/${id}`, { method: 'GET' });
+  },
+
   markRead: async (id) => {
     return apiFetch(`/notifications/${id}/read`, { method: 'PATCH' });
   },

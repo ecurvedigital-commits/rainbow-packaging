@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import {
   Plus, Search, RefreshCw, Eye, Scale, Edit3, Trash2,
-  X, RotateCcw, Check, ChevronDown, ChevronUp, Calendar, IndianRupee, Clock, Printer, ArrowUpDown
+  X, RotateCcw, Check, ChevronDown, ChevronUp, Calendar, IndianRupee, Clock, Printer, ArrowUpDown,
+  Wrench, FileSpreadsheet, FileText, Download,
 } from 'lucide-react';
 import { reelApi } from '../../api/reelApi';
 import { masterCodeApi } from '../../api/masterCodeApi';
@@ -15,6 +17,7 @@ import Pagination from '../../components/Common/Pagination';
 import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';
 import EmptyState from '../../components/Common/EmptyState';
+import CustomDatePicker from '../../components/Common/CustomDatePicker';
 import { formatWeight, formatDate, formatCurrency, getStatusBadgeClass } from '../../utils/formatters';
 
 const formatBfDisplay = (bf) => {
@@ -64,6 +67,7 @@ export default function ReelListPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [usageReel, setUsageReel] = useState(null);
   const [correctionReel, setCorrectionReel] = useState(null);
+  const [messageReel, setMessageReel] = useState(null);
   const [voidReel, setVoidReel] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [sortConfig, setSortConfig] = useState([]); // [{ key, dir }] in priority order
@@ -78,6 +82,22 @@ export default function ReelListPage() {
     total: 0,
     totalPages: 1,
   });
+
+  const exportDropdownRef = useRef(null);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+
+  // Click outside for export dropdown
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target)) {
+        setShowExportDropdown(false);
+      }
+    };
+    if (showExportDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showExportDropdown]);
 
   // Set of field keys that are currently "open" (expanded) — multiple allowed
   const [openFields, setOpenFields] = useState(() => {
@@ -323,7 +343,7 @@ export default function ReelListPage() {
         const init = Number(reel.max_weight ?? reel.initial_weight_kg ?? cur);
         return Math.max(0, init - cur);
       }
-      case 'price': return reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 55;
+      case 'price': return reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 0;
       case 'status': return String(reel.status || '').toLowerCase();
       case 'created': {
         const t = new Date(reel.purchase_date || reel.created_at || reel.createdAt).getTime();
@@ -401,7 +421,7 @@ export default function ReelListPage() {
         const consumedWeight = Math.max(0, initialWeight - currentWeight);
         totalWeight += Number(currentWeight) || 0;
         totalConsumedWeight += Number(consumedWeight) || 0;
-        const itemRate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 55;
+        const itemRate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 0;
         const createdDate = formatDate(reel.purchase_date || reel.created_at || reel.createdAt);
         const specifications = [
           reel.quality || reel.paper_quality || '',
@@ -419,8 +439,7 @@ export default function ReelListPage() {
             <td>${escapeReportHtml(reel.mill_name || '-')}</td>
             <td class="right nowrap">${escapeReportHtml(formatWeight(currentWeight))}</td>
             <td class="right nowrap">${escapeReportHtml(formatWeight(consumedWeight))}</td>
-            <td class="right nowrap">Rs ${escapeReportHtml(itemRate.toLocaleString('en-IN'))}/kg</td>
-            <td class="center">${escapeReportHtml(reel.status || 'N/A')}</td>
+            <td class="right nowrap">${itemRate > 0 ? `Rs ${escapeReportHtml(itemRate.toLocaleString('en-IN'))}/kg` : '-'}</td>
             <td class="center nowrap">${escapeReportHtml(createdDate || 'N/A')}</td>
           </tr>
         `;
@@ -454,7 +473,8 @@ export default function ReelListPage() {
 
     .letterhead { text-align: center; padding-bottom: 8px; border-bottom: 2.5px solid #111827; }
     .company { font-size: 24px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin: 0; }
-    .title { font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #374151; margin: 4px 0 0; }
+    .address { font-size: 12px; font-weight: 600; color: #4b5563; text-transform: uppercase; letter-spacing: 1.5px; margin: 3px 0 0; }
+    .title { font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #374151; margin: 5px 0 0; }
 
     .meta { width: 100%; border-collapse: collapse; margin: 10px 0 12px; font-size: 10.5px; }
     .meta td { border: none; padding: 2px 0; vertical-align: top; }
@@ -488,7 +508,8 @@ export default function ReelListPage() {
     <tbody><tr><td>
       <div class="report">
         <div class="letterhead">
-          <h1 class="company">Rainbow Packages</h1>
+          <h1 class="company">Rainbow Packaging Ind.</h1>
+          <p class="address">Sidcul Haridwar</p>
           <p class="title">Reel Inventory Report</p>
         </div>
 
@@ -507,14 +528,14 @@ export default function ReelListPage() {
         <table class="data">
           <colgroup>
             <col style="width:4%" />
-            <col style="width:10%" />
+            <col style="width:11%" />
             <col style="width:20%" />
             <col style="width:15%" />
             <col style="width:13%" />
             <col style="width:10%" />
-            <col style="width:9%" />
+            <col style="width:10%" />
             <col style="width:8%" />
-            <col style="width:11%" />
+            <col style="width:9%" />
           </colgroup>
           <thead>
             <tr>
@@ -526,12 +547,11 @@ export default function ReelListPage() {
               <th>Stock Weight</th>
               <th>Total Consumed</th>
               <th>Price / KG</th>
-              <th>Status</th>
               <th>Created</th>
             </tr>
           </thead>
           <tbody>
-            ${rows || '<tr><td colspan="10" class="center">No reels found for the selected filters.</td></tr>'}
+            ${rows || '<tr><td colspan="9" class="center">No reels found for the selected filters.</td></tr>'}
           </tbody>
         </table>
 
@@ -555,6 +575,65 @@ export default function ReelListPage() {
       printWindow.close();
       console.error('[ReelListPage] Failed to generate print report:', err);
       setError(err.message || 'Failed to generate report.');
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  // ── Excel (.xlsx) / CSV (.csv) Report Export ─────────────────────────────
+  const handleExportSpreadsheet = async (format = 'xlsx') => {
+    setReportLoading(true);
+    setError(null);
+    try {
+      const reportReels = applySort(await fetchAllReportReels());
+      if (!reportReels.length) {
+        setError('No reels found to export with the current filters.');
+        setReportLoading(false);
+        return;
+      }
+
+      const rows = reportReels.map((reel, index) => {
+        const currentWeight = Number(reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight ?? 0);
+        const initialWeight = Number(reel.max_weight ?? reel.initial_weight_kg ?? currentWeight);
+        const consumedWeight = Math.max(0, initialWeight - currentWeight);
+        const rate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 0;
+        const totalValue = currentWeight * rate;
+        const purchaseDate = formatDate(reel.purchase_date || reel.created_at || reel.createdAt);
+
+        return {
+          'Sr. No': index + 1,
+          'Reel Number': reel.reel_no || reel.reel_number || '',
+          'Quality': reel.quality || reel.paper_quality || '',
+          'GSM': reel.gsm ?? '',
+          'BF': reel.bf ? String(reel.bf) : '',
+          'Size (cm)': reel.size || reel.width_mm || '',
+          'Master Code': formatMasterCodeBadge(reel.master_code || reel.master_code_id, reel, masterCodeMap),
+          'Supplier Name': reel.supplier_name || reel.supplier || '',
+          'Mill Name': reel.mill_name || '',
+          'Current Stock Weight (kg)': currentWeight,
+          'Initial Max Weight (kg)': initialWeight,
+          'Consumed Weight (kg)': consumedWeight,
+          'Rate / KG (Rs)': rate > 0 ? rate : 0,
+          'Total Stock Value (Rs)': totalValue > 0 ? Math.round(totalValue) : 0,
+          'Purchase Date': purchaseDate || '',
+          'Status': reel.status || 'AVAILABLE',
+          'Station': reel.station || '',
+        };
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Reel Inventory');
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      if (format === 'csv') {
+        XLSX.writeFile(workbook, `Rainbow_Reels_Inventory_${dateStr}.csv`, { bookType: 'csv' });
+      } else {
+        XLSX.writeFile(workbook, `Rainbow_Reels_Inventory_${dateStr}.xlsx`, { bookType: 'xlsx' });
+      }
+    } catch (err) {
+      console.error('[ReelListPage] Failed to generate spreadsheet export:', err);
+      setError(err.message || 'Failed to export report.');
     } finally {
       setReportLoading(false);
     }
@@ -658,11 +737,11 @@ export default function ReelListPage() {
   const filteredTotalPrice = Math.round(
     reels.reduce((sum, r) => {
       const w = r.previous_weight ?? r.current_weight_kg ?? r.max_weight ?? 0;
-      const rate = r.rate_per_kg && Number(r.rate_per_kg) > 0 ? Number(r.rate_per_kg) : 55;
+      const rate = r.rate_per_kg && Number(r.rate_per_kg) > 0 ? Number(r.rate_per_kg) : 0;
       return sum + (w * rate);
     }, 0)
   );
-  const filteredAvgPricePerKg = filteredTotalWeight > 0 ? Math.round((filteredTotalPrice / filteredTotalWeight) * 100) / 100 : 55;
+  const filteredAvgPricePerKg = filteredTotalWeight > 0 && filteredTotalPrice > 0 ? Math.round((filteredTotalPrice / filteredTotalWeight) * 100) / 100 : 0;
 
   return (
     <div className="space-y-6">
@@ -676,15 +755,55 @@ export default function ReelListPage() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap justify-end">
-          <button
-            onClick={openPrintReport}
-            disabled={reportLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium rounded-lg shadow-sm transition"
-            title="Print the complete reel report using the current filters"
-          >
-            <Printer className={reportLoading ? 'w-4 h-4 animate-pulse' : 'w-4 h-4'} />
-            {reportLoading ? 'Preparing Report...' : 'Print / PDF Report'}
-          </button>
+          {/* Export & Download Dropdown */}
+          <div className="relative" ref={exportDropdownRef}>
+            <button
+              onClick={() => setShowExportDropdown(!showExportDropdown)}
+              disabled={reportLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium rounded-lg shadow-sm transition cursor-pointer"
+              title="Export report in PDF, Excel, or CSV format"
+            >
+              <Download className="w-4 h-4 text-emerald-400" />
+              <span>{reportLoading ? 'Preparing Report...' : 'Export Report'}</span>
+              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+            </button>
+
+            {showExportDropdown && (
+              <div className="absolute right-0 mt-2 w-60 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-50 p-2 space-y-1 animate-fade-in">
+                <button
+                  onClick={() => { setShowExportDropdown(false); openPrintReport(); }}
+                  className="w-full text-left px-3 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 transition cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                  <div>
+                    <span className="block font-bold text-slate-900 dark:text-white">Print / PDF Report</span>
+                    <span className="text-[10px] text-slate-400 block font-normal">Formatted printable report</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => { setShowExportDropdown(false); handleExportSpreadsheet('xlsx'); }}
+                  className="w-full text-left px-3 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 transition cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="block font-bold text-slate-900 dark:text-white">Download Excel (.xlsx)</span>
+                    <span className="text-[10px] text-slate-400 block font-normal">Spreadsheet with full data columns</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => { setShowExportDropdown(false); handleExportSpreadsheet('csv'); }}
+                  className="w-full text-left px-3 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 transition cursor-pointer"
+                >
+                  <Download className="w-4 h-4 text-blue-600 shrink-0" />
+                  <div>
+                    <span className="block font-bold text-slate-900 dark:text-white">Download CSV (.csv)</span>
+                    <span className="text-[10px] text-slate-400 block font-normal">Standard comma-separated file</span>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+
           <button onClick={fetchReels}
             className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-700 transition"
             title="Refresh list">
@@ -758,7 +877,7 @@ export default function ReelListPage() {
       </div>
 
       {/* ── Filter Panel ───────────────────────────────────────────────── */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm relative z-20">
 
         {/* Search Input + Field Selector Dropdown + Reset */}
         <div className="p-4 border-b border-slate-100 dark:border-slate-700/60 flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
@@ -816,20 +935,20 @@ export default function ReelListPage() {
               <Calendar className="w-4 h-4 text-indigo-500" /> Filter by Creation Date:
             </span>
             <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => { setDateFrom(e.target.value); setPagination((p) => ({ ...p, page: 1 })); }}
-                className="px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white"
-                title="From Date"
+              <CustomDatePicker
+                date={dateFrom}
+                onChange={(newDate) => { setDateFrom(newDate); setPagination((p) => ({ ...p, page: 1 })); }}
+                placeholder="From Date"
+                align="left"
+                iconColor="text-indigo-500"
               />
               <span className="text-xs text-slate-400">to</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => { setDateTo(e.target.value); setPagination((p) => ({ ...p, page: 1 })); }}
-                className="px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white"
-                title="To Date"
+              <CustomDatePicker
+                date={dateTo}
+                onChange={(newDate) => { setDateTo(newDate); setPagination((p) => ({ ...p, page: 1 })); }}
+                placeholder="To Date"
+                align="left"
+                iconColor="text-indigo-500"
               />
             </div>
           </div>
@@ -850,20 +969,27 @@ export default function ReelListPage() {
               <Calendar className="w-4 h-4 text-emerald-500" /> Filter by Consumption Date:
             </span>
             <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={consumedFrom}
-                onChange={(e) => { setConsumedFrom(e.target.value); if (!consumedTo) setConsumedTo(e.target.value); setPagination((p) => ({ ...p, page: 1 })); }}
-                className="px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:text-white"
-                title="Consumed From Date"
+              <CustomDatePicker
+                date={consumedFrom}
+                onChange={(newDate) => {
+                  setConsumedFrom(newDate);
+                  if (!consumedTo) setConsumedTo(newDate);
+                  setPagination((p) => ({ ...p, page: 1 }));
+                }}
+                placeholder="Consumed From"
+                align="left"
+                iconColor="text-emerald-500"
               />
               <span className="text-xs text-slate-400">to</span>
-              <input
-                type="date"
-                value={consumedTo}
-                onChange={(e) => { setConsumedTo(e.target.value); setPagination((p) => ({ ...p, page: 1 })); }}
-                className="px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:text-white"
-                title="Consumed To Date"
+              <CustomDatePicker
+                date={consumedTo}
+                onChange={(newDate) => {
+                  setConsumedTo(newDate);
+                  setPagination((p) => ({ ...p, page: 1 }));
+                }}
+                placeholder="Consumed To"
+                align="left"
+                iconColor="text-emerald-500"
               />
             </div>
           </div>
@@ -1153,7 +1279,7 @@ export default function ReelListPage() {
                     const initialWeight = reel.max_weight ?? reel.initial_weight_kg;
                     const consumedWeight = Math.max(0, (initialWeight || 0) - (currentWeight || 0));
                     const consumedPct = initialWeight > 0 ? Math.round((consumedWeight / initialWeight) * 100) : 0;
-                    const itemRate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 55;
+                    const itemRate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 0;
                     const itemPrice = Math.round((currentWeight || 0) * itemRate);
 
                     const statusStr = (reel.status || '').toUpperCase();
@@ -1251,10 +1377,10 @@ export default function ReelListPage() {
 
                         <td className="align-middle px-4 py-3.5 text-right whitespace-nowrap tabular-nums">
                           <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
-                            {reel.rate_per_kg > 0 ? `₹${reel.rate_per_kg}/kg` : `₹55/kg`}
+                            {reel.rate_per_kg > 0 ? `₹${reel.rate_per_kg}/kg` : '-'}
                           </div>
                           <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                            Total: {formatCurrency(itemPrice)}
+                            {itemPrice > 0 ? `Total: ${formatCurrency(itemPrice)}` : 'Total: -'}
                           </div>
                         </td>
 
@@ -1302,10 +1428,19 @@ export default function ReelListPage() {
                               )
                             )}
 
+                            {/* Request Correction / Message */}
+                            {!isVoided && (
+                              <button onClick={() => setMessageReel(reel)}
+                                className="p-1.5 text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                                title="Send Message / Request Correction for this Reel">
+                                <Wrench className="w-4 h-4" />
+                              </button>
+                            )}
+
                             {(isRoleAdmin || isRoleSupervisor) && !isVoided && (
                               <button onClick={() => setCorrectionReel(reel)}
-                                className="p-1.5 text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                                title="Edit Reel Details / Correction">
+                                className="p-1.5 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                                title="Edit Reel Details / Master Override">
                                 <Edit3 className="w-4 h-4" />
                               </button>
                             )}
@@ -1358,6 +1493,15 @@ export default function ReelListPage() {
           <MasterCorrectionModal isOpen={Boolean(correctionReel)} reel={correctionReel}
             onClose={() => setCorrectionReel(null)}
             onSuccess={() => { setCorrectionReel(null); fetchReels(); }} />
+        )
+      }
+      {
+        messageReel && (
+          <ComposeMessageModal isOpen={Boolean(messageReel)}
+            initialReel={messageReel}
+            initialMode="CORRECTION"
+            onClose={() => setMessageReel(null)}
+            onSuccess={() => { setMessageReel(null); fetchReels(); }} />
         )
       }
       {

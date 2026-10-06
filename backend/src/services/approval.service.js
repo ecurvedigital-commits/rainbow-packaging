@@ -1,6 +1,7 @@
 import { ReelEvent } from '../models/reelEvent.model.js';
 import { Reel } from '../models/reel.model.js';
 import { Notification } from '../models/notification.model.js';
+import { CorrectionRequest } from '../models/correctionRequest.model.js';
 import { APPROVAL_STATUS } from '../constants/approvalStatus.js';
 import { EVENT_TYPES } from '../constants/eventTypes.js';
 import { RECORD_STATUS } from '../constants/reelStatus.js';
@@ -75,10 +76,14 @@ export async function listPendingApprovals({ filters = {}, actor }) {
     };
   }
 
-  // Fetch associated reels
+  // Fetch associated reels and pending corrections
   const reelIds = [...new Set(rawEvents.map((e) => e.reel_id.toString()))];
-  const reels = await Reel.find({ _id: { $in: reelIds } }).lean();
+  const [reels, pendingCorrections] = await Promise.all([
+    Reel.find({ _id: { $in: reelIds } }).lean(),
+    CorrectionRequest.find({ reel_id: { $in: reelIds }, status: 'PENDING' }).lean(),
+  ]);
   const reelMap = new Map(reels.map((r) => [r._id.toString(), r]));
+  const corrMap = new Map(pendingCorrections.map((c) => [c.reel_id.toString(), c]));
 
   // Check FIFO ordering per reel
   const now = Date.now();
@@ -101,6 +106,7 @@ export async function listPendingApprovals({ filters = {}, actor }) {
 
       const can_confirm = olderPendingCount === 0;
       const reelObj = reelMap.get(event.reel_id.toString());
+      const pendingCorr = corrMap.get(event.reel_id.toString());
 
       return {
         id: event._id.toString(),
@@ -120,6 +126,16 @@ export async function listPendingApprovals({ filters = {}, actor }) {
         performed_at: event.performed_at,
         waiting_hours,
         can_confirm,
+        has_pending_correction: !!pendingCorr,
+        pending_correction: pendingCorr
+          ? {
+              id: pendingCorr._id.toString(),
+              category: pendingCorr.category,
+              message: pendingCorr.message,
+              requested_by_name: pendingCorr.requested_by_name,
+              created_at: pendingCorr.created_at,
+            }
+          : null,
         payload: event.payload || {},
       };
     })

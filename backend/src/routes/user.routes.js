@@ -16,6 +16,7 @@ import {
 import {
   createUser,
   listUsers,
+  listDirectory,
   getUser,
   updateUser,
   setUserStatus,
@@ -26,7 +27,13 @@ import {
 
 const router = Router();
 
-router.use(authenticate, requirePasswordChange, authorizeRoles(ROLES.ADMIN));
+router.use(authenticate, requirePasswordChange);
+
+// Directory endpoint available to all authenticated users for messaging & mentions
+router.get('/directory', listDirectory);
+
+// Admin-only management routes
+router.use(authorizeRoles(ROLES.ADMIN));
 
 router.post('/', validate(createUserSchema), createUser);
 router.get('/', validate(listUsersSchema), listUsers);

@@ -8,7 +8,8 @@ import LoginQuickActionsModal from '../Common/LoginQuickActionsModal';
 import {
   LayoutDashboard, ClipboardCheck, Boxes, Layers, Users, Settings, LogOut,
   Bell, Menu, ChevronDown, KeyRound, SlidersHorizontal, FileText, Mail, Weight,
-  AlertTriangle, ArrowRight, X, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Sparkles
+  AlertTriangle, ArrowRight, X, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Sparkles,
+  MessageSquarePlus,
 } from 'lucide-react';
 
 export const AppShell = ({ children }) => {
@@ -59,7 +60,8 @@ export const AppShell = ({ children }) => {
       try {
         const notifRes = await notificationApi.getUnreadCount();
         if (isMounted && notifRes.success) {
-          setUnreadCount(notifRes.data?.unread_count || 0);
+          const count = notifRes.data?.unread_count ?? notifRes.data?.unread ?? 0;
+          setUnreadCount(count);
         }
 
         if (isRoleSupervisor) {
@@ -83,12 +85,12 @@ export const AppShell = ({ children }) => {
     };
 
     fetchCounts();
-    const interval = setInterval(fetchCounts, 15000);
+    const interval = setInterval(fetchCounts, 30000);
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [role, isRoleSupervisor, location.pathname]);
+  }, [role, isRoleSupervisor]);
 
   const handleLogout = async () => {
     await logout();
@@ -239,7 +241,7 @@ export const AppShell = ({ children }) => {
                 </div>
                 <div className="hidden sm:block text-left">
                   <p className="text-xs font-bold text-gray-900 leading-tight">{user?.name || user?.username}</p>
-                  <p className="text-[10px] font-bold leading-tight uppercase text-brand-blue">{role}</p>
+                  <p className="text-[10px] font-bold leading-tight uppercase text-brand-blue">{role === 'SUPERVISOR' ? 'MIS' : role}</p>
                 </div>
                 <ChevronDown size={14} className="text-gray-400 hidden sm:block" />
               </button>
@@ -325,6 +327,16 @@ export const AppShell = ({ children }) => {
           isOpen={showQuickActions}
           onClose={() => setShowQuickActions(false)}
         />
+
+        {/* Floating Message Button on Bottom Right */}
+        <button
+          onClick={() => navigate('/messages/compose')}
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-xs rounded-full shadow-2xl hover:shadow-indigo-500/30 hover:scale-105 active:scale-95 transition-all duration-200 group border border-white/25"
+          title="Send a Message or Reel Correction Request"
+        >
+          <MessageSquarePlus size={18} className="shrink-0 transition-transform group-hover:rotate-12" />
+          <span className="hidden sm:inline">Message</span>
+        </button>
       </div>
     </div>
   );
@@ -468,35 +480,45 @@ const SidebarContent = ({
   </>
 );
 
-const NavItem = ({ to, icon: Icon, label, badgeCount = 0, badgeColor = 'bg-brand-blue text-white', collapsed = false, onClick }) => (
+const NavItem = ({
+  to,
+  icon: Icon,
+  label,
+  badgeCount = 0,
+  badgeColor = 'bg-brand-blue text-white',
+  collapsed = false,
+  onClick,
+}) => (
   <NavLink
     to={to}
     onClick={onClick}
     title={collapsed ? label : undefined}
     className={({ isActive }) =>
-      `relative flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'justify-between px-3 py-2.5'
-      } rounded-xl text-[13px] font-medium transition-all ${isActive
-        ? 'bg-indigo-50 text-brand-blue-dark ring-1 ring-inset ring-indigo-100 font-bold'
-        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+      `relative flex items-center ${
+        collapsed ? 'justify-center px-0 py-3' : 'justify-between px-3 py-2.5'
+      } rounded-xl text-[13px] font-medium transition-all ${
+        isActive
+          ? 'bg-indigo-50 text-brand-blue-dark ring-1 ring-inset ring-indigo-100 font-bold'
+          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
       }`
     }
   >
-    <span className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
+    <span className={`relative flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
       <Icon size={18} className="shrink-0" />
       {!collapsed && <span>{label}</span>}
+      {/* Collapsed Badge Number */}
+      {collapsed && badgeCount > 0 && (
+        <span className="absolute -top-1.5 -right-2.5 px-1 min-w-[18px] h-[18px] text-[10px] font-black rounded-full bg-red-500 text-white flex items-center justify-center shadow-xs">
+          {badgeCount > 99 ? '99+' : badgeCount}
+        </span>
+      )}
     </span>
 
-    {/* Badge Counter */}
-    {badgeCount > 0 && (
-      collapsed ? (
-        <span className={`absolute top-1.5 right-1.5 w-4 h-4 text-[9px] font-bold rounded-full flex items-center justify-center ${badgeColor} shadow-xs`}>
-          {badgeCount > 9 ? '9+' : badgeCount}
-        </span>
-      ) : (
-        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${badgeColor}`}>
-          {badgeCount}
-        </span>
-      )
+    {/* Expanded Badge Counter */}
+    {!collapsed && badgeCount > 0 && (
+      <span className={`px-2 py-0.5 text-[11px] font-bold rounded-full ${badgeColor} shadow-xs shrink-0`}>
+        {badgeCount > 99 ? '99+' : badgeCount}
+      </span>
     )}
   </NavLink>
 );

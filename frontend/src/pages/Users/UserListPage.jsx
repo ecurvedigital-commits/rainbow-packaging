@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, UserPlus, Search, Edit3, Trash2, Shield, RefreshCw, AlertCircle, 
-  CheckCircle, XCircle, Eye, EyeOff, Copy, Check, Key
+  CheckCircle, XCircle, Eye, EyeOff, Copy, Check, Key, Send
 } from 'lucide-react';
 import { userApi } from '../../api/userApi';
 import { useAuth } from '../../auth/AuthContext';
@@ -15,6 +16,7 @@ import Toast from '../../components/Common/Toast';
 import { formatDate } from '../../utils/formatters';
 
 export default function UserListPage() {
+  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -131,7 +133,7 @@ export default function UserListPage() {
             User Account Management
           </h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Provision, edit, view passwords, and audit system users for Operators, Supervisors, and Administrators.
+            Provision, edit, view passwords, and audit system users for Operators, MIS, and Administrators.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -181,7 +183,7 @@ export default function UserListPage() {
         >
           <option value="">All Roles</option>
           <option value="ADMIN">ADMIN</option>
-          <option value="SUPERVISOR">SUPERVISOR</option>
+          <option value="SUPERVISOR">MIS</option>
           <option value="OPERATOR">OPERATOR</option>
         </select>
       </div>
@@ -244,7 +246,7 @@ export default function UserListPage() {
                       {/* Role */}
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getRoleBadgeClass(u.role)}`}>
-                          {u.role}
+                          {u.role === 'SUPERVISOR' ? 'MIS' : u.role}
                         </span>
                       </td>
 
@@ -298,6 +300,14 @@ export default function UserListPage() {
                       {/* Actions */}
                       <td className="px-6 py-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => navigate(`/messages/compose?recipient=${u.id || u._id}`)}
+                            className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                            title={`Send message to ${u.name || u.username}`}
+                          >
+                            <Send className="w-4 h-4" />
+                          </button>
+
                           <button
                             onClick={() => {
                               setFormModalUser(u);

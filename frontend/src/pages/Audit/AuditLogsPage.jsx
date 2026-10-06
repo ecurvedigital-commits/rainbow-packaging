@@ -7,6 +7,7 @@ import Pagination from '../../components/Common/Pagination';
 import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';
 import EmptyState from '../../components/Common/EmptyState';
+import CustomDatePicker from '../../components/Common/CustomDatePicker';
 import { formatDate } from '../../utils/formatters';
 
 const formatMasterCodeBadge = (code, payload = null, map = {}) => {
@@ -305,23 +306,31 @@ export default function AuditLogsPage() {
 
         <div>
           <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Start Date</label>
-          <input
-            type="date"
-            name="startDate"
-            value={filters.startDate}
-            onChange={handleFilterChange}
-            className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:text-white"
+          <CustomDatePicker
+            date={filters.startDate}
+            onChange={(newDate) => {
+              setFilters((prev) => ({ ...prev, startDate: newDate }));
+              setPagination((prev) => ({ ...prev, page: 1 }));
+            }}
+            placeholder="Start Date"
+            className="w-full"
+            align="left"
+            iconColor="text-indigo-500"
           />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">End Date</label>
-          <input
-            type="date"
-            name="endDate"
-            value={filters.endDate}
-            onChange={handleFilterChange}
-            className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:text-white"
+          <CustomDatePicker
+            date={filters.endDate}
+            onChange={(newDate) => {
+              setFilters((prev) => ({ ...prev, endDate: newDate }));
+              setPagination((prev) => ({ ...prev, page: 1 }));
+            }}
+            placeholder="End Date"
+            className="w-full"
+            align="right"
+            iconColor="text-indigo-500"
           />
         </div>
       </div>

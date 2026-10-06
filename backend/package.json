@@ -12,7 +12,12 @@
     "start": "node src/server.js",
     "test": "node --test tests/**/*.test.js",
     "db:indexes": "node scripts/createIndexes.js",
-    "seed:admin": "node scripts/seedAdmin.js"
+    "seed:admin": "node scripts/seedAdmin.js",
+    "seed:users": "node scripts/resetUsers.js",
+    "db:reset": "node scripts/resetDatabase.js",
+    "db:reset-all": "node scripts/resetDatabase.js --all",
+    "db:reset-users": "node scripts/resetDatabase.js --users-only",
+    "db:reset-reels": "node scripts/resetDatabase.js --reels-only"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

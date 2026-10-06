@@ -347,25 +347,41 @@ export async function searchReels({ query = {}, actor }) {
     return 0;
   });
 
-  return reels.map((reel) => ({
-    id: reel._id.toString(),
-    sr_no: reel.sr_no,
-    reel_no: reel.reel_no,
-    master_key: reel.master_key || null,
-    master_code: reel.master_code || null,
-    quality: reel.quality,
-    gsm: reel.gsm,
-    bf: reel.bf,
-    size: reel.size,
-    supplier_name: reel.supplier_name || null,
-    mill_name: reel.mill_name || '',
-    previous_weight: reel.previous_weight,
-    max_weight: reel.max_weight,
-    status: reel.status,
-    pending_count: reel.pending_count || 0,
-    created_at: reel.created_at || reel.purchase_date,
-    approval_status: reel.pending_count > 0 ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED,
-  }));
+  // Resolve master code names for badge display
+  const masterCodes = await MasterCode.find({ status: 'ACTIVE' }).lean();
+  const mcMap = new Map(masterCodes.map((m) => [String(m._id), m]));
+  const mcCodeMap = new Map(masterCodes.map((m) => [String(m.master_code).trim().toLowerCase(), m]));
+
+  return reels.map((reel) => {
+    let mcDoc = reel.master_code_id ? mcMap.get(String(reel.master_code_id)) : null;
+    if (!mcDoc && reel.master_code) {
+      mcDoc = mcCodeMap.get(String(reel.master_code).trim().toLowerCase());
+    }
+    const resolvedMasterCode = mcDoc ? mcDoc.master_code : reel.master_code;
+    const resolvedMasterCodeName = mcDoc ? mcDoc.master_code_name : null;
+
+    return {
+      id: reel._id.toString(),
+      sr_no: reel.sr_no,
+      reel_no: reel.reel_no,
+      master_key: reel.master_key || null,
+      master_code_id: mcDoc ? mcDoc._id.toString() : (reel.master_code_id ? reel.master_code_id.toString() : null),
+      master_code: resolvedMasterCode || null,
+      master_code_name: resolvedMasterCodeName || null,
+      quality: reel.quality,
+      gsm: reel.gsm,
+      bf: reel.bf,
+      size: reel.size,
+      supplier_name: reel.supplier_name || null,
+      mill_name: reel.mill_name || '',
+      previous_weight: reel.previous_weight,
+      max_weight: reel.max_weight,
+      status: reel.status,
+      pending_count: reel.pending_count || 0,
+      created_at: reel.created_at || reel.purchase_date,
+      approval_status: reel.pending_count > 0 ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED,
+    };
+  });
 }
 
 /**
@@ -523,25 +539,8 @@ export const bulkCreateReels = async ({ input, actor }) => withTransaction(async
     throw createApiError(422, ERROR_CODES.VALIDATION_ERROR, 'Input must be a non-empty array of reels.');
   }
 
-  // 1. Duplicate reel numbers inside the batch and against existing active reels
-  const seen = new Map();
-  const reelNos = input.map((row, idx) => {
-    const no = String(row.reel_no).trim();
-    if (seen.has(no)) {
-      throw createApiError(422, ERROR_CODES.VALIDATION_ERROR, `Row ${idx + 1}: reel number "${no}" is duplicated (also in row ${seen.get(no) + 1}).`);
-    }
-    seen.set(no, idx);
-    return no;
-  });
-
-  const existing = await Reel.find({ reel_no: { $in: reelNos }, record_status: RECORD_STATUS.ACTIVE })
-    .select('reel_no')
-    .session(session)
-    .lean();
-  if (existing.length) {
-    const list = existing.slice(0, 5).map((r) => r.reel_no).join(', ');
-    throw createApiError(409, ERROR_CODES.DUPLICATE_REEL_NO, `Reel number(s) already exist: ${list}${existing.length > 5 ? ' …' : ''}`);
-  }
+  // 1. Map reel numbers safely
+  const reelNos = input.map((row, idx) => String(row.reel_no || '').trim() || `R-${idx + 1}`);
 
   // 2. Resolve master products once per unique spec (sequential: same session)
   const productCache = new Map();
@@ -589,13 +588,13 @@ export const bulkCreateReels = async ({ input, actor }) => withTransaction(async
     quality: row.quality,
     bf: row.bf,
     purchase_date: row.purchase_date ? new Date(row.purchase_date) : now,
-    supplier_name: row.supplier_name.trim(),
+    supplier_name: String(row.supplier_name || 'Self / Stock').trim(),
     mill_name: row.mill_name ? String(row.mill_name).trim() : '',
-    size: row.size,
-    gsm: row.gsm,
-    rate_per_kg: row.rate_per_kg ?? 0,
-    max_weight: row.max_weight,
-    previous_weight: row.max_weight,
+    size: Number(row.size),
+    gsm: Number(row.gsm),
+    rate_per_kg: row.rate_per_kg !== undefined && row.rate_per_kg !== null && !isNaN(Number(row.rate_per_kg)) ? Number(row.rate_per_kg) : 0,
+    max_weight: Number(row.max_weight),
+    previous_weight: Number(row.max_weight),
     status: deriveReelStatus({ previous_weight: row.max_weight, max_weight: row.max_weight }),
     custom_fields: row.custom_fields || {},
     pending_count: isOperator ? 1 : 0,
@@ -693,8 +692,8 @@ export async function createReel({ input, actor }) {
           quality: input.quality,
           bf: input.bf,
           purchase_date: input.purchase_date ? new Date(input.purchase_date) : new Date(),
-          supplier_name: input.supplier_name.trim(),
-          mill_name: input.mill_name ? input.mill_name.trim() : '',
+          supplier_name: String(input.supplier_name || 'Self / Stock').trim(),
+          mill_name: input.mill_name ? String(input.mill_name).trim() : '',
           size: input.size,
           gsm: input.gsm,
           rate_per_kg: input.rate_per_kg !== undefined && input.rate_per_kg !== null ? Number(input.rate_per_kg) : 0,
@@ -870,6 +869,12 @@ export async function updateReel({ id, input, actor }) {
       }
     }
 
+    const isOperator = actor.role === ROLES.OPERATOR;
+    const eventApprovalStatus = isOperator ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED;
+    if (isOperator) {
+      reel.pending_count = (reel.pending_count || 0) + 1;
+    }
+
     reel.status = deriveReelStatus({ previous_weight: reel.previous_weight, max_weight: reel.max_weight });
     reel.last_activity_at = new Date();
     await reel.save({ session });
@@ -878,9 +883,9 @@ export async function updateReel({ id, input, actor }) {
       reel_id: reel._id,
       reel_no: reel.reel_no,
       event_type: EVENT_TYPES.ADMIN_CORRECTED,
-      approval_status: APPROVAL_STATUS.CONFIRMED,
+      approval_status: eventApprovalStatus,
       performed_by: actor,
-      approved_by: actor,
+      approved_by: isOperator ? null : actor,
       payload: {
         action: 'EDIT',
         changes,

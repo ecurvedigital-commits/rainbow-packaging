@@ -31,7 +31,7 @@ export async function getSummary({ actor }) {
                   $sum: {
                     $multiply: [
                       '$previous_weight',
-                      { $cond: [{ $gt: ['$rate_per_kg', 0] }, '$rate_per_kg', 55] },
+                      { $cond: [{ $gt: ['$rate_per_kg', 0] }, '$rate_per_kg', 0] },
                     ],
                   },
                 },
@@ -65,9 +65,9 @@ export async function getSummary({ actor }) {
   const total_reels = facet.totals?.[0]?.total_reels || 0;
   const rawWeight = facet.totals?.[0]?.weight_in_stock || 0;
   const weight_in_stock = Math.round(rawWeight * 100) / 100;
-  const rawStockValue = facet.totals?.[0]?.total_stock_value || Math.round(weight_in_stock * 55);
+  const rawStockValue = facet.totals?.[0]?.total_stock_value || 0;
   const total_stock_value = Math.round(rawStockValue * 100) / 100;
-  const price_per_kg = weight_in_stock > 0 ? Math.round((total_stock_value / weight_in_stock) * 100) / 100 : 55;
+  const price_per_kg = (weight_in_stock > 0 && total_stock_value > 0) ? Math.round((total_stock_value / weight_in_stock) * 100) / 100 : 0;
   const unused_reels = facet.unused_reels?.[0]?.count || 0;
 
   const byStatusMap = { REEL: 0, CUT: 0, NILL: 0 };

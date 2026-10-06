@@ -13,6 +13,11 @@ export async function listUsers(req, res) {
   return sendSuccess(res, items, { meta });
 }
 
+export async function listDirectory(req, res) {
+  const items = await userService.listDirectory({ actor: req.user });
+  return sendSuccess(res, items);
+}
+
 export async function getUser(req, res) {
   const { params } = req.validated;
   const result = await userService.getUser({ id: params.id, actor: req.user });

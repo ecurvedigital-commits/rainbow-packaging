@@ -12,6 +12,12 @@ export async function getUnreadCount(req, res) {
   return sendSuccess(res, result);
 }
 
+export const getNotification = async (req, res) => {
+  const { params } = req.validated;
+  const result = await notificationService.getNotification({ id: params.id, actor: req.user });
+  return sendSuccess(res, result);
+};
+
 export async function markRead(req, res) {
   const { params } = req.validated;
   const result = await notificationService.markRead({ id: params.id, actor: req.user });
@@ -22,3 +28,4 @@ export async function markAllRead(req, res) {
   const result = await notificationService.markAllRead({ actor: req.user });
   return sendSuccess(res, result);
 }
+

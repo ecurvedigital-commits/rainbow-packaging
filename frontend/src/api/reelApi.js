@@ -70,6 +70,10 @@ export const reelApi = {
     });
   },
 
+  getReel: async (id) => {
+    return reelApi.getById(id);
+  },
+
   getJourney: async (id, params = {}) => {
     const query = new URLSearchParams();
     if (typeof params === 'object') {

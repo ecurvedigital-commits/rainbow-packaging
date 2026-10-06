@@ -29,20 +29,20 @@ const labelClass = 'block text-[11px] font-bold text-gray-700 uppercase tracking
 const BASE_FIELDS = [
   { key: 'reel_no', label: 'Reel Number', type: 'text', required: true },
   { key: 'quality', label: 'Quality', type: 'text', required: true },
-  { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: true },
+  { key: 'supplier_name', label: 'Supplier Name', type: 'text', required: false },
   { key: 'mill_name', label: 'Mill Name', type: 'text', required: false },
   { key: 'max_weight', label: 'Reel Weight (kg)', type: 'number', required: true },
   { key: 'rate_per_kg', label: 'Rate / KG (₹)', type: 'number', required: false },
   { key: 'gsm', label: 'GSM', type: 'number', required: true },
   { key: 'size', label: 'Size / Width (cm)', type: 'number', required: true },
   { key: 'bf', label: 'Bursting Factor (BF)', type: 'text', required: true },
-  { key: 'purchase_date', label: 'Purchase Date', type: 'date', required: true },
+  { key: 'purchase_date', label: 'Purchase Date', type: 'date', required: false },
 ];
 
 const DEFAULT_ROW = {
   reel_no: '',
   quality: 'VK',
-  supplier_name: '',
+  supplier_name: 'Self / Stock',
   mill_name: '',
   max_weight: 1000,
   rate_per_kg: '',
@@ -139,33 +139,77 @@ const parseExcelSheetSmart = (sheet) => {
 
 const buildRowFromExcel = (raw, fieldDefs, fallback) => {
   const row = cloneRow(fallback);
-  const foundReelNo = String(getCell(raw, ['reel_number', 'reel_no', 'reelno', 'reel', 'reel#', 'reelnum', 'number']) || '').trim();
-  const foundSrNo = String(getCell(raw, ['srno', 'sr.no', 'sr_no', 'sr no']) || '').trim();
-  row.reel_no = foundReelNo || foundSrNo;
+  let foundReelNo = String(getCell(raw, ['reel_number', 'reel_no', 'reelno', 'reel', 'reel#', 'reelnum', 'number']) || '').trim();
+  if (foundReelNo === '-' || foundReelNo.toUpperCase() === 'N/A' || foundReelNo.toUpperCase() === 'NA') {
+    foundReelNo = '';
+  }
+  let foundSrNo = String(getCell(raw, ['srno', 'sr.no', 'sr_no', 'sr no']) || '').trim();
+  if (foundSrNo === '-' || foundSrNo.toUpperCase() === 'N/A' || foundSrNo.toUpperCase() === 'NA') {
+    foundSrNo = '';
+  }
+  row.reel_no = foundReelNo || (foundSrNo ? `R-${foundSrNo}` : '');
 
-  row.quality = String(getCell(raw, ['quality', 'grade', 'paperquality', 'qual']) || row.quality).trim();
-  row.supplier_name = String(getCell(raw, ['supplier_name', 'supplier', 'suppliername', 'vendor', 'partyname', 'party']) || '').trim();
-  row.mill_name = String(getCell(raw, ['mill_name', 'mill', 'millname', 'papermill', 'manufacturer']) || '').trim();
-  row.max_weight = toNumberOrBlank(getCell(raw, ['max_weight', 'weight', 'reelweight', 'reelweightkg', 'netweight']));
-  row.rate_per_kg = toNumberOrBlank(getCell(raw, ['rate_per_kg', 'rate', 'ratekg', 'rateperkg']));
-  row.gsm = toNumberOrBlank(getCell(raw, ['gsm', 'g.s.m', 'g_s_m']));
-  row.size = toNumberOrBlank(getCell(raw, ['size', 'width', 'sizecm', 'widthcm', 'sizewidth', 'sizewidthcm']));
+  let qual = String(getCell(raw, ['quality', 'grade', 'paperquality', 'qual']) || fallback?.quality || 'VK').trim();
+  if (!qual || qual === '-' || qual.toUpperCase() === 'N/A') qual = fallback?.quality || 'VK';
+  row.quality = qual;
 
-  const rawBf = getCell(raw, ['bf', 'burstingfactor', 'burstingfactorbf', 'b.f.']);
+  let foundSupplier = String(getCell(raw, ['supplier_name', 'supplier', 'suppliername', 'vendor', 'partyname', 'party', 'supplier / party', 'party name']) || '').trim();
+  if (!foundSupplier || foundSupplier === '-' || foundSupplier.toUpperCase() === 'N/A') {
+    foundSupplier = fallback?.supplier_name || 'Self / Stock';
+  }
+  row.supplier_name = foundSupplier;
+
+  let foundMill = String(getCell(raw, ['mill_name', 'mill', 'millname', 'papermill', 'manufacturer', 'mill name']) || '').trim();
+  if (foundMill === '-' || foundMill.toUpperCase() === 'N/A') foundMill = '';
+  row.mill_name = foundMill;
+
+  let foundWeight = toNumberOrBlank(getCell(raw, ['max_weight', 'weight', 'reelweight', 'reelweightkg', 'netweight', 'weight (kg)', 'weight(kg)', 'wt']));
+  if (foundWeight === '-' || foundWeight === '' || isNaN(Number(foundWeight)) || Number(foundWeight) <= 0) {
+    foundWeight = fallback?.max_weight || 1000;
+  }
+  row.max_weight = Number(foundWeight);
+
+  let foundRate = toNumberOrBlank(getCell(raw, ['rate_per_kg', 'rate', 'ratekg', 'rateperkg', 'rate_perkg', 'rate / kg', 'rate/kg', 'rate (rs/kg)', 'price', 'price/kg', 'price_per_kg']));
+  if (foundRate === '-' || foundRate === '' || isNaN(Number(foundRate)) || Number(foundRate) < 0) {
+    foundRate = fallback?.rate_per_kg || '';
+  }
+  row.rate_per_kg = foundRate;
+
+  let foundGsm = toNumberOrBlank(getCell(raw, ['gsm', 'g.s.m', 'g_s_m']));
+  if (foundGsm === '-' || foundGsm === '' || isNaN(Number(foundGsm)) || Number(foundGsm) <= 0) {
+    foundGsm = fallback?.gsm || 150;
+  }
+  row.gsm = Number(foundGsm);
+
+  let foundSize = toNumberOrBlank(getCell(raw, ['size', 'width', 'sizecm', 'widthcm', 'sizewidth', 'sizewidthcm', 'size / width', 'size (cm)', 'size(cm)']));
+  if (foundSize === '-' || foundSize === '' || isNaN(Number(foundSize)) || Number(foundSize) <= 0) {
+    foundSize = fallback?.size || 100;
+  }
+  row.size = Number(foundSize);
+
+  const rawBf = getCell(raw, ['bf', 'burstingfactor', 'burstingfactorbf', 'b.f.', 'bursting factor']);
   const rawBfStr = String(rawBf ?? '').trim();
-  if (row.quality.toUpperCase() === 'ULTRA') {
-    row.bf = 'ULTRA';
-  } else if (rawBfStr !== '') {
-    row.bf = rawBfStr;
+  if (['ULTRA', 'SPECTRA', 'DCB', 'FBB', 'SBS'].includes(row.quality.toUpperCase()) || ['ULTRA', 'SPECTRA', 'DCB', 'FBB', 'SBS'].includes(rawBfStr.toUpperCase())) {
+    row.bf = rawBfStr ? rawBfStr.toUpperCase() : row.quality.toUpperCase();
+  } else if (rawBfStr !== '' && rawBfStr !== '-') {
+    const numericPart = rawBfStr.replace(/[^0-9.]/g, '');
+    row.bf = numericPart && !isNaN(Number(numericPart)) ? Number(numericPart) : rawBfStr;
   } else {
-    row.bf = row.bf;
+    row.bf = fallback?.bf || 18;
   }
 
-  row.purchase_date = excelDateToInput(getCell(raw, ['purchase_date', 'purchasedate', 'date']));
+  const rawDate = getCell(raw, ['purchase_date', 'purchasedate', 'date', 'purchased_date', 'purch_date', 'inv_date', 'invoice_date', 'purchase date']);
+  const parsedDate = excelDateToInput(rawDate);
+  row.purchase_date = parsedDate || fallback?.purchase_date || new Date().toISOString().slice(0, 10);
+
+  const rawMasterCode = getCell(raw, ['master_code', 'mastercode', 'code', 'mc', 'master code']);
+  if (rawMasterCode) {
+    row.master_code = String(rawMasterCode).trim();
+  }
 
   fieldDefs.forEach((def) => {
     const value = getCell(raw, [def.key, def.label]);
-    if (value !== '' && value !== null && value !== undefined) {
+    if (value !== '' && value !== null && value !== undefined && value !== '-') {
       row.custom_fields[def.key] = def.type === 'number' ? toNumberOrBlank(value) : String(value);
     }
   });
@@ -538,19 +582,19 @@ export default function CreateReelPage() {
 
   const buildPayload = (row) => ({
     reel_no: String(row.reel_no || '').trim(),
-    master_code: selectedMasterCode?.master_code || undefined,
+    master_code: row.master_code || selectedMasterCode?.master_code || undefined,
     master_code_id: selectedMasterCodeId || undefined,
     quality: String(row.quality || '').trim(),
     bf: isNaN(Number(row.bf)) || String(row.quality || '').trim().toUpperCase() === 'ULTRA' || String(row.bf).trim().toUpperCase() === 'ULTRA'
       ? String(row.bf || '').trim()
       : Number(row.bf),
-    supplier_name: String(row.supplier_name || '').trim(),
+    supplier_name: String(row.supplier_name || 'Self / Stock').trim(),
     mill_name: String(row.mill_name || '').trim(),
     size: Number(row.size),
     gsm: Number(row.gsm),
     rate_per_kg: row.rate_per_kg === '' ? 0 : Number(row.rate_per_kg),
     max_weight: Number(row.max_weight),
-    purchase_date: row.purchase_date,
+    purchase_date: row.purchase_date || new Date().toISOString().slice(0, 10),
     custom_fields: row.custom_fields || {},
   });
 
@@ -558,13 +602,10 @@ export default function CreateReelPage() {
     const missing = [];
     if (!String(row.reel_no || '').trim()) missing.push('Reel Number');
     if (!String(row.quality || '').trim()) missing.push('Quality');
-    if (!String(row.supplier_name || '').trim()) missing.push('Supplier Name');
     if (row.max_weight === '' || Number.isNaN(Number(row.max_weight)) || Number(row.max_weight) <= 0) missing.push('Reel Weight');
     if (row.gsm === '' || Number.isNaN(Number(row.gsm))) missing.push('GSM');
     if (row.size === '' || Number.isNaN(Number(row.size))) missing.push('Size');
     if (row.bf === '' || row.bf === null || row.bf === undefined || String(row.bf).trim() === '') missing.push('BF');
-    if (!row.purchase_date) missing.push('Purchase Date');
-    if (!row.purchase_date) missing.push('Purchase Date');
 
     fieldDefs.forEach((def) => {
       if (!def.required) return;
@@ -640,8 +681,11 @@ export default function CreateReelPage() {
       const nextNo = await fetchNextReelNumber();
       setNextReelNo(nextNo);
     } catch (err) {
+      console.error('[BulkCreate] Full error object:', err);
+      console.error('[BulkCreate] Error message:', err.message);
+      console.error('[BulkCreate] Error details:', err.details);
       const detail = Array.isArray(err.details) && err.details.length
-        ? ` (${err.details.slice(0, 3).map((d) => `${d.field}: ${d.message}`).join('; ')})`
+        ? ` (${err.details.slice(0, 5).map((d) => `${d.field}: ${d.message}`).join('; ')})`
         : '';
       setError((err.message || 'Failed to submit bulk rows. Please try again.') + detail);
     }
@@ -704,7 +748,7 @@ export default function CreateReelPage() {
       supplier_name: 'Example Supplier',
       mill_name: 'Example Paper Mill',
       max_weight: 1000,
-      rate_per_kg: 55,
+      rate_per_kg: '',
       gsm: selectedMasterCode?.gsm || 150,
       size: selectedMasterCode?.size || 100,
       bf: selectedMasterCode?.bf || 18,

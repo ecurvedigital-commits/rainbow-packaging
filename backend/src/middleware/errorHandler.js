@@ -80,5 +80,10 @@ export function errorHandler(err, _req, res, _next) {
 
   // Unhandled internal server error
   logger.error({ err }, 'Unhandled Internal Server Error');
-  return sendError(res, 500, ERROR_CODES.INTERNAL_ERROR, 'An internal server error occurred.');
+  console.error('[errorHandler] Unhandled error:', err.message);
+  console.error('[errorHandler] Stack:', err.stack);
+  const devMessage = process.env.NODE_ENV !== 'production'
+    ? `${err.message || 'Unknown error'}`
+    : 'An internal server error occurred.';
+  return sendError(res, 500, ERROR_CODES.INTERNAL_ERROR, devMessage, process.env.NODE_ENV !== 'production' ? [{ field: 'stack', message: err.stack?.split('\n').slice(0, 5).join(' | ') || '' }] : undefined);
 }

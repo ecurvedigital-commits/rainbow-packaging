@@ -25,6 +25,10 @@ export const userApi = {
     return apiFetch(`/users?${query.toString()}`, { method: 'GET' });
   },
 
+  getDirectory: async () => {
+    return apiFetch('/users/directory', { method: 'GET' });
+  },
+
   getUsers: async (params = {}) => {
     const query = new URLSearchParams();
     Object.entries(params || {}).forEach(([key, val]) => {

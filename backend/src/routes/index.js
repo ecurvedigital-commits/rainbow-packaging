@@ -12,6 +12,8 @@ import { digestRoutes } from './digest.routes.js';
 import { settingRoutes } from './setting.routes.js';
 import masterProductRoutes from './masterProduct.routes.js';
 import masterCodeRoutes from './masterCode.routes.js';
+import { messageRoutes } from './message.routes.js';
+import { correctionRoutes } from './correction.routes.js';
 
 const router = Router();
 
@@ -23,6 +25,8 @@ router.use('/master-products', masterProductRoutes);
 router.use('/master-codes', masterCodeRoutes);
 router.use('/approvals', approvalRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/messages', messageRoutes);
+router.use('/corrections', correctionRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/field-definitions', fieldDefinitionRoutes);
 router.use('/audit', auditRoutes);
@@ -30,3 +34,4 @@ router.use('/digest', digestRoutes);
 router.use('/settings', settingRoutes);
 
 export const apiRouter = router;
+

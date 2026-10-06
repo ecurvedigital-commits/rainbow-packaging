@@ -53,8 +53,8 @@ export const createReelSchema = z.object({
       const n = Number(s);
       return !isNaN(n) && s !== '' ? n : s;
     }),
-    purchase_date: dateOnlySchema.optional(),
-    supplier_name: z.string().min(1, 'Supplier name is required').trim(),
+    purchase_date: dateOnlySchema.optional().default(() => new Date().toISOString().slice(0, 10)),
+    supplier_name: z.string().trim().optional().default('Self / Stock'),
     mill_name: z.string().trim().optional().default(''),
     size: z.coerce.number().positive(),
     gsm: z.coerce.number().positive(),

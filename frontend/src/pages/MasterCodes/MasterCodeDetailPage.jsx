@@ -67,7 +67,7 @@ export const MasterCodeDetailPage = () => {
   const totalWeight = reels.reduce((acc, r) => acc + (r.previous_weight ?? r.max_weight ?? 0), 0);
   const totalValue = reels.reduce((acc, r) => {
     const w = r.previous_weight ?? r.max_weight ?? 0;
-    const rate = r.rate_per_kg && Number(r.rate_per_kg) > 0 ? Number(r.rate_per_kg) : 55;
+    const rate = r.rate_per_kg && Number(r.rate_per_kg) > 0 ? Number(r.rate_per_kg) : 0;
     return acc + (w * rate);
   }, 0);
 
@@ -224,7 +224,7 @@ export const MasterCodeDetailPage = () => {
                 {reels.map((reel) => {
                   const reelId = reel.id || reel._id;
                   const currentWeight = reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight;
-                  const rate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 55;
+                  const rate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 0;
                   const price = Math.round((currentWeight || 0) * rate);
                   const reelMasterCode = reel.master_code || reel.master_key || masterCode.master_code;
 

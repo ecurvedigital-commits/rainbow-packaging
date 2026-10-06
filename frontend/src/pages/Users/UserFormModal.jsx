@@ -87,7 +87,7 @@ export default function UserFormModal({ user, onClose, onSuccess }) {
                 {isEdit ? 'Update User Account' : 'Provision New User'}
               </h3>
               <p className="text-xs text-gray-500">
-                Assign roles and credentials for Operators, Supervisors, or Admins.
+                Assign roles and credentials for Operators, MIS, or Admins.
               </p>
             </div>
           </div>
@@ -182,7 +182,7 @@ export default function UserFormModal({ user, onClose, onSuccess }) {
             <div className="grid grid-cols-3 gap-3">
               {[
                 { key: 'OPERATOR', title: 'Operator', desc: 'Usage & scanning' },
-                { key: 'SUPERVISOR', title: 'Supervisor', desc: 'Approvals & reports' },
+                { key: 'SUPERVISOR', title: 'MIS', desc: 'Approvals & reports' },
                 { key: 'ADMIN', title: 'Admin', desc: 'Full control' }
               ].map((r) => (
                 <label

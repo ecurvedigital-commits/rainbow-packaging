@@ -151,6 +151,26 @@ export async function listUsers({ filters = {}, actor }) {
 }
 
 /**
+ * List active users directory for messaging and mention lookups.
+ * @param {{ actor: object }} args
+ * @returns {Promise<Array<object>>}
+ */
+export async function listDirectory({ actor }) {
+  const users = await User.find({ is_active: true })
+    .select('name username role is_active')
+    .sort({ name: 1 })
+    .lean();
+
+  return users.map((u) => ({
+    id: u._id.toString(),
+    name: u.name,
+    username: u.username,
+    role: u.role,
+  }));
+}
+
+
+/**
  * Get user by id (docs/routes/users.md).
  * @param {{ id: string, actor: object }} args
  * @returns {Promise<object>}

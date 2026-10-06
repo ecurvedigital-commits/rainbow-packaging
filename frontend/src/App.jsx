@@ -19,6 +19,7 @@ import MasterCodeDetailPage from './pages/MasterCodes/MasterCodeDetailPage';
 import ApprovalsPage from './pages/Approvals/ApprovalsPage';
 import OperatorApprovalsPage from './pages/Approvals/OperatorApprovalsPage';
 import NotificationsPage from './pages/Notifications/NotificationsPage';
+import NotificationDetailPage from './pages/Notifications/NotificationDetailPage';
 import UserListPage from './pages/Users/UserListPage';
 import CustomFieldsPage from './pages/CustomFields/CustomFieldsPage';
 import AuditLogsPage from './pages/Audit/AuditLogsPage';
@@ -26,6 +27,7 @@ import DailyDigestPage from './pages/Digest/DailyDigestPage';
 import DigestBreakdownPage from './pages/Digest/DigestBreakdownPage';
 import SettingsPage from './pages/Settings/SettingsPage';
 import ChangePasswordPage from './pages/ChangePassword/ChangePasswordPage';
+import ComposeMessagePage from './pages/Messages/ComposeMessagePage';
 import ForbiddenPage from './pages/Errors/ForbiddenPage';
 import NotFoundPage from './pages/Errors/NotFoundPage';
 
@@ -91,8 +93,12 @@ export default function App() {
           {/* Operator Approvals / My Submitted Approvals */}
           <Route path="/my-approvals" element={<OperatorApprovalsPage />} />
 
-          {/* Notifications */}
+          {/* Notifications & Messaging */}
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/notifications/:id" element={<NotificationDetailPage />} />
+          <Route path="/messages/compose" element={<ComposeMessagePage />} />
+          <Route path="/messages/new" element={<ComposeMessagePage />} />
+          <Route path="/messages" element={<ComposeMessagePage />} />
 
           {/* User Account Management (Admin Only) */}
           <Route

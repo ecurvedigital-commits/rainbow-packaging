@@ -29,7 +29,7 @@ const QUALITY_REVERSE_MAP = Object.freeze({
  */
 export function normalizeQuality(quality) {
   if (!quality || typeof quality !== 'string') {
-    throw new Error('Quality is required and must be a string.');
+    return { value: 'VK', code: 'VK' };
   }
   const normalized = quality.trim().toUpperCase();
   
@@ -39,10 +39,7 @@ export function normalizeQuality(quality) {
     return { value, code };
   }
 
-  if (!QUALITIES.includes(normalized)) {
-    throw new Error(`Invalid quality value: ${quality}. Must be one of ${QUALITIES.join(', ')}.`);
-  }
-  const code = QUALITY_CODES[normalized] || normalized;
+  const code = QUALITY_CODES[normalized] || normalized.replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'QUAL';
   return { value: normalized, code };
 }
 

@@ -10,3 +10,8 @@ export const listNotificationsSchema = z.object({
 export const markReadSchema = z.object({
   params: idParamSchema,
 });
+
+export const getNotificationSchema = z.object({
+  params: idParamSchema,
+});
+

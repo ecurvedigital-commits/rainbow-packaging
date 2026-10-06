@@ -35,9 +35,17 @@ export async function createReel(req, res) {
 }
 
 export async function bulkCreateReels(req, res) {
-  const { body } = req.validated;
-  const result = await reelService.bulkCreateReels({ input: body, actor: req.user });
-  return sendSuccess(res, result, { status: 201 });
+  try {
+    const { body } = req.validated;
+    console.log(`[bulkCreateReels] Received ${body.length} reels. Sample row:`, JSON.stringify(body[0]).slice(0, 300));
+    const result = await reelService.bulkCreateReels({ input: body, actor: req.user });
+    return sendSuccess(res, result, { status: 201 });
+  } catch (err) {
+    console.error('[bulkCreateReels] ERROR:', err.message);
+    console.error('[bulkCreateReels] STACK:', err.stack);
+    if (err.details) console.error('[bulkCreateReels] DETAILS:', JSON.stringify(err.details));
+    throw err;
+  }
 }
 
 export async function recordUsage(req, res) {
