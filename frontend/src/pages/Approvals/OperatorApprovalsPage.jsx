@@ -316,11 +316,19 @@ export default function OperatorApprovalsPage() {
                     {/* Metadata & Decision details */}
                     <div className="text-xs text-gray-400 flex items-center gap-3 flex-wrap pt-1 border-t border-gray-100">
                       <span>Submitted: <strong className="text-gray-700">{formatDate(dateStr)}</strong></span>
-                      {item.payload?.fields?.master_key && (
+                      {/* {item.payload?.fields?.master_key && (
                         <>
                           <span>•</span>
                           <span className="font-mono text-brand-blue font-bold bg-brand-blue/5 px-2 py-0.5 rounded-md">
                             Key: {item.payload.fields.master_key}
+                          </span>
+                        </>
+                      )} */}
+                      {item.payload?.fields?.master_code && (
+                        <>
+                          <span>•</span>
+                          <span className="font-mono text-brand-blue font-bold bg-brand-blue/5 px-2 py-0.5 rounded-md">
+                            Code: {item.payload.fields.master_code}
                           </span>
                         </>
                       )}

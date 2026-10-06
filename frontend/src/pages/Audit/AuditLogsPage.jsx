@@ -358,7 +358,7 @@ export default function AuditLogsPage() {
                   <th className="px-6 py-3">Action</th>
                   <th className="px-6 py-3">Performed By</th>
                   <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3">Details</th>
+                  {/* <th className="px-6 py-3">Details</th> */}
                   <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
@@ -433,9 +433,9 @@ export default function AuditLogsPage() {
                           <span className="text-slate-400 text-xs italic">-</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-xs">
+                      {/* <td className="px-6 py-4 text-xs">
                         {renderPayloadSummary(log)}
-                      </td>
+                      </td> */}
                       <td className="px-4 py-4 text-right whitespace-nowrap">
                         <button
                           onClick={(e) => {
@@ -465,11 +465,10 @@ export default function AuditLogsPage() {
         </div>
       )}
 
-      {/* Audit Detail Modal */}
-      {selectedAudit && (
+      {/* Audit Detail Modal - Commented Out */}
+      {/* {selectedAudit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl">
@@ -493,9 +492,7 @@ export default function AuditLogsPage() {
               </button>
             </div>
 
-            {/* Modal Body */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
-              {/* Event Overview Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
                   <span className="text-xs text-slate-500 uppercase font-semibold block">Reel Number</span>
@@ -575,7 +572,6 @@ export default function AuditLogsPage() {
                 )}
               </div>
 
-              {/* Reviewed By & Reasons */}
               {(selectedAudit.approved_by_name || selectedAudit.decline_reason) && (
                 <div className="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
                   <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Review Metadata</h4>
@@ -595,7 +591,6 @@ export default function AuditLogsPage() {
                 </div>
               )}
 
-              {/* Audit Payload Breakdown */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -633,7 +628,6 @@ export default function AuditLogsPage() {
                 )}
               </div>
 
-              {/* Event Chain Links */}
               {(selectedAudit.ref_event_id || selectedAudit.cascaded_from_event_id) && (
                 <div className="p-3.5 bg-indigo-50/50 dark:bg-indigo-950/30 rounded-xl border border-indigo-100 dark:border-indigo-900/50 text-xs space-y-1 font-mono">
                   {selectedAudit.ref_event_id && (
@@ -652,7 +646,6 @@ export default function AuditLogsPage() {
               )}
             </div>
 
-            {/* Modal Footer */}
             <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-end">
               <button
                 onClick={() => setSelectedAudit(null)}
@@ -663,7 +656,7 @@ export default function AuditLogsPage() {
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

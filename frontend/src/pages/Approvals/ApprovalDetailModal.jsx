@@ -34,7 +34,8 @@ export default function ApprovalDetailModal({
   const usedW = payload.used_this_time ?? (prevW !== undefined && currW !== undefined ? Math.max(0, prevW - currW) : null);
   const maxW = payload.max_weight ?? reelObj.max_weight;
 
-  const masterKey = reelObj.master_key || payload.fields?.master_key || payload.master_key || 'N/A';
+  // const masterKey = reelObj.master_key || payload.fields?.master_key || payload.master_key || 'N/A';
+  const masterCode = reelObj.master_code || payload.fields?.master_code || payload.master_code || 'N/A';
   const supplier = reelObj.supplier_name || payload.fields?.supplier_name || payload.supplier_name || 'N/A';
   const mill = reelObj.mill_name || payload.fields?.mill_name || payload.mill_name || item.mill_name || 'N/A';
   const quality = reelObj.quality || payload.fields?.quality || 'N/A';
@@ -190,8 +191,10 @@ export default function ApprovalDetailModal({
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
               <div>
-                <span className="text-slate-500 dark:text-slate-400">Master Key:</span>
-                <p className="font-mono font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">{masterKey}</p>
+                {/* <span className="text-slate-500 dark:text-slate-400">Master Key:</span>
+                <p className="font-mono font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">{masterKey}</p> */}
+                <span className="text-slate-500 dark:text-slate-400">Master Code:</span>
+                <p className="font-mono font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">{masterCode}</p>
               </div>
               <div>
                 <span className="text-slate-500 dark:text-slate-400">Supplier:</span>

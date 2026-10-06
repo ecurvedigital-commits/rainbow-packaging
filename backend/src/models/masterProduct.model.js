@@ -3,12 +3,10 @@ import { QUALITIES } from '../constants/qualities.js';
 
 const masterProductSchema = new mongoose.Schema(
   {
-    master_key: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
+    // master_key: {
+    //   type: String,
+    //   trim: true,
+    // },
     master_code_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'MasterCode',
@@ -72,7 +70,7 @@ const masterProductSchema = new mongoose.Schema(
 );
 
 masterProductSchema.index({ quality: 1, gsm: 1, bf: 1, size: 1 }, { unique: true });
-masterProductSchema.index({ is_active: 1, master_key: 1 });
+// masterProductSchema.index({ is_active: 1, master_key: 1 });
 masterProductSchema.index({ master_code_id: 1 });
 masterProductSchema.index({ master_code: 1 });
 

@@ -51,7 +51,7 @@ export const AppShell = ({ children }) => {
 
   const normalizedRole = (role || '').toUpperCase().replace(/_/g, ' ');
   const isRoleAdmin = normalizedRole === 'ADMIN' || normalizedRole === 'HEAD ADMIN' || normalizedRole === 'SUPER ADMIN' || normalizedRole === 'ADMINISTRATOR';
-  const isRoleSupervisor = normalizedRole === 'SUPERVISOR' || isRoleAdmin;
+  const isRoleSupervisor = normalizedRole === 'MIS' || isRoleAdmin;
 
   // Poll notifications and pending count
   useEffect(() => {
@@ -494,12 +494,10 @@ const NavItem = ({
     onClick={onClick}
     title={collapsed ? label : undefined}
     className={({ isActive }) =>
-      `relative flex items-center ${
-        collapsed ? 'justify-center px-0 py-3' : 'justify-between px-3 py-2.5'
-      } rounded-xl text-[13px] font-medium transition-all ${
-        isActive
-          ? 'bg-indigo-50 text-brand-blue-dark ring-1 ring-inset ring-indigo-100 font-bold'
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+      `relative flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'justify-between px-3 py-2.5'
+      } rounded-xl text-[13px] font-medium transition-all ${isActive
+        ? 'bg-indigo-50 text-brand-blue-dark ring-1 ring-inset ring-indigo-100 font-bold'
+        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
       }`
     }
   >

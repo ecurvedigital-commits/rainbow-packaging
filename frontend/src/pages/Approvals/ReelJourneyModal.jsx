@@ -94,9 +94,14 @@ export default function ReelJourneyModal({ reelId, reelNo: initialReelNo, onClos
                   <span className="text-lg font-extrabold text-slate-900 dark:text-white font-mono">
                     Reel #{reel.reel_no}
                   </span>
-                  {reel.master_key && (
+                  {/* {reel.master_key && (
                     <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 font-mono font-bold text-xs rounded-lg">
                       {reel.master_key}
+                    </span>
+                  )} */}
+                  {reel.master_code && (
+                    <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 font-mono font-bold text-xs rounded-lg">
+                      {reel.master_code}
                     </span>
                   )}
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${getStatusBadgeStyle(reel.status)}`}>

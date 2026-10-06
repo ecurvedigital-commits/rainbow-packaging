@@ -226,7 +226,7 @@ export const MasterCodeDetailPage = () => {
                   const currentWeight = reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight;
                   const rate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 0;
                   const price = Math.round((currentWeight || 0) * rate);
-                  const reelMasterCode = reel.master_code || reel.master_key || masterCode.master_code;
+                  const reelMasterCode = reel.master_code || masterCode.master_code;
 
                   return (
                     <tr

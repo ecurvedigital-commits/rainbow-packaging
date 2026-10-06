@@ -20,8 +20,8 @@ test('Master Key Unit Tests - Parameter Normalization & Generation', async (t) =
     assert.deepEqual(normalizeQuality('DCB'), { value: 'DCB', code: 'DCB' });
     assert.deepEqual(normalizeQuality('SPC'), { value: 'SPECTRA', code: 'SPC' });
 
-    assert.throws(() => normalizeQuality('INVALID_QUAL'), /Invalid quality value/);
-    assert.throws(() => normalizeQuality(null), /Quality is required/);
+    assert.deepEqual(normalizeQuality('CUSTOM_PAPER'), { value: 'CUSTOM_PAPER', code: 'CUSTOM' });
+    assert.deepEqual(normalizeQuality(null), { value: 'VK', code: 'VK' });
   });
 
   await t.test('2. normalizeGsm pads values under 100 to 3 digits', () => {

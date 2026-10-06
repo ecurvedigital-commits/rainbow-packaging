@@ -87,8 +87,11 @@ export default function MasterProductDetailPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
           <div>
             <div className="flex items-center gap-3">
-              <span className="px-3 py-1 bg-brand-blue text-white rounded-xl font-mono font-bold text-sm tracking-wide shadow-xs">
+              {/* <span className="px-3 py-1 bg-brand-blue text-white rounded-xl font-mono font-bold text-sm tracking-wide shadow-xs">
                 {mp.master_key}
+              </span> */}
+              <span className="px-3 py-1 bg-brand-blue text-white rounded-xl font-mono font-bold text-sm tracking-wide shadow-xs">
+                {mp.master_code || mp.name}
               </span>
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                 mp.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
@@ -207,7 +210,8 @@ export default function MasterProductDetailPage() {
             <h2 className="text-sm font-bold text-gray-900" style={{ fontFamily: 'var(--font-family-display)' }}>
               Associated Physical Reels ({meta.total})
             </h2>
-            <p className="text-xs text-gray-500">Individual reels belonging to Master Product {mp.master_key}</p>
+            {/* <p className="text-xs text-gray-500">Individual reels belonging to Master Product {mp.master_key}</p> */}
+            <p className="text-xs text-gray-500">Individual reels belonging to Master Product {mp.master_code || mp.name}</p>
           </div>
         </div>
 

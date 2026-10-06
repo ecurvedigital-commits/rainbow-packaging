@@ -180,7 +180,12 @@ export default function ApprovalsPage() {
       setSelectedDetailItem(null);
       fetchPending();
     } catch (err) {
-      setToast({ type: 'error', message: err.message || 'Failed to confirm request.' });
+      if (err.message?.toLowerCase().includes('already been decided')) {
+        setToast({ type: 'info', message: 'This entry has already been decided. Refreshing list...' });
+        fetchPending();
+      } else {
+        setToast({ type: 'error', message: err.message || 'Failed to confirm request.' });
+      }
     } finally {
       setActionLoadingId(null);
     }
@@ -197,7 +202,12 @@ export default function ApprovalsPage() {
       setSelectedDetailItem(null);
       fetchPending();
     } catch (err) {
-      setToast({ type: 'error', message: err.message || 'Failed to decline request.' });
+      if (err.message?.toLowerCase().includes('already been decided')) {
+        setToast({ type: 'info', message: 'This entry has already been decided. Refreshing list...' });
+        fetchPending();
+      } else {
+        setToast({ type: 'error', message: err.message || 'Failed to decline request.' });
+      }
     } finally {
       setActionLoadingId(null);
     }
@@ -512,11 +522,19 @@ export default function ApprovalsPage() {
                       <span>Submitted by: <strong className="text-slate-600 dark:text-slate-300">{performedBy}</strong></span>
                       <span>•</span>
                       <span>Date: {formatDate(dateStr)}</span>
-                      {(item.reel?.master_key || item.payload?.fields?.master_key) && (
+                      {/* {(item.reel?.master_key || item.payload?.fields?.master_key) && (
                         <>
                           <span>•</span>
                           <span className="font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded">
                             Master Key: {item.reel?.master_key || item.payload?.fields?.master_key}
+                          </span>
+                        </>
+                      )} */}
+                      {(item.reel?.master_code || item.payload?.fields?.master_code) && (
+                        <>
+                          <span>•</span>
+                          <span className="font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded">
+                            Master Code: {item.reel?.master_code || item.payload?.fields?.master_code}
                           </span>
                         </>
                       )}

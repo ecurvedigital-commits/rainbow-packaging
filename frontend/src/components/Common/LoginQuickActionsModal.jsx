@@ -264,9 +264,14 @@ export default function LoginQuickActionsModal({ isOpen, onClose }) {
                               <span className="font-bold text-gray-900 text-sm group-hover:text-brand-blue transition-colors">
                                 #{reel.reel_no}
                               </span>
-                              {reel.master_key && (
+                              {/* {reel.master_key && (
                                 <span className="px-2 py-0.5 bg-blue-50 text-brand-blue text-[10px] font-mono font-bold rounded border border-blue-200">
                                   {reel.master_key}
+                                </span>
+                              )} */}
+                              {reel.master_code && (
+                                <span className="px-2 py-0.5 bg-blue-50 text-brand-blue text-[10px] font-mono font-bold rounded border border-blue-200">
+                                  {reel.master_code}
                                 </span>
                               )}
                               <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-full">

@@ -269,9 +269,14 @@ export default function UsageLogsPage() {
                         {item.station}
                       </span>
 
-                      {item.master_key && (
+                      {/* {item.master_key && (
                         <span className="text-xs font-mono font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 px-2 py-0.5 rounded">
                           {item.master_key}
+                        </span>
+                      )} */}
+                      {item.master_code && (
+                        <span className="text-xs font-mono font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 px-2 py-0.5 rounded">
+                          {item.master_code}
                         </span>
                       )}
 

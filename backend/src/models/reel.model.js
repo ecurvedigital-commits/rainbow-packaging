@@ -32,11 +32,11 @@ const reelSchema = new mongoose.Schema(
       ref: 'MasterProduct',
       default: null,
     },
-    master_key: {
-      type: String,
-      trim: true,
-      default: null,
-    },
+    // master_key: {
+    //   type: String,
+    //   trim: true,
+    //   default: null,
+    // },
     master_code_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'MasterCode',
@@ -88,7 +88,7 @@ reelSchema.index({ record_status: 1, quality: 1, purchase_date: -1 });
 reelSchema.index({ record_status: 1, status: 1, quality: 1, purchase_date: -1 });
 reelSchema.index({ record_status: 1, supplier_name: 1, purchase_date: -1 });
 reelSchema.index({ record_status: 1, last_activity_at: 1 });
-reelSchema.index({ record_status: 1, master_key: 1 });
+// reelSchema.index({ record_status: 1, master_key: 1 });
 reelSchema.index({ record_status: 1, master_product_id: 1 });
 reelSchema.index({ record_status: 1, master_code_id: 1 });
 reelSchema.index({ record_status: 1, master_code: 1 });

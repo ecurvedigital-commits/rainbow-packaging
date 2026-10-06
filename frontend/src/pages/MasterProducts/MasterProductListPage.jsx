@@ -178,7 +178,8 @@ export default function MasterProductListPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                  <th className="py-3 px-4">Master Key</th>
+                  {/* <th className="py-3 px-4">Master Key</th> */}
+                  <th className="py-3 px-4">Master Code</th>
                   <th className="py-3 px-4">Specification Name</th>
                   <th className="py-3 px-4 text-center">Quality</th>
                   <th className="py-3 px-4 text-center">GSM</th>
@@ -198,7 +199,8 @@ export default function MasterProductListPage() {
                   >
                     <td className="py-3.5 px-4 font-mono font-bold text-brand-blue">
                       <span className="px-2.5 py-1 bg-brand-blue/10 text-brand-blue rounded-lg text-xs">
-                        {item.master_key}
+                        {/* {item.master_key} */}
+                        {item.master_code || item.name}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-gray-900">{item.name}</td>
