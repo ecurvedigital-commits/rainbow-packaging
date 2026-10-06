@@ -675,7 +675,27 @@ export default function CreateReelPage() {
         throw new Error(res.message || 'Bulk creation failed');
       }
 
-      setSuccess(`Successfully submitted ${bulkRows.length} reels for approval!`);
+      const { insertedCount = 0, skippedCount = 0, skippedReels = [] } = res.data || {};
+
+      if (skippedCount > 0) {
+        setBulkResult({
+          failedRows: skippedReels.map((item) => ({
+            index: (item.row_index || 1) - 1,
+            reel_no: item.reel_no,
+            error: item.reason,
+          })),
+        });
+
+        if (insertedCount > 0) {
+          setSuccess(`Successfully submitted ${insertedCount} reel(s) for approval! (${skippedCount} duplicate reel(s) were skipped)`);
+        } else {
+          setError(`No reels uploaded. All ${skippedCount} reel(s) in the batch were duplicates and were skipped.`);
+        }
+      } else {
+        setSuccess(`Successfully submitted ${insertedCount || bulkRows.length} reels for approval!`);
+        setBulkResult(null);
+      }
+
       setBulkRows([]);
       setBulkCount(1);
       const nextNo = await fetchNextReelNumber();
@@ -1070,13 +1090,23 @@ export default function CreateReelPage() {
           </section>
 
           {bulkResult && bulkResult.failedRows.length > 0 && (
-            <section className="bg-white border border-red-200 rounded-2xl p-5">
-              <h3 className="text-sm font-extrabold text-gray-900">Failed Rows</h3>
-              <div className="mt-3 space-y-2">
+            <section className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-extrabold text-amber-900 flex items-center gap-2">
+                    <span>Skipped / Duplicate Reels</span>
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-200 text-amber-900">
+                      {bulkResult.failedRows.length} not uploaded
+                    </span>
+                  </h3>
+                  <p className="text-xs text-amber-700 mt-0.5">The following reels were skipped because they already exist in inventory or were duplicated in the file:</p>
+                </div>
+              </div>
+              <div className="mt-3 max-h-60 overflow-y-auto space-y-1.5 pr-1">
                 {bulkResult.failedRows.map((item) => (
-                  <div key={`${item.index}-${item.reel_no}`} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 rounded-xl bg-red-50 border border-red-100 px-3 py-2 text-xs">
-                    <span className="font-bold text-red-800">Row {item.index + 1} · {item.reel_no}</span>
-                    <span className="text-red-700">{item.error}</span>
+                  <div key={`${item.index}-${item.reel_no}`} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 rounded-xl bg-white border border-amber-200/80 px-3.5 py-2 text-xs">
+                    <span className="font-bold text-gray-900">Row {item.index + 1} · <span className="font-mono text-amber-900">{item.reel_no}</span></span>
+                    <span className="text-amber-800 font-medium">{item.error}</span>
                   </div>
                 ))}
               </div>

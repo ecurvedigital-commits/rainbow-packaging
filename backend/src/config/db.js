@@ -79,12 +79,23 @@ export function getDbStatus() {
  */
 export async function withTransaction(work) {
   const session = await mongoose.startSession();
+  let originalError = null;
   try {
     let result;
     await session.withTransaction(async () => {
-      result = await work(session);
+      try {
+        result = await work(session);
+      } catch (err) {
+        originalError = err;
+        throw err;
+      }
     });
     return result;
+  } catch (err) {
+    if (originalError) {
+      throw originalError;
+    }
+    throw err;
   } finally {
     await session.endSession();
   }

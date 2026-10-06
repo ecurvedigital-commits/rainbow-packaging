@@ -540,13 +540,78 @@ export const bulkCreateReels = async ({ input, actor }) => withTransaction(async
   }
 
   // 1. Map reel numbers safely
-  const reelNos = input.map((row, idx) => String(row.reel_no || '').trim() || `R-${idx + 1}`);
+  const allReelNos = input.map((row, idx) => String(row.reel_no || '').trim() || `R-${idx + 1}`);
 
-  // 2. Resolve master products once per unique spec (sequential: same session)
-  const productCache = new Map();
-  const resolved = [];
+  // 1b. Check which reel numbers already exist in active database records
+  const existingInDb = await Reel.find({ reel_no: { $in: allReelNos }, record_status: RECORD_STATUS.ACTIVE })
+    .select('reel_no')
+    .lean()
+    .session(session);
+  const existingSet = new Set(existingInDb.map((r) => r.reel_no));
+
+  const seenInBatch = new Map();
+  const validRows = [];
+  const skippedReels = [];
+
   for (let idx = 0; idx < input.length; idx++) {
     const row = input[idx];
+    const rNo = allReelNos[idx];
+
+    // Check if duplicate in active DB
+    if (existingSet.has(rNo)) {
+      skippedReels.push({
+        row_index: idx + 1,
+        reel_no: rNo,
+        reason: 'Duplicate: Reel number already exists in active inventory',
+      });
+      continue;
+    }
+
+    // Check if duplicate within this upload batch
+    if (seenInBatch.has(rNo)) {
+      const firstRow = seenInBatch.get(rNo) + 1;
+      skippedReels.push({
+        row_index: idx + 1,
+        reel_no: rNo,
+        reason: `Duplicate: Same reel number already appeared at Row ${firstRow} in this file`,
+      });
+      continue;
+    }
+
+    seenInBatch.set(rNo, idx);
+    validRows.push({ row, reel_no: rNo, original_idx: idx });
+  }
+
+  // If all rows were duplicates / skipped
+  if (validRows.length === 0) {
+    return {
+      insertedCount: 0,
+      skippedCount: skippedReels.length,
+      skippedReels,
+      message: `No reels created. All ${skippedReels.length} reel(s) were duplicates.`,
+    };
+  }
+
+  // 2. Resolve master products once per unique spec for valid rows
+  const productCache = new Map();
+  const resolved = [];
+  for (let i = 0; i < validRows.length; i++) {
+    const { row, original_idx } = validRows[i];
+
+    // Explicit row validation before resolving master product
+    if (!row.quality || String(row.quality).trim() === '') {
+      throw createApiError(422, ERROR_CODES.VALIDATION_ERROR, `Row ${original_idx + 1}: Quality is required.`);
+    }
+    if (row.gsm === undefined || row.gsm === null || isNaN(Number(row.gsm)) || Number(row.gsm) <= 0) {
+      throw createApiError(422, ERROR_CODES.VALIDATION_ERROR, `Row ${original_idx + 1}: GSM must be a positive number (got "${row.gsm}").`);
+    }
+    if (row.size === undefined || row.size === null || isNaN(Number(row.size)) || Number(row.size) <= 0) {
+      throw createApiError(422, ERROR_CODES.VALIDATION_ERROR, `Row ${original_idx + 1}: Size must be a positive number (got "${row.size}").`);
+    }
+    if (row.max_weight === undefined || row.max_weight === null || isNaN(Number(row.max_weight)) || Number(row.max_weight) <= 0) {
+      throw createApiError(422, ERROR_CODES.VALIDATION_ERROR, `Row ${original_idx + 1}: Weight (KG) must be a positive number (got "${row.max_weight}").`);
+    }
+
     const cacheKey = [row.quality, row.gsm, row.bf, row.size, row.master_code_id || row.master_code || ''].join('|');
     let product = productCache.get(cacheKey);
     if (!product) {
@@ -562,7 +627,7 @@ export const bulkCreateReels = async ({ input, actor }) => withTransaction(async
           session,
         });
       } catch (err) {
-        throw createApiError(422, ERROR_CODES.VALIDATION_ERROR, `Row ${idx + 1}: ${err.message}`);
+        throw createApiError(422, ERROR_CODES.VALIDATION_ERROR, `Row ${original_idx + 1}: ${err.message}`);
       }
       productCache.set(cacheKey, product);
     }
@@ -571,16 +636,16 @@ export const bulkCreateReels = async ({ input, actor }) => withTransaction(async
 
   // 3. Reserve a contiguous block of sr_no values in one atomic step
   const firstSr = await getNextSequence('reel_sr_no', session);
-  if (input.length > 1) {
-    await Counter.updateOne({ _id: 'reel_sr_no' }, { $inc: { seq: input.length - 1 } }, { session });
+  if (validRows.length > 1) {
+    await Counter.updateOne({ _id: 'reel_sr_no' }, { $inc: { seq: validRows.length - 1 } }, { session });
   }
 
   const now = new Date();
   const isOperator = actor.role === ROLES.OPERATOR;
   const initialApprovalStatus = isOperator ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED;
-  const reelDocs = input.map((row, idx) => ({
+  const reelDocs = validRows.map(({ row, reel_no }, idx) => ({
     sr_no: firstSr + idx,
-    reel_no: reelNos[idx],
+    reel_no,
     master_product_id: resolved[idx]._id,
     master_key: resolved[idx].master_key,
     master_code_id: resolved[idx].master_code_id || null,
@@ -636,7 +701,12 @@ export const bulkCreateReels = async ({ input, actor }) => withTransaction(async
   }));
   await ReelEvent.insertMany(eventDocs, { session });
 
-  return { insertedCount: insertedReels.length, message: `Successfully created ${insertedReels.length} reels in bulk.` };
+  return {
+    insertedCount: insertedReels.length,
+    skippedCount: skippedReels.length,
+    skippedReels,
+    message: `Successfully created ${insertedReels.length} reels in bulk.${skippedReels.length > 0 ? ` (${skippedReels.length} duplicate reel(s) skipped)` : ''}`,
+  };
 });
 
 /**
