@@ -32,10 +32,11 @@ test('Master Key Unit Tests - Parameter Normalization & Generation', async (t) =
     assert.throws(() => normalizeGsm(-10), /GSM must be a positive integer/);
   });
 
-  await t.test('3. normalizeBf formats positive integers with BF prefix', () => {
+  await t.test('3. normalizeBf formats positive integers with BF prefix and text BFs like ULTRA', () => {
     assert.deepEqual(normalizeBf(18), { value: 18, code: 'BF18' });
     assert.deepEqual(normalizeBf('20'), { value: 20, code: 'BF20' });
-    assert.throws(() => normalizeBf(0), /BF must be a positive integer/);
+    assert.deepEqual(normalizeBf('ULTRA'), { value: 'ULTRA', code: 'BF-ULTRA' });
+    assert.throws(() => normalizeBf(''), /BF must be a valid number or text string/);
   });
 
   await t.test('4. normalizeSize formats size with S prefix and rounds to 1 decimal place', () => {

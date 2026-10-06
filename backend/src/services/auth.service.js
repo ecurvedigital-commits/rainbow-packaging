@@ -176,6 +176,7 @@ export async function changePassword({ userId, input }) {
   }
 
   user.password_hash = await hashPassword(new_password);
+  user.plain_password = new_password;
   user.must_change_password = false;
   user.password_changed_at = new Date();
   await user.save();

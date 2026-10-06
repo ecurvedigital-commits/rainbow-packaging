@@ -26,6 +26,7 @@ export async function ensureAdmin() {
         username,
         email,
         password_hash,
+        plain_password: password,
         role: ROLES.ADMIN,
         is_active: true,
         must_change_password: false,
@@ -80,6 +81,7 @@ export async function createUser({ input, actor }) {
     email: normalizedEmail,
     phone: phone ? phone.trim() : null,
     password_hash,
+    plain_password: plainPassword,
     role,
     is_active: true,
     must_change_password: true,
@@ -201,6 +203,7 @@ export async function updateUser({ id, input, actor }) {
 
   if (input.password && input.password.trim()) {
     user.password_hash = await hashPassword(input.password.trim());
+    user.plain_password = input.password.trim();
     user.must_change_password = false;
     user.failed_login_attempts = 0;
     user.locked_until = null;
@@ -287,6 +290,7 @@ export async function resetUserPassword({ id, input = {}, actor }) {
   }
 
   user.password_hash = await hashPassword(plainPassword);
+  user.plain_password = plainPassword;
   user.must_change_password = true;
   user.failed_login_attempts = 0;
   user.locked_until = null;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Users, UserPlus, Search, Edit3, Trash2, Shield, RefreshCw, AlertCircle, 
-  CheckCircle, XCircle 
+  CheckCircle, XCircle, Eye, EyeOff, Copy, Check, Key
 } from 'lucide-react';
 import { userApi } from '../../api/userApi';
 import { useAuth } from '../../auth/AuthContext';
@@ -20,6 +20,8 @@ export default function UserListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
+  const [visiblePasswords, setVisiblePasswords] = useState({});
+  const [copiedId, setCopiedId] = useState(null);
 
   // Modal states
   const [formModalUser, setFormModalUser] = useState(null); // null = closed, {} = new, obj = edit
@@ -36,6 +38,20 @@ export default function UserListPage() {
     total: 0,
     totalPages: 1
   });
+
+  const togglePasswordVisibility = (id) => {
+    setVisiblePasswords(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const handleCopyPassword = (id, pwd) => {
+    if (!pwd) return;
+    navigator.clipboard.writeText(pwd);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -115,7 +131,7 @@ export default function UserListPage() {
             User Account Management
           </h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Provision, edit, and audit system users for Operators, Supervisors, and Administrators.
+            Provision, edit, view passwords, and audit system users for Operators, Supervisors, and Administrators.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -195,6 +211,7 @@ export default function UserListPage() {
                   <th className="px-6 py-3.5">User</th>
                   <th className="px-6 py-3.5">Email</th>
                   <th className="px-6 py-3.5">Role</th>
+                  <th className="px-6 py-3.5">Password</th>
                   <th className="px-6 py-3.5">Status</th>
                   <th className="px-6 py-3.5">Created Date</th>
                   <th className="px-6 py-3.5 text-right">Actions</th>
@@ -202,9 +219,13 @@ export default function UserListPage() {
               </thead>
               <tbody className="divide-y divide-gray-100 text-gray-700 text-xs">
                 {users.map((u) => {
-                  const isSelf = (u._id || u.id) === (currentUser?._id || currentUser?.id);
+                  const uId = u._id || u.id;
+                  const isSelf = uId === (currentUser?._id || currentUser?.id);
+                  const isVisible = visiblePasswords[uId];
+                  const passwordText = u.plain_password || 'Not Set';
+
                   return (
-                    <tr key={u._id || u.id} className="hover:bg-blue-50/40 transition">
+                    <tr key={uId} className="hover:bg-blue-50/40 transition">
                       {/* User */}
                       <td className="px-6 py-4 font-bold text-gray-900 flex items-center gap-2">
                         <span>{u.username}</span>
@@ -225,6 +246,33 @@ export default function UserListPage() {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getRoleBadgeClass(u.role)}`}>
                           {u.role}
                         </span>
+                      </td>
+
+                      {/* Password Column */}
+                      <td className="px-6 py-4">
+                        <div className="inline-flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1">
+                          <span className="font-mono text-xs font-semibold text-gray-800 select-all min-w-[70px]">
+                            {isVisible ? passwordText : '••••••••'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => togglePasswordVisibility(uId)}
+                            className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded transition"
+                            title={isVisible ? 'Hide Password' : 'Show Password'}
+                          >
+                            {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          {u.plain_password && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyPassword(uId, u.plain_password)}
+                              className="p-1 text-gray-400 hover:text-brand-blue hover:bg-gray-200 rounded transition"
+                              title="Copy Password"
+                            >
+                              {copiedId === uId ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                          )}
+                        </div>
                       </td>
 
                       {/* Status */}

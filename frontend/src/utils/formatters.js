@@ -109,12 +109,17 @@ export const extractMasterCodeSpecs = (mc) => {
     }
   }
 
-  if (mc.bf !== undefined && mc.bf !== null && mc.bf !== '') {
-    const parsedBf = parseInt(String(mc.bf).replace(/[^\d]/g, ''), 10);
-    if (!isNaN(parsedBf) && parsedBf > 0) {
+  if (specs.quality === 'ULTRA') {
+    specs.bf = 'ULTRA';
+  } else if (mc.bf !== undefined && mc.bf !== null && mc.bf !== '') {
+    const rawBf = String(mc.bf).trim();
+    const parsedBf = parseInt(rawBf.replace(/[^\d]/g, ''), 10);
+    if (isNaN(parsedBf) || rawBf.toUpperCase() === 'ULTRA' || rawBf.toUpperCase() === 'DCB' || rawBf.toUpperCase() === 'SPECTRA') {
+      specs.bf = rawBf.toUpperCase() === 'ULTRA' ? 'ULTRA' : rawBf;
+    } else if (!isNaN(parsedBf) && parsedBf > 0) {
       specs.bf = parsedBf;
     } else {
-      specs.bf = 18;
+      specs.bf = rawBf;
     }
   }
 

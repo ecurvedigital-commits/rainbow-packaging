@@ -16,9 +16,83 @@ export function buildReelFilter(filters = {}, actor = {}) {
     query.record_status = RECORD_STATUS.ACTIVE;
   }
 
-  // Quick or substring search on reel_no
+  // Field-targeted or global multi-field search
   if (filters.q) {
-    query.reel_no = new RegExp(filters.q.trim(), 'i');
+    const term = String(filters.q).trim();
+    const regex = new RegExp(term, 'i');
+    const num = Number(term);
+    const hasNum = !isNaN(num) && term !== '';
+
+    const targetField = String(filters.search_field || 'all').toLowerCase();
+
+    if (targetField === 'reel_no') {
+      query.reel_no = regex;
+    } else if (targetField === 'master_code') {
+      query.$or = [{ master_code: regex }, { master_key: regex }];
+    } else if (targetField === 'quality') {
+      query.quality = regex;
+    } else if (targetField === 'supplier' || targetField === 'supplier_name') {
+      query.supplier_name = regex;
+    } else if (targetField === 'mill' || targetField === 'mill_name') {
+      query.mill_name = regex;
+    } else if (targetField === 'gsm') {
+      query.gsm = hasNum ? num : regex;
+    } else if (targetField === 'bf') {
+      query.bf = hasNum ? { $in: [num, String(num), `${num}BF`, `${num} BF`] } : regex;
+    } else if (targetField === 'size') {
+      query.size = hasNum ? num : regex;
+    } else if (targetField === 'weight') {
+      query.$or = hasNum ? [{ previous_weight: num }, { max_weight: num }] : [{ previous_weight: regex }];
+    } else if (targetField === 'consumed') {
+      if (hasNum) {
+        query.$expr = { $eq: [{ $subtract: ['$max_weight', '$previous_weight'] }, num] };
+      }
+    } else if (targetField === 'station') {
+      query.stations_used = regex;
+    } else if (targetField === 'status') {
+      query.status = regex;
+    } else {
+      // 'all' fields search across all specifications
+      const orConditions = [
+        { reel_no: regex },
+        { master_code: regex },
+        { master_key: regex },
+        { quality: regex },
+        { supplier_name: regex },
+        { mill_name: regex },
+        { stations_used: regex },
+        { status: regex },
+        { bf: regex },
+      ];
+      if (hasNum) {
+        orConditions.push({ gsm: num });
+        orConditions.push({ bf: num });
+        orConditions.push({ size: num });
+        orConditions.push({ previous_weight: num });
+        orConditions.push({ max_weight: num });
+      }
+      query.$or = orConditions;
+    }
+  }
+
+  // Consumed Filter (Unused, Partially Consumed, Fully Consumed/Depleted)
+  if (filters.consumption) {
+    const cVal = String(filters.consumption).toUpperCase();
+    if (cVal.includes('UNUSED') || cVal.includes('FRESH')) {
+      query.$expr = { $gte: ['$previous_weight', '$max_weight'] };
+    } else if (cVal.includes('PARTIAL') || cVal.includes('CUT')) {
+      query.$expr = {
+        $and: [
+          { $lt: ['$previous_weight', '$max_weight'] },
+          { $gt: ['$previous_weight', 0] },
+        ]
+      };
+    } else if (cVal.includes('DEPLETED') || cVal.includes('NILL') || cVal.includes('FULL')) {
+      query.$or = [
+        { status: 'NILL' },
+        { previous_weight: { $lte: 0 } },
+      ];
+    }
   }
 
   // Master Key filter (supports comma-separated multi-select)
@@ -67,13 +141,34 @@ export function buildReelFilter(filters = {}, actor = {}) {
     }
   }
 
-  // Bursting Factor (BF) — supports comma-separated multi-select
+  // Bursting Factor (BF) — supports comma-separated multi-select (numbers like 18 or text strings like 18BF, ULTRA)
   if (filters.bf !== undefined && filters.bf !== '') {
-    const bfValues = String(filters.bf).split(',').map((v) => v.trim()).filter(Boolean);
-    if (bfValues.length === 1) {
-      query.bf = Number(bfValues[0]);
-    } else if (bfValues.length > 1) {
-      query.bf = { $in: bfValues.map(Number) };
+    const rawValues = String(filters.bf).split(',').map((v) => v.trim()).filter(Boolean);
+    const expanded = [];
+    rawValues.forEach((val) => {
+      expanded.push(val);
+      const numMatch = val.match(/^(\d+)(?:\s*BF)?$/i);
+      if (numMatch) {
+        const n = Number(numMatch[1]);
+        expanded.push(n);
+        expanded.push(String(n));
+        expanded.push(`${n}BF`);
+        expanded.push(`${n} BF`);
+      } else if (!isNaN(Number(val))) {
+        const n = Number(val);
+        expanded.push(n);
+        expanded.push(String(n));
+        expanded.push(`${n}BF`);
+        expanded.push(`${n} BF`);
+      } else {
+        expanded.push(new RegExp(`^${val}$`, 'i'));
+      }
+    });
+    const uniqueExpanded = Array.from(new Set(expanded));
+    if (uniqueExpanded.length === 1) {
+      query.bf = uniqueExpanded[0];
+    } else {
+      query.bf = { $in: uniqueExpanded };
     }
   }
 
@@ -152,6 +247,8 @@ export function buildReelFilter(filters = {}, actor = {}) {
       query.purchase_date.$lte = toDate;
     }
   }
+
+  // NOTE: consumed_date_from/to are resolved in reel.service listReels via usage events.
 
   // Aging reels threshold (last_activity_at <= now - aging_days)
   const agingDays = filters.aging_days || filters.aging;

@@ -31,13 +31,13 @@
    * `sr_no` (Number, unique auto-increment sequence)
    * `reel_no` (String, e.g. `"78"`, `"1094"`, `"R-1001"`)
    * `quality` (String, e.g. `"ULTRA"`, `"VK"`, `"SK"`, `"DCB"`, `"FBB"`, `"Spectra"`, `"SBS"`)
-   * `bf` (Mixed: Number/String, e.g. `18`, `22`, `"ULTRA"`, `"DCB"`, `"FBB"`)
+   * `bf` (Mixed: Number/String, e.g. `18`, `22`, `"18BF"`, `"ULTRA"`, `"DCB"`, `"FBB"`). **Text input**; `ULTRA` quality reels auto-get BF `ULTRA`; Excel "NumberBF" values (e.g. `18BF`) are preserved as-is.
    * `gsm` (Mixed: Number/String, e.g. `220`, `140`, `100`, `180`)
    * `size` (Number, size in cm, e.g. `26`, `32.5`, `34`)
    * `max_weight` / `previous_weight` (Number, in kg)
    * `supplier_name` (String, e.g. `"Century Paper"`, `"Vishal Kraft"`, `"Shree Krishna"`)
    * `mill_name` (String, e.g. `"Century Paper Mill"`, `"VK Mill"`, `"SK Paper Mill"`, `"ITC Bhadrachalam"`)
-   * `master_code` (String, e.g. `"1"`, `"6"`, `"19"`)
+   * `master_code` (String index, e.g. `"1"`, `"6"`, `"19"`). **UI must never show the raw index** — always show the business name (`master_code_name`, e.g. `VK-20-20`, `VK-22-220`) resolved via `masterCodeApi.list({status:'ACTIVE'})` / `formatMasterCodeBadge`.
    * `master_code_id` (ObjectId ref `MasterCode`)
    * `master_key` (String, e.g. `"Duplex ultra 220-32.5"`)
    * `status` (`'REEL'`, `'CUT'`, `'NILL'`, `'VOIDED'`)
@@ -51,6 +51,25 @@
 
 4. **`Notification` (`backend/src/models/notification.model.js`)**:
    * Real-time notifications for users (`user_id`, `type`, `title`, `message`, `is_read`, `data`).
+
+---
+
+## 3b. Current Project State (updated 2026-10-06)
+
+Features already implemented — do not rebuild, reuse them:
+
+* **Usage approval flow is disabled**: `recordUsage` in `backend/src/services/usage.service.js` saves usage as `CONFIRMED` immediately (the old operator→PENDING logic is kept commented). Reel *creation* approval still applies. Plan step "flag reel in Supervisor queue" must therefore rely on `pending_count`/a new flag, not on usage events.
+* **Admin** can view every user's password in Users management. Station name fixed to `Sold to Revati`.
+* **Master Code display**: `formatMasterCodeBadge(code, payload|reel, map)` pattern is used in `ReelListPage.jsx`, `UsageLogsPage.jsx` and `AuditLogsPage.jsx` (names like `VK-20-20`, not `Master Code 1-2`).
+* **Reel Inventory (`frontend/src/pages/Reels/ReelListPage.jsx`)**:
+  * Search bar with a right-side "Search Field" selector (reel no, master code, quality, GSM, BF, size, weight, consumed, supplier, mill, station, status) → backend `q` + `search_field` in `backend/src/utils/buildReelFilter.js`.
+  * BF filter supports `NumberBF` text (`18BF`) and `ULTRA`.
+  * Total Consumed Weight card + sortable "Total Consumed" column; `consumption` status filter (Unused / Partial / Depleted) retained.
+  * **Consumption Date filter** (below Creation Date): sends `consumed_date_from/to`; `listReels` in `reel.service.js` aggregates `USAGE_LOGGED` ReelEvents (non-declined) in range, restricts reels, and returns `consumed_in_range` kg per reel (shown in the table and a summary card).
+* **Usage Logs page** has a "Consumed on date" picker (`startDate`/`endDate` → `listUsageLogs` filters `performed_at`) with entry/reel/kg summary.
+* **Audit Logs page** (`frontend/src/pages/Audit/AuditLogsPage.jsx`): reel number in table and modal links to `/reels/:id` (`ReelDetailPage`); API returns `reel_id`.
+* **Excel import** (`CreateReelPage.jsx` → `parseExcelSheetSmart`) auto-detects header row and flexible column names.
+* Tests: `npm test` in `backend/` (37 passing); `npm run build` in `frontend/`.
 
 ---
 

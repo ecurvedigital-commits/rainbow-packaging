@@ -17,6 +17,12 @@ import ErrorAlert from '../../components/Common/ErrorAlert';
 import EmptyState from '../../components/Common/EmptyState';
 import { formatWeight, formatDate, formatCurrency, getStatusBadgeClass } from '../../utils/formatters';
 
+const formatBfDisplay = (bf) => {
+  if (!bf && bf !== 0) return '';
+  const str = String(bf).trim();
+  return str.toUpperCase().includes('BF') || isNaN(Number(str)) ? str : `${str} BF`;
+};
+
 const formatMasterCodeBadge = (code, reel = null, map = {}) => {
   if (reel?.master_code_name) return reel.master_code_name;
   if (!code) return '';
@@ -35,18 +41,19 @@ const BASE_FIELDS = [
   { key: 'gsm', label: 'GSM', apiKey: 'gsm' },
   { key: 'bf', label: 'Bursting Factor (BF)', apiKey: 'bf' },
   { key: 'width_mm', label: 'Size / Width (cm)', apiKey: 'size' },
+  { key: 'consumption', label: 'Consumed / Usage Status', apiKey: 'consumption' },
   { key: 'status', label: 'Reel Status', apiKey: 'status' },
   { key: 'station', label: 'Station Used', apiKey: 'station' },
 ];
 
 const SORT_LABELS = {
   reel: 'Reel No.', specs: 'Specifications', supplier: 'Supplier', mill: 'Mill Name',
-  weight: 'Net Weight', price: 'Price / KG', status: 'Status', created: 'Created',
+  weight: 'Stock Weight', consumed: 'Total Consumed', price: 'Price / KG', status: 'Status', created: 'Created',
 };
 
 const EMPTY_FILTER_VALUES = {
   supplier: [], mill_name: [], master_code: [], paper_quality: [], gsm: [],
-  bf: [], width_mm: [], status: [], station: [],
+  bf: [], width_mm: [], consumption: [], status: [], station: [],
 };
 
 export default function ReelListPage() {
@@ -99,12 +106,17 @@ export default function ReelListPage() {
     };
   });
 
-  // Free-text search
+  // Free-text search & field selector
   const [searchQ, setSearchQ] = useState(searchParams.get('q') || '');
+  const [searchField, setSearchField] = useState('all');
 
   // Creation Date Filters
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+
+  // Consumption Date Filter (reels consumed on a given day / range)
+  const [consumedFrom, setConsumedFrom] = useState('');
+  const [consumedTo, setConsumedTo] = useState('');
 
   // Dropdown options from backend
   const [filterOptions, setFilterOptions] = useState({
@@ -188,9 +200,16 @@ export default function ReelListPage() {
   // ── Build API params ────────────────────────────────────────────────────
   const buildApiParams = useCallback(() => {
     const params = { page: pagination.page, limit: pagination.limit };
-    if (searchQ.trim()) params.q = searchQ.trim();
+    if (searchQ.trim()) {
+      params.q = searchQ.trim();
+      if (searchField && searchField !== 'all') {
+        params.search_field = searchField;
+      }
+    }
     if (dateFrom) params.purchase_date_from = dateFrom;
     if (dateTo) params.purchase_date_to = dateTo;
+    if (consumedFrom) params.consumed_date_from = consumedFrom;
+    if (consumedTo) params.consumed_date_to = consumedTo;
 
     const csv = (arr) => (Array.isArray(arr) && arr.length ? arr.join(',') : undefined);
 
@@ -201,6 +220,7 @@ export default function ReelListPage() {
     if (csv(filterValues.gsm)) params.gsm = csv(filterValues.gsm);
     if (csv(filterValues.bf)) params.bf = csv(filterValues.bf);
     if (csv(filterValues.width_mm)) params.size = csv(filterValues.width_mm);
+    if (csv(filterValues.consumption)) params.consumption = csv(filterValues.consumption);
     if (csv(filterValues.status)) params.status = csv(filterValues.status);
     if (csv(filterValues.station)) params.station = csv(filterValues.station);
 
@@ -215,7 +235,7 @@ export default function ReelListPage() {
       }
     });
     return params;
-  }, [pagination.page, pagination.limit, filterValues, searchQ, dateFrom, dateTo]);
+  }, [pagination.page, pagination.limit, filterValues, searchQ, searchField, dateFrom, dateTo, consumedFrom, consumedTo]);
 
   // ── Fetch reels ────────────────────────────────────────────────────────
   const fetchReels = useCallback(async () => {
@@ -298,6 +318,11 @@ export default function ReelListPage() {
       case 'supplier': return String(reel.supplier_name || reel.supplier || '').toLowerCase();
       case 'mill': return String(reel.mill_name || '').toLowerCase();
       case 'weight': return Number(reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight ?? 0);
+      case 'consumed': {
+        const cur = Number(reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight ?? 0);
+        const init = Number(reel.max_weight ?? reel.initial_weight_kg ?? cur);
+        return Math.max(0, init - cur);
+      }
       case 'price': return reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 55;
       case 'status': return String(reel.status || '').toLowerCase();
       case 'created': {
@@ -369,15 +394,19 @@ export default function ReelListPage() {
       const reportReels = applySort(await fetchAllReportReels());
 
       let totalWeight = 0;
+      let totalConsumedWeight = 0;
       const rows = reportReels.map((reel, index) => {
         const currentWeight = reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight ?? 0;
+        const initialWeight = reel.max_weight ?? reel.initial_weight_kg ?? currentWeight;
+        const consumedWeight = Math.max(0, initialWeight - currentWeight);
         totalWeight += Number(currentWeight) || 0;
+        totalConsumedWeight += Number(consumedWeight) || 0;
         const itemRate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 55;
         const createdDate = formatDate(reel.purchase_date || reel.created_at || reel.createdAt);
         const specifications = [
           reel.quality || reel.paper_quality || '',
           reel.gsm ? `${reel.gsm} GSM` : '',
-          reel.bf ? `${reel.bf} BF` : '',
+          reel.bf ? formatBfDisplay(reel.bf) : '',
           (reel.size || reel.width_mm) ? `${reel.size || reel.width_mm} cm` : '',
         ].filter(Boolean).join(' | ');
 
@@ -389,6 +418,7 @@ export default function ReelListPage() {
             <td>${escapeReportHtml(reel.supplier_name || reel.supplier || 'N/A')}</td>
             <td>${escapeReportHtml(reel.mill_name || '-')}</td>
             <td class="right nowrap">${escapeReportHtml(formatWeight(currentWeight))}</td>
+            <td class="right nowrap">${escapeReportHtml(formatWeight(consumedWeight))}</td>
             <td class="right nowrap">Rs ${escapeReportHtml(itemRate.toLocaleString('en-IN'))}/kg</td>
             <td class="center">${escapeReportHtml(reel.status || 'N/A')}</td>
             <td class="center nowrap">${escapeReportHtml(createdDate || 'N/A')}</td>
@@ -493,14 +523,15 @@ export default function ReelListPage() {
               <th>Specifications</th>
               <th>Supplier</th>
               <th>Mill</th>
-              <th>Net Weight</th>
+              <th>Stock Weight</th>
+              <th>Total Consumed</th>
               <th>Price / KG</th>
               <th>Status</th>
               <th>Created</th>
             </tr>
           </thead>
           <tbody>
-            ${rows || '<tr><td colspan="9" class="center">No reels found for the selected filters.</td></tr>'}
+            ${rows || '<tr><td colspan="10" class="center">No reels found for the selected filters.</td></tr>'}
           </tbody>
         </table>
 
@@ -575,6 +606,7 @@ export default function ReelListPage() {
       case 'gsm': return filterOptions.gsms;
       case 'bf': return filterOptions.bfs;
       case 'width_mm': return filterOptions.sizes;
+      case 'consumption': return ['Unused / Fresh (0 kg)', 'Partially Consumed (>0 kg)', 'Fully Consumed / Depleted'];
       case 'supplier': return filterOptions.suppliers;
       case 'mill_name': return filterOptions.mill_names;
       case 'master_code': return filterOptions.master_codes;
@@ -615,9 +647,14 @@ export default function ReelListPage() {
   const canAction = isRoleAdmin || isRoleSupervisor || isRoleOperator;
 
   const totalActiveCount = Object.values(filterValues)
-    .reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0);
+    .reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (consumedFrom ? 1 : 0) + (consumedTo ? 1 : 0);
 
   const filteredTotalWeight = reels.reduce((sum, r) => sum + (r.previous_weight ?? r.current_weight_kg ?? r.max_weight ?? 0), 0);
+  const filteredTotalConsumed = reels.reduce((sum, r) => {
+    const cur = r.previous_weight ?? r.current_weight_kg ?? r.max_weight ?? 0;
+    const init = r.max_weight ?? r.initial_weight_kg ?? cur;
+    return sum + Math.max(0, init - cur);
+  }, 0);
   const filteredTotalPrice = Math.round(
     reels.reduce((sum, r) => {
       const w = r.previous_weight ?? r.current_weight_kg ?? r.max_weight ?? 0;
@@ -681,6 +718,26 @@ export default function ReelListPage() {
           </div>
           <div className="h-8 w-px bg-slate-700/60 hidden sm:block" />
           <div>
+            <p className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">Total Consumed Weight</p>
+            <p className="text-2xl font-extrabold text-amber-300" style={{ fontFamily: 'var(--font-family-display)' }}>
+              {formatWeight(filteredTotalConsumed)}
+            </p>
+          </div>
+          {(consumedFrom || consumedTo) && (
+            <>
+              <div className="h-8 w-px bg-slate-700/60 hidden sm:block" />
+              <div>
+                <p className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider">
+                  Consumed {consumedFrom === consumedTo ? `on ${consumedFrom}` : `${consumedFrom || 'start'} to ${consumedTo || 'today'}`} ({reels.length} reels{pagination.totalPages > 1 ? ', this page' : ''})
+                </p>
+                <p className="text-2xl font-extrabold text-emerald-300" style={{ fontFamily: 'var(--font-family-display)' }}>
+                  {formatWeight(reels.reduce((s, r) => s + (Number(r.consumed_in_range) || 0), 0))}
+                </p>
+              </div>
+            </>
+          )}
+          <div className="h-8 w-px bg-slate-700/60 hidden sm:block" />
+          <div>
             <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
               <IndianRupee className="w-3.5 h-3.5" /> Total Stock Value
             </p>
@@ -703,20 +760,48 @@ export default function ReelListPage() {
       {/* ── Filter Panel ───────────────────────────────────────────────── */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
 
-        {/* Search + Reset */}
-        <div className="p-4 border-b border-slate-100 dark:border-slate-700/60 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchQ}
-              onChange={(e) => { setSearchQ(e.target.value); setPagination((p) => ({ ...p, page: 1 })); }}
-              placeholder="Search reel #, barcode, supplier, master code..."
-              className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:text-white"
-            />
+        {/* Search Input + Field Selector Dropdown + Reset */}
+        <div className="p-4 border-b border-slate-100 dark:border-slate-700/60 flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+          <div className="relative flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQ}
+                onChange={(e) => { setSearchQ(e.target.value); setPagination((p) => ({ ...p, page: 1 })); }}
+                placeholder={searchField === 'all' ? 'Search everywhere (reel #, weight, size, quality, supplier, mill...)' : `Search by ${searchField.replace('_', ' ')}...`}
+                className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:text-white"
+              />
+            </div>
+
+            {/* Field selector dropdown on the right side of search bar */}
+            <div className="shrink-0 flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Search Field:</span>
+              <select
+                value={searchField}
+                onChange={(e) => { setSearchField(e.target.value); setPagination((p) => ({ ...p, page: 1 })); }}
+                className="text-xs font-bold text-slate-800 dark:text-slate-200 bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer py-0.5"
+                title="Select specific field to filter search"
+              >
+                <option value="all">🔍 All Fields (Everywhere)</option>
+                <option value="reel_no">Reel Number</option>
+                <option value="master_code">Master Code</option>
+                <option value="quality">Paper Quality</option>
+                <option value="gsm">GSM</option>
+                <option value="bf">Bursting Factor (BF)</option>
+                <option value="size">Size / Width (cm)</option>
+                <option value="weight">Stock Weight (kg)</option>
+                <option value="consumed">Consumed Weight (kg)</option>
+                <option value="supplier">Supplier Name</option>
+                <option value="mill">Mill Name</option>
+                <option value="station">Station Used</option>
+                <option value="status">Reel Status</option>
+              </select>
+            </div>
           </div>
-          {(totalActiveCount > 0 || searchQ || dateFrom || dateTo) && (
-            <button onClick={() => { handleResetAll(); clearDateFilter(); }}
+
+          {(totalActiveCount > 0 || searchQ || dateFrom || dateTo || searchField !== 'all') && (
+            <button onClick={() => { handleResetAll(); clearDateFilter(); setConsumedFrom(''); setConsumedTo(''); setSearchField('all'); }}
               className="px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition border border-rose-200 dark:border-rose-800 flex items-center gap-1.5 shrink-0">
               <RotateCcw className="w-3.5 h-3.5" />
               Reset All Filters
@@ -754,6 +839,38 @@ export default function ReelListPage() {
             <button onClick={handleMonthFilter} className="px-2.5 py-1 text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 rounded-lg transition">This Month</button>
             {(dateFrom || dateTo) && (
               <button onClick={clearDateFilter} className="px-2.5 py-1 text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline">Clear Date</button>
+            )}
+          </div>
+        </div>
+
+        {/* Consumption Date Filter Row */}
+        <div className="p-4 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/40 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 shrink-0">
+              <Calendar className="w-4 h-4 text-emerald-500" /> Filter by Consumption Date:
+            </span>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={consumedFrom}
+                onChange={(e) => { setConsumedFrom(e.target.value); if (!consumedTo) setConsumedTo(e.target.value); setPagination((p) => ({ ...p, page: 1 })); }}
+                className="px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:text-white"
+                title="Consumed From Date"
+              />
+              <span className="text-xs text-slate-400">to</span>
+              <input
+                type="date"
+                value={consumedTo}
+                onChange={(e) => { setConsumedTo(e.target.value); setPagination((p) => ({ ...p, page: 1 })); }}
+                className="px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:text-white"
+                title="Consumed To Date"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button onClick={() => { const t = new Date().toISOString().split('T')[0]; setConsumedFrom(t); setConsumedTo(t); setPagination((p) => ({ ...p, page: 1 })); }} className="px-2.5 py-1 text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 rounded-lg transition">Today</button>
+            {(consumedFrom || consumedTo) && (
+              <button onClick={() => { setConsumedFrom(''); setConsumedTo(''); setPagination((p) => ({ ...p, page: 1 })); }} className="px-2.5 py-1 text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline">Clear Date</button>
             )}
           </div>
         </div>
@@ -988,9 +1105,17 @@ export default function ReelListPage() {
                     <th className="px-4 py-3 whitespace-nowrap text-right">
                       <button type="button" onClick={() => handleSort('weight')}
                         className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition justify-end"
-                        title="Click to sort; click more columns to sort by several fields">
+                        title="Click to sort by stock weight">
                         {SORT_LABELS.weight}
                         {renderSortIcon('weight')}
+                      </button>
+                    </th>
+                    <th className="px-4 py-3 whitespace-nowrap text-right">
+                      <button type="button" onClick={() => handleSort('consumed')}
+                        className="inline-flex items-center gap-1.5 uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:text-amber-700 transition justify-end"
+                        title="Click to sort by total consumed weight">
+                        {SORT_LABELS.consumed}
+                        {renderSortIcon('consumed')}
                       </button>
                     </th>
                     <th className="px-4 py-3 whitespace-nowrap text-right">
@@ -1026,6 +1151,8 @@ export default function ReelListPage() {
                     const isVoided = reel.status === 'VOIDED' || reel.record_status === 'VOIDED';
                     const currentWeight = reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight;
                     const initialWeight = reel.max_weight ?? reel.initial_weight_kg;
+                    const consumedWeight = Math.max(0, (initialWeight || 0) - (currentWeight || 0));
+                    const consumedPct = initialWeight > 0 ? Math.round((consumedWeight / initialWeight) * 100) : 0;
                     const itemRate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 55;
                     const itemPrice = Math.round((currentWeight || 0) * itemRate);
 
@@ -1080,7 +1207,7 @@ export default function ReelListPage() {
                             {reel.quality || reel.paper_quality}
                           </div>
                           <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                            {reel.gsm} GSM • {reel.bf} BF • {reel.size || reel.width_mm} cm
+                            {reel.gsm} GSM • {formatBfDisplay(reel.bf)} • {reel.size || reel.width_mm} cm
                           </div>
                         </td>
 
@@ -1106,6 +1233,20 @@ export default function ReelListPage() {
                           <div className="text-xs text-slate-400">
                             Orig: {formatWeight(initialWeight)}
                           </div>
+                        </td>
+
+                        <td className="align-middle px-4 py-3.5 text-right whitespace-nowrap tabular-nums">
+                          <div className="font-extrabold text-amber-600 dark:text-amber-400">
+                            {formatWeight(consumedWeight)}
+                          </div>
+                          <div className="text-[10px] font-semibold text-slate-400">
+                            {consumedPct > 0 ? `${consumedPct}% used` : 'Unused (0%)'}
+                          </div>
+                          {reel.consumed_in_range !== undefined && (
+                            <div className="mt-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                              {formatWeight(reel.consumed_in_range)} in selected dates
+                            </div>
+                          )}
                         </td>
 
                         <td className="align-middle px-4 py-3.5 text-right whitespace-nowrap tabular-nums">

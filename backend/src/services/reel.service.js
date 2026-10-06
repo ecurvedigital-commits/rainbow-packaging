@@ -56,9 +56,14 @@ export function matchReelToMasterCode(reel, mc) {
 
   if (!qualityMatches) return false;
 
-  const numericMcBf = Number(mc.bf);
-  if (!isNaN(numericMcBf) && numericMcBf > 0) {
-    if (Number(reel.bf) !== numericMcBf) return false;
+  const mcBfVal = mc.bf;
+  if (mcBfVal !== undefined && mcBfVal !== null && mcBfVal !== '') {
+    const numericMcBf = Number(mcBfVal);
+    if (!isNaN(numericMcBf) && numericMcBf > 0) {
+      if (Number(reel.bf) !== numericMcBf) return false;
+    } else {
+      if (String(reel.bf || '').trim().toUpperCase() !== String(mcBfVal).trim().toUpperCase()) return false;
+    }
   }
 
   const mcGsmStr = String(mc.gsm || '').trim();
@@ -195,6 +200,32 @@ export async function listReels({ filters = {}, actor }) {
     }
   }
 
+  // Consumption date range: restrict to reels with usage events in range and capture kg used
+  let consumedByReel = null;
+  const cFrom = filters.consumed_date_from || filters.consumed_from;
+  const cTo = filters.consumed_date_to || filters.consumed_to;
+  if (cFrom || cTo) {
+    const range = {};
+    if (cFrom) range.$gte = new Date(cFrom);
+    if (cTo) {
+      const toDate = new Date(cTo);
+      toDate.setHours(23, 59, 59, 999);
+      range.$lte = toDate;
+    }
+    const agg = await ReelEvent.aggregate([
+      {
+        $match: {
+          event_type: EVENT_TYPES.USAGE_LOGGED,
+          approval_status: { $ne: APPROVAL_STATUS.DECLINED },
+          performed_at: range,
+        },
+      },
+      { $group: { _id: '$reel_id', kg: { $sum: '$payload.used_this_time' } } },
+    ]);
+    consumedByReel = new Map(agg.map((a) => [String(a._id), Math.round(a.kg * 100) / 100]));
+    query._id = { $in: agg.map((a) => a._id) };
+  }
+
   console.log('[listReels] Executing Mongoose Reel.find with query:', JSON.stringify(query));
 
   const [reels, total, masterCodeDocs, masterProductDocs] = await Promise.all([
@@ -245,6 +276,7 @@ export async function listReels({ filters = {}, actor }) {
       max_weight: reel.max_weight,
       previous_weight: reel.previous_weight,
       consumed_weight: Math.round((reel.max_weight - reel.previous_weight) * 100) / 100,
+      consumed_in_range: consumedByReel ? (consumedByReel.get(reel._id.toString()) || 0) : undefined,
       status: reel.status,
       pending_count: reel.pending_count || 0,
       approval_status: reel.pending_count > 0 ? APPROVAL_STATUS.PENDING : APPROVAL_STATUS.CONFIRMED,

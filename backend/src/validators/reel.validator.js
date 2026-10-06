@@ -47,7 +47,12 @@ export const createReelSchema = z.object({
   body: z.object({
     reel_no: z.string().min(1, 'Reel number is required').trim(),
     quality: z.string().min(1, 'Quality is required').trim(),
-    bf: z.coerce.number().positive(),
+    bf: z.union([z.string().min(1, 'BF is required'), z.number()]).transform((v) => {
+      if (typeof v === 'number') return v;
+      const s = String(v).trim();
+      const n = Number(s);
+      return !isNaN(n) && s !== '' ? n : s;
+    }),
     purchase_date: dateOnlySchema.optional(),
     supplier_name: z.string().min(1, 'Supplier name is required').trim(),
     mill_name: z.string().trim().optional().default(''),
@@ -79,7 +84,12 @@ export const updateReelSchema = z.object({
   body: z.object({
     reel_no: z.string().trim().optional(),
     quality: z.string().trim().optional(),
-    bf: z.coerce.number().positive().optional(),
+    bf: z.union([z.string(), z.number()]).transform((v) => {
+      if (typeof v === 'number') return v;
+      const s = String(v).trim();
+      const n = Number(s);
+      return !isNaN(n) && s !== '' ? n : s;
+    }).optional(),
     purchase_date: dateOnlySchema.optional(),
     supplier_name: z.string().trim().optional(),
     mill_name: z.string().trim().optional(),

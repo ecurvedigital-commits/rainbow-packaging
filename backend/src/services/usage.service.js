@@ -122,6 +122,20 @@ export async function listUsageLogs({ filters = {}, actor }) {
     query['payload.station'] = filters.station;
   }
 
+  if (filters.startDate || filters.endDate || filters.date_from || filters.date_to) {
+    const sDate = filters.startDate || filters.date_from;
+    const eDate = filters.endDate || filters.date_to;
+    query.performed_at = {};
+    if (sDate) {
+      query.performed_at.$gte = new Date(sDate);
+    }
+    if (eDate) {
+      const toDate = new Date(eDate);
+      toDate.setHours(23, 59, 59, 999);
+      query.performed_at.$lte = toDate;
+    }
+  }
+
   if (filters.q && filters.q.trim()) {
     const qTrim = filters.q.trim();
     const regex = new RegExp(qTrim.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');

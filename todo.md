@@ -16,7 +16,7 @@
 <!-- rate per kg. -->
 
 
-Admin
+<!-- Admin -->
 <!-- excel format: invert/input -->
 <!-- invert approval -> already done -->
 <!-- if approved then only it will shown in stock -->
@@ -28,7 +28,7 @@ Admin
 <!-- excel sheet input style -->
 
 <!-- on station:
-4. Sold to revaty
+4. Sold to Revati
 5. return
 6. others -->
 
@@ -41,7 +41,7 @@ Admin
 
 <!-- from to to in daily digest -->
 
----
+<!-- --- -->
 <!-- 
 S.No	Buckets
 1	Duplex ultra 220  (quality -> duplex, bf -> ultra, gsm -> 220)
@@ -64,3 +64,25 @@ S.No	Buckets
 18	SBS (sbs)
 
 some buckets will be of quality, bf, gsm and some can have any field like string or text. so give full freedom to admin to create the master code (header with their own preference) update the current 18 buckets and this should be now the master code. -->
+
+store (create)
+mis (approve)
+admin (full access)
+
+column consume (total consume)
+filter consume
+search proper searching (can search according weight, size, everthing)
+search on reel list page on right side there will be a option to open list then based on the feild of reel selected from that the search will show results.
+
+message (edit request and it will show on the notification)
+<!-- admin can see the password of every user. -->
+
+<!-- Sold to Revati instead of Sold to Revaty -->
+
+report of consumption in a day (check in the project where it exist)
+
+'Filter by Creation Date:' when date entered and then a div on the 'Filter Panel' a small div show the total consumption of the reels from that filter.
+
+use the calender style of daily digest in every place in the frontend.
+
+how to see that one on day how many reels consumption done and how many per kg has been done with reel number, master code. just like creation date filter below it give a date selection option which will then show the reels that has been consumed on that day.

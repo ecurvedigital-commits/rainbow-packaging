@@ -1,11 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { History, Search, RefreshCw, Filter, ShieldCheck, User, Calendar, Tag, AlertCircle, CheckCircle2, XCircle, Clock, Eye, X, Code, ExternalLink, ArrowRight } from 'lucide-react';
 import { auditApi } from '../../api/auditApi';
+import { masterCodeApi } from '../../api/masterCodeApi';
 import Pagination from '../../components/Common/Pagination';
 import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';
 import EmptyState from '../../components/Common/EmptyState';
 import { formatDate } from '../../utils/formatters';
+
+const formatMasterCodeBadge = (code, payload = null, map = {}) => {
+  if (payload?.master_code_name) return payload.master_code_name;
+  if (!code) return '';
+  const str = String(code).trim();
+  if (map && map[str]) return map[str];
+  const numOnly = str.replace(/^(master\s*code|code|mc)\s*:?\s*/i, '').trim();
+  if (map && map[numOnly]) return map[numOnly];
+  return str;
+};
 
 const EVENT_TYPE_LABELS = {
   CREATED: { label: 'Reel Created', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800' },
@@ -21,6 +33,28 @@ export default function AuditLogsPage() {
   const [error, setError] = useState(null);
   const [selectedAudit, setSelectedAudit] = useState(null);
   const [showJsonRaw, setShowJsonRaw] = useState(false);
+  const [masterCodeMap, setMasterCodeMap] = useState({});
+
+  useEffect(() => {
+    masterCodeApi.list({ status: 'ACTIVE' })
+      .then((res) => {
+        if (res.success && Array.isArray(res.data)) {
+          const map = {};
+          res.data.forEach((mc) => {
+            const nameOrCode = mc.master_code_name || mc.master_code;
+            if (mc.master_code) {
+              map[String(mc.master_code).trim()] = nameOrCode;
+              map[`Master Code ${mc.master_code}`] = nameOrCode;
+            }
+            if (mc.master_code_id || mc.id || mc._id) {
+              map[String(mc.master_code_id || mc.id || mc._id).trim()] = nameOrCode;
+            }
+          });
+          setMasterCodeMap(map);
+        }
+      })
+      .catch((err) => console.error('[AuditLogsPage] Failed to load master codes:', err));
+  }, []);
 
   const [filters, setFilters] = useState({
     action: '',
@@ -99,8 +133,10 @@ export default function AuditLogsPage() {
 
   const displayedLogs = logs.filter(log => {
     if (!filters.master_code.trim()) return true;
-    const mc = String(log.master_code || log.payload?.master_code || log.payload?.master_key || '').toLowerCase();
-    return mc.includes(filters.master_code.trim().toLowerCase());
+    const rawMc = log.master_code || log.payload?.master_code || log.payload?.master_key || '';
+    const formattedMc = formatMasterCodeBadge(rawMc, log.payload, masterCodeMap);
+    const target = (String(rawMc) + ' ' + String(formattedMc)).toLowerCase();
+    return target.includes(filters.master_code.trim().toLowerCase());
   });
 
   const renderPayloadSummary = (log) => {
@@ -233,7 +269,7 @@ export default function AuditLogsPage() {
             name="master_code"
             value={filters.master_code}
             onChange={handleFilterChange}
-            placeholder="e.g. MC-100"
+            placeholder="e.g. VK-20-20"
             className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:text-white"
           />
         </div>
@@ -323,7 +359,8 @@ export default function AuditLogsPage() {
                     label: log.event_type || 'UNKNOWN',
                     color: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200 border-slate-200'
                   };
-                  const masterCode = log.master_code || log.payload?.master_code || log.payload?.master_key;
+                  const rawMasterCode = log.master_code || log.payload?.master_code || log.payload?.master_key;
+                  const masterCode = formatMasterCodeBadge(rawMasterCode, log.payload, masterCodeMap);
 
                   return (
                     <tr
@@ -335,7 +372,16 @@ export default function AuditLogsPage() {
                         {formatDate(log.performed_at || log.created_at)}
                       </td>
                       <td className="px-6 py-4 font-mono font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
-                        {log.reel_no || log.resource_id || '-'}
+                        {(log.reel_id || log.resource_id) ? (
+                          <Link
+                            to={`/reels/${log.reel_id || log.resource_id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:underline"
+                            title="Open reel details"
+                          >
+                            {log.reel_no || log.resource_id}
+                          </Link>
+                        ) : (log.reel_no || '-')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {masterCode ? (
@@ -445,14 +491,26 @@ export default function AuditLogsPage() {
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
                   <span className="text-xs text-slate-500 uppercase font-semibold block">Reel Number</span>
                   <span className="font-mono font-extrabold text-indigo-600 dark:text-indigo-400 text-base">
-                    {selectedAudit.reel_no || '-'}
+                    {(selectedAudit.reel_id || selectedAudit.resource_id) ? (
+                      <Link
+                        to={`/reels/${selectedAudit.reel_id || selectedAudit.resource_id}`}
+                        className="hover:underline"
+                        title="Open reel details"
+                      >
+                        {selectedAudit.reel_no || selectedAudit.resource_id}
+                      </Link>
+                    ) : (selectedAudit.reel_no || '-')}
                   </span>
                 </div>
 
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
                   <span className="text-xs text-slate-500 uppercase font-semibold block">Master Code</span>
                   <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-xs inline-block px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800">
-                    {selectedAudit.master_code || selectedAudit.payload?.master_code || selectedAudit.payload?.master_key || 'N/A'}
+                    {formatMasterCodeBadge(
+                      selectedAudit.master_code || selectedAudit.payload?.master_code || selectedAudit.payload?.master_key,
+                      selectedAudit.payload,
+                      masterCodeMap
+                    ) || 'N/A'}
                   </span>
                 </div>
 

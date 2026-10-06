@@ -20,7 +20,12 @@ export const previewMasterKeySchema = z.object({
       invalid_type_error: `Quality must be one of: ${QUALITIES.join(', ')}`,
     }),
     gsm: z.coerce.number().int().positive('GSM must be a positive integer'),
-    bf: z.coerce.number().int().positive('BF must be a positive integer'),
+    bf: z.union([z.string().min(1), z.number()]).transform((v) => {
+      if (typeof v === 'number') return v;
+      const s = String(v).trim();
+      const n = Number(s);
+      return !isNaN(n) && s !== '' ? n : s;
+    }),
     size: z.coerce.number().positive('Size must be a positive number'),
   }),
 });

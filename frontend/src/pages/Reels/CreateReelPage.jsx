@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import {
@@ -35,7 +35,7 @@ const BASE_FIELDS = [
   { key: 'rate_per_kg', label: 'Rate / KG (₹)', type: 'number', required: false },
   { key: 'gsm', label: 'GSM', type: 'number', required: true },
   { key: 'size', label: 'Size / Width (cm)', type: 'number', required: true },
-  { key: 'bf', label: 'Bursting Factor (BF)', type: 'number', required: true },
+  { key: 'bf', label: 'Bursting Factor (BF)', type: 'text', required: true },
   { key: 'purchase_date', label: 'Purchase Date', type: 'date', required: true },
 ];
 
@@ -104,17 +104,63 @@ const cloneRow = (row) => ({
   custom_fields: { ...(row.custom_fields || {}) },
 });
 
+const parseExcelSheetSmart = (sheet) => {
+  const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  if (!grid.length) return [];
+
+  const KEYWORDS = ['reel', 'quality', 'gsm', 'size', 'bf', 'weight', 'supplier', 'mill', 'master', 'sr'];
+  let headerRowIndex = 0;
+  let maxMatches = 0;
+
+  for (let r = 0; r < Math.min(15, grid.length); r++) {
+    const row = grid[r];
+    if (!Array.isArray(row)) continue;
+    const rowText = row.map((cell) => String(cell).toLowerCase()).join(' ');
+    const matches = KEYWORDS.filter((kw) => rowText.includes(kw)).length;
+    if (matches > maxMatches) {
+      maxMatches = matches;
+      headerRowIndex = r;
+    }
+  }
+
+  const headers = (grid[headerRowIndex] || []).map((h) => String(h || '').trim());
+  const rows = [];
+  for (let r = headerRowIndex + 1; r < grid.length; r++) {
+    const row = grid[r];
+    if (!row || row.every((cell) => String(cell ?? '').trim() === '')) continue;
+    const obj = {};
+    headers.forEach((h, colIdx) => {
+      if (h) obj[h] = row[colIdx] ?? '';
+    });
+    rows.push(obj);
+  }
+  return rows;
+};
+
 const buildRowFromExcel = (raw, fieldDefs, fallback) => {
   const row = cloneRow(fallback);
-  row.reel_no = String(getCell(raw, ['reel_no', 'reelno', 'reelnumber', 'reel']) || '').trim();
-  row.quality = String(getCell(raw, ['quality']) || row.quality).trim();
-  row.supplier_name = String(getCell(raw, ['supplier_name', 'supplier', 'suppliername']) || '').trim();
-  row.mill_name = String(getCell(raw, ['mill_name', 'mill', 'millname', 'papermill']) || '').trim();
-  row.max_weight = toNumberOrBlank(getCell(raw, ['max_weight', 'weight', 'reelweight', 'reelweightkg']));
+  const foundReelNo = String(getCell(raw, ['reel_number', 'reel_no', 'reelno', 'reel', 'reel#', 'reelnum', 'number']) || '').trim();
+  const foundSrNo = String(getCell(raw, ['srno', 'sr.no', 'sr_no', 'sr no']) || '').trim();
+  row.reel_no = foundReelNo || foundSrNo;
+
+  row.quality = String(getCell(raw, ['quality', 'grade', 'paperquality', 'qual']) || row.quality).trim();
+  row.supplier_name = String(getCell(raw, ['supplier_name', 'supplier', 'suppliername', 'vendor', 'partyname', 'party']) || '').trim();
+  row.mill_name = String(getCell(raw, ['mill_name', 'mill', 'millname', 'papermill', 'manufacturer']) || '').trim();
+  row.max_weight = toNumberOrBlank(getCell(raw, ['max_weight', 'weight', 'reelweight', 'reelweightkg', 'netweight']));
   row.rate_per_kg = toNumberOrBlank(getCell(raw, ['rate_per_kg', 'rate', 'ratekg', 'rateperkg']));
-  row.gsm = toNumberOrBlank(getCell(raw, ['gsm']));
+  row.gsm = toNumberOrBlank(getCell(raw, ['gsm', 'g.s.m', 'g_s_m']));
   row.size = toNumberOrBlank(getCell(raw, ['size', 'width', 'sizecm', 'widthcm', 'sizewidth', 'sizewidthcm']));
-  row.bf = toNumberOrBlank(getCell(raw, ['bf', 'burstingfactor', 'burstingfactorbf']));
+
+  const rawBf = getCell(raw, ['bf', 'burstingfactor', 'burstingfactorbf', 'b.f.']);
+  const rawBfStr = String(rawBf ?? '').trim();
+  if (row.quality.toUpperCase() === 'ULTRA') {
+    row.bf = 'ULTRA';
+  } else if (rawBfStr !== '') {
+    row.bf = rawBfStr;
+  } else {
+    row.bf = row.bf;
+  }
+
   row.purchase_date = excelDateToInput(getCell(raw, ['purchase_date', 'purchasedate', 'date']));
 
   fieldDefs.forEach((def) => {
@@ -146,30 +192,63 @@ const Field = ({ definition, value, onChange }) => {
   );
 };
 
-const MemoizedBulkRow = React.memo(({ row, rowIndex, allBulkColumns, updateBulkCustom, updateBulkCell, deleteBulkRow }) => {
+const MemoizedBulkRow = React.memo(({
+  row,
+  rowIndex,
+  allBulkColumns,
+  updateBulkCustom,
+  updateBulkCell,
+  deleteBulkRow,
+  onStartFill,
+}) => {
   return (
-    <tr className="odd:bg-white even:bg-gray-50/60 hover:bg-blue-50/40">
+    <tr
+      data-bulk-row-index={rowIndex}
+      className="odd:bg-white even:bg-gray-50/60 hover:bg-blue-50/40"
+    >
       <td className="sticky left-0 z-10 bg-inherit px-3 py-2 border-b border-gray-100 font-bold text-gray-400">{rowIndex + 1}</td>
+
       {allBulkColumns.map((column) => {
         const value = column.bulkCustom
           ? row.custom_fields?.[column.key] ?? ''
           : row[column.key] ?? '';
+
         return (
           <td key={column.key} className="px-2 py-2 border-b border-gray-100 align-top">
-            <input
-              type={column.type === 'number' ? 'number' : column.type === 'date' ? 'date' : 'text'}
-              required={column.required}
-              value={value}
-              onChange={(e) => {
-                if (column.bulkCustom) updateBulkCustom(rowIndex, column.key, e.target.value);
-                else updateBulkCell(rowIndex, column.key, e.target.value);
-              }}
-              className={compactInputClass}
-              aria-label={`${column.label} row ${rowIndex + 1}`}
-            />
+            <div className="relative group/fill">
+              <input
+                type={column.type === 'number' ? 'number' : column.type === 'date' ? 'date' : 'text'}
+                required={column.required}
+                value={value}
+                onChange={(e) => {
+                  if (column.bulkCustom) updateBulkCustom(rowIndex, column.key, e.target.value);
+                  else updateBulkCell(rowIndex, column.key, e.target.value);
+                }}
+                className={compactInputClass}
+                aria-label={`${column.label} row ${rowIndex + 1}`}
+              />
+
+              {/* Excel-style fill handle. Drag downward to copy this cell's
+                  current value into the same column on rows below. */}
+              <button
+                type="button"
+                aria-label={`Fill ${column.label} down from row ${rowIndex + 1}`}
+                title={`Drag to fill ${column.label} down`}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onStartFill(rowIndex, column.key, Boolean(column.bulkCustom));
+                }}
+                className="absolute right-0 bottom-0 translate-x-1/4 translate-y-1/4
+                  w-2.5 h-2.5 rounded-[2px] border border-white bg-brand-blue
+                  opacity-0 group-hover/fill:opacity-100 focus:opacity-100
+                  cursor-crosshair shadow-sm z-20 touch-none"
+              />
+            </div>
           </td>
         );
       })}
+
       <td className="sticky right-0 z-10 bg-inherit px-3 py-2 border-b border-gray-100">
         <button
           type="button"
@@ -200,6 +279,7 @@ export default function CreateReelPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [bulkResult, setBulkResult] = useState(null);
+  const [fillSession, setFillSession] = useState(null);
 
   const selectedMasterCode = useMemo(
     () => masterCodes.find((mc) => (mc.master_code_id || mc.id) === selectedMasterCodeId),
@@ -302,7 +382,13 @@ export default function CreateReelPage() {
   };
 
   const updateSingle = (key, value) => {
-    setSingleForm((prev) => ({ ...prev, [key]: value }));
+    setSingleForm((prev) => {
+      const next = { ...prev, [key]: value };
+      if (key === 'quality' && String(value).trim().toUpperCase() === 'ULTRA') {
+        next.bf = 'ULTRA';
+      }
+      return next;
+    });
     setError('');
   };
 
@@ -335,9 +421,14 @@ export default function CreateReelPage() {
 
   const updateBulkCell = React.useCallback((rowIndex, key, value) => {
     setBulkRows((rows) =>
-      rows.map((row, index) =>
-        index === rowIndex ? { ...row, [key]: value } : row
-      )
+      rows.map((row, index) => {
+        if (index !== rowIndex) return row;
+        const next = { ...row, [key]: value };
+        if (key === 'quality' && String(value).trim().toUpperCase() === 'ULTRA') {
+          next.bf = 'ULTRA';
+        }
+        return next;
+      })
     );
     setError('');
   }, []);
@@ -353,17 +444,106 @@ export default function CreateReelPage() {
     setError('');
   }, []);
 
-  const deleteBulkRow = React.useCallback((rowIndex) => {
+  const deleteBulkRow = useCallback((rowIndex) => {
     setBulkRows((rows) => rows.filter((_, index) => index !== rowIndex));
     setBulkCount((count) => Math.max(1, count - 1));
   }, []);
+
+  const stopFill = useCallback(() => {
+    setFillSession(null);
+  }, []);
+
+  const startFill = useCallback((sourceRowIndex, key, bulkCustom) => {
+    setFillSession({
+      sourceRowIndex,
+      key,
+      bulkCustom,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!fillSession) return undefined;
+
+    const getRowIndexAtPoint = (event) => {
+      const element = document.elementFromPoint(event.clientX, event.clientY);
+      const rowElement = element?.closest?.('[data-bulk-row-index]');
+      if (!rowElement) return null;
+
+      const index = Number(rowElement.getAttribute('data-bulk-row-index'));
+      return Number.isInteger(index) ? index : null;
+    };
+
+    const handlePointerMove = (event) => {
+      const targetRowIndex = getRowIndexAtPoint(event);
+
+      // This feature intentionally fills only rows below the source cell,
+      // matching Excel's vertical fill-handle behavior requested for the bulk grid.
+      if (
+        targetRowIndex === null ||
+        targetRowIndex <= fillSession.sourceRowIndex
+      ) {
+        return;
+      }
+
+      setBulkRows((rows) => {
+        const sourceRow = rows[fillSession.sourceRowIndex];
+        if (!sourceRow) return rows;
+
+        const sourceValue = fillSession.bulkCustom
+          ? sourceRow.custom_fields?.[fillSession.key] ?? ''
+          : sourceRow[fillSession.key] ?? '';
+
+        let changed = false;
+
+        const nextRows = rows.map((row, index) => {
+          if (
+            index <= fillSession.sourceRowIndex ||
+            index > targetRowIndex
+          ) {
+            return row;
+          }
+
+          changed = true;
+
+          if (fillSession.bulkCustom) {
+            return {
+              ...row,
+              custom_fields: {
+                ...row.custom_fields,
+                [fillSession.key]: sourceValue,
+              },
+            };
+          }
+
+          return {
+            ...row,
+            [fillSession.key]: sourceValue,
+          };
+        });
+
+        return changed ? nextRows : rows;
+      });
+    };
+
+    const handlePointerUp = () => stopFill();
+
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [fillSession, stopFill]);
 
   const buildPayload = (row) => ({
     reel_no: String(row.reel_no || '').trim(),
     master_code: selectedMasterCode?.master_code || undefined,
     master_code_id: selectedMasterCodeId || undefined,
     quality: String(row.quality || '').trim(),
-    bf: Number(row.bf),
+    bf: isNaN(Number(row.bf)) || String(row.quality || '').trim().toUpperCase() === 'ULTRA' || String(row.bf).trim().toUpperCase() === 'ULTRA'
+      ? String(row.bf || '').trim()
+      : Number(row.bf),
     supplier_name: String(row.supplier_name || '').trim(),
     mill_name: String(row.mill_name || '').trim(),
     size: Number(row.size),
@@ -382,7 +562,8 @@ export default function CreateReelPage() {
     if (row.max_weight === '' || Number.isNaN(Number(row.max_weight)) || Number(row.max_weight) <= 0) missing.push('Reel Weight');
     if (row.gsm === '' || Number.isNaN(Number(row.gsm))) missing.push('GSM');
     if (row.size === '' || Number.isNaN(Number(row.size))) missing.push('Size');
-    if (row.bf === '' || Number.isNaN(Number(row.bf))) missing.push('BF');
+    if (row.bf === '' || row.bf === null || row.bf === undefined || String(row.bf).trim() === '') missing.push('BF');
+    if (!row.purchase_date) missing.push('Purchase Date');
     if (!row.purchase_date) missing.push('Purchase Date');
 
     fieldDefs.forEach((def) => {
@@ -486,8 +667,8 @@ export default function CreateReelPage() {
       if (!sheetName) throw new Error('The Excel file does not contain a worksheet.');
 
       const sheet = workbook.Sheets[sheetName];
-      const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-      if (!rawRows.length) throw new Error('The Excel sheet is empty. Add at least one reel row.');
+      const rawRows = parseExcelSheetSmart(sheet);
+      if (!rawRows.length) throw new Error('The Excel sheet is empty or no data rows could be found. Add at least one reel row.');
 
       const base = cloneRow({
         ...DEFAULT_ROW,
@@ -741,7 +922,9 @@ export default function CreateReelPage() {
                       <FileSpreadsheet size={13} />
                       {bulkRows.length} rows loaded — scroll down inside the table to see all
                     </span>
-                    <span className="text-[11px] text-gray-400">Edit any cell, then submit at the bottom.</span>
+                    <span className="text-[11px] text-gray-400">
+                      Edit any cell. Hover a cell, grab the tiny bottom-right square, and drag down to fill the same column like Excel.
+                    </span>
                   </div>
                 )}
                 {!bulkRows.length && (
@@ -777,6 +960,7 @@ export default function CreateReelPage() {
                           updateBulkCustom={updateBulkCustom}
                           updateBulkCell={updateBulkCell}
                           deleteBulkRow={deleteBulkRow}
+                          onStartFill={startFill}
                         />
                       ))}
                     </tbody>

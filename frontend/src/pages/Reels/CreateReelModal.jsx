@@ -134,7 +134,7 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
         master_code: selectedCodeDoc ? selectedCodeDoc.master_code : undefined,
         master_code_id: selectedMasterCodeId || undefined,
         quality: formData.quality,
-        bf: Number(formData.bf),
+        bf: isNaN(Number(formData.bf)) || String(formData.quality || '').trim().toUpperCase() === 'ULTRA' || String(formData.bf).trim().toUpperCase() === 'ULTRA' ? String(formData.bf).trim() : Number(formData.bf),
         supplier_name: formData.supplier_name.trim(),
         mill_name: formData.mill_name ? formData.mill_name.trim() : '',
         size: Number(formData.size),
@@ -250,7 +250,14 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
                 className={inputClass}
                 placeholder="e.g. duplex, sk, vk, import kraft, fbb, sbs"
                 value={formData.quality}
-                onChange={(e) => setFormData({ ...formData, quality: e.target.value })}
+                onChange={(e) => {
+                  const qVal = e.target.value;
+                  setFormData(prev => ({
+                    ...prev,
+                    quality: qVal,
+                    bf: qVal.trim().toUpperCase() === 'ULTRA' ? 'ULTRA' : prev.bf,
+                  }));
+                }}
               />
             </div>
 

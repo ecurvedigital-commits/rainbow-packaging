@@ -187,7 +187,7 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
                   <option value="E-Flute">E-Flute</option>
                   <option value="Narrow-Flute">Narrow-Flute</option>
                   <option value="Sheater">Sheater</option>
-                  <option value="Sold to revaty">Sold to revaty</option>
+                  <option value="Sold to Revati">Sold to Revati</option>
                   <option value="Return">Return</option>
                   <option value="Others">Others</option>
                 </select>

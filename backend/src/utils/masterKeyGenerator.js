@@ -66,9 +66,15 @@ export function normalizeGsm(gsm) {
  * @returns {{ value: number, code: string }}
  */
 export function normalizeBf(bf) {
+  if (typeof bf === 'string' && isNaN(Number(bf))) {
+    const clean = bf.trim().toUpperCase();
+    return { value: clean, code: `BF-${clean}` };
+  }
   const num = parseInt(bf, 10);
   if (isNaN(num) || num <= 0) {
-    throw new Error('BF must be a positive integer.');
+    const clean = String(bf || '').trim().toUpperCase();
+    if (clean) return { value: clean, code: `BF-${clean}` };
+    throw new Error('BF must be a valid number or text string.');
   }
   const code = `BF${num}`;
   return { value: num, code };

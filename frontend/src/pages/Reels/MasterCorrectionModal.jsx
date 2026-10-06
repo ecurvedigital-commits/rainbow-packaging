@@ -157,7 +157,7 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
         master_code_id: formData.master_code_id || null,
         master_code: formData.master_code || null,
         quality: formData.quality,
-        bf: Number(formData.bf),
+        bf: isNaN(Number(formData.bf)) || String(formData.quality || '').trim().toUpperCase() === 'ULTRA' || String(formData.bf).trim().toUpperCase() === 'ULTRA' ? String(formData.bf).trim() : Number(formData.bf),
         supplier_name: formData.supplier_name.trim(),
         mill_name: formData.mill_name ? formData.mill_name.trim() : '',
         size: Number(formData.size),
@@ -243,7 +243,14 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
             </div>
             <div>
               <label className={labelClass}>Quality</label>
-              <select className={inputClass} value={formData.quality} onChange={(e) => setFormData({ ...formData, quality: e.target.value })}>
+              <select className={inputClass} value={formData.quality} onChange={(e) => {
+                const qVal = e.target.value;
+                setFormData(prev => ({
+                  ...prev,
+                  quality: qVal,
+                  bf: qVal.trim().toUpperCase() === 'ULTRA' ? 'ULTRA' : prev.bf,
+                }));
+              }}>
                 {['VK', 'SPECTRA', 'ULTRA', 'SK', 'IMPORTANT', 'SBS', 'FBB', 'DCB'].map((q) => <option key={q} value={q}>{q}</option>)}
               </select>
             </div>
@@ -273,7 +280,7 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
             </div>
             <div>
               <label className={labelClass}>Bursting Factor (BF)</label>
-              <input required type="number" min="1" className={inputClass} value={formData.bf} onChange={(e) => setFormData({ ...formData, bf: e.target.value })} />
+              <input required type="text" className={inputClass} value={formData.bf} onChange={(e) => setFormData({ ...formData, bf: e.target.value })} />
             </div>
             <div>
               <label className={labelClass}>Machine / Assigned Station</label>
@@ -282,7 +289,7 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
                 <option value="E-Flute">E-Flute</option>
                 <option value="Narrow-Flute">Narrow-Flute</option>
                 <option value="Sheater">Sheater</option>
-                <option value="Sold to revaty">Sold to revaty</option>
+                <option value="Sold to Revati">Sold to Revati</option>
                 <option value="Return">Return</option>
                 <option value="Others">Others</option>
               </select>
