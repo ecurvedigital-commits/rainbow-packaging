@@ -303,7 +303,8 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
                             </span>
                           </div>
                           <p className="text-xs text-gray-500">
-                            Quality: {r.quality || '-'} · Supplier: <strong className="text-gray-700">{r.supplier_name || 'N/A'}</strong>
+                            Quality: {r.quality || '-'} · Size: {r.size || '-'} · GSM: {r.gsm || '-'}
+                            · Supplier: <strong className="text-gray-700">{r.supplier_name || 'N/A'}</strong>
                             {r.mill_name ? ` · Mill: ${r.mill_name}` : ''}
                           </p>
                         </div>
@@ -339,7 +340,8 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
                   <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">Selected Reel</p>
                   <p className="text-xl font-bold text-blue-950">#{selectedReel.reel_no}</p>
                   <p className="text-xs text-blue-700">
-                    Quality: {selectedReel.quality || '-'} · Supplier: {selectedReel.supplier_name || 'N/A'}
+                    Quality: {selectedReel.quality || '-'} · Size: {selectedReel.size || '-'} · GSM: {selectedReel.gsm || '-'}
+                    · Supplier: {selectedReel.supplier_name || 'N/A'}
                     {selectedReel.mill_name ? ` · Mill: ${selectedReel.mill_name}` : ''}
                   </p>
                 </div>
