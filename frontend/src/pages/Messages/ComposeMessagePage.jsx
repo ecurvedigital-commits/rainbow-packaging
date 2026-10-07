@@ -619,7 +619,7 @@ export default function ComposeMessagePage() {
                         </p>
                         <p className="text-[10px] text-gray-500">
                           Balance: <strong>{formatWeight(r.previous_weight ?? r.current_weight)}</strong>
-                          {r.supplier_name && ` • ${r.supplier_name}`}
+                          {/* {r.supplier_name && ` • ${r.supplier_name}`} */}
                         </p>
                       </div>
 
@@ -728,10 +728,10 @@ export default function ComposeMessagePage() {
                                   {formatWeight(r.previous_weight ?? r.current_weight)}
                                 </strong>
                               </span>
-                              <span>•</span>
+                              {/* <span>•</span>
                               <span className="truncate">
                                 Supplier: {r.supplier_name || 'N/A'} {r.mill_name ? `(${r.mill_name})` : ''}
-                              </span>
+                              </span> */}
                             </div>
                           </div>
 
@@ -808,8 +808,8 @@ export default function ComposeMessagePage() {
                                 {formatWeight(r.previous_weight ?? r.current_weight)}
                               </strong>
                             </span>
-                            <span>•</span>
-                            <span className="truncate">{r.supplier_name || 'N/A'}</span>
+                            {/* <span>•</span>
+                            <span className="truncate">{r.supplier_name || 'N/A'}</span> */}
                           </div>
                         </div>
                         <button

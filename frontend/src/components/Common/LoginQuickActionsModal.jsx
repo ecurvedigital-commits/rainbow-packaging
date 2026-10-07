@@ -213,7 +213,7 @@ export default function LoginQuickActionsModal({ isOpen, onClose }) {
                       autoFocus
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Type reel number, barcode, supplier name, GSM, or weight..."
+                      placeholder="Type reel number, barcode, GSM, or weight..."
                       className="w-full border border-gray-300 rounded-xl pl-10 pr-10 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue"
                     />
                     {searchLoading ? (
@@ -239,13 +239,13 @@ export default function LoginQuickActionsModal({ isOpen, onClose }) {
                     {!searchLoading && searchDone && searchResults.length === 0 && (
                       <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-semibold flex items-center gap-2">
                         <AlertTriangle size={16} className="shrink-0 text-red-600" />
-                        <span>No active reel found matching key "{searchQuery}". Please verify the reel code or supplier name.</span>
+                        <span>No active reel found matching key "{searchQuery}". Please verify the reel code.</span>
                       </div>
                     )}
 
                     {!searchQuery && !searchResults.length && (
                       <div className="p-8 text-center text-gray-400 text-xs font-medium border-2 border-dashed border-gray-200 rounded-xl">
-                        Type a reel code (e.g. R-1001) or supplier name above to select a reel.
+                        Type a reel code (e.g. R-1001) above to select a reel.
                       </div>
                     )}
 
@@ -273,7 +273,7 @@ export default function LoginQuickActionsModal({ isOpen, onClose }) {
                               </span>
                             </div>
                             <p className="text-xs text-gray-500">
-                              {reel.quality} · {reel.gsm} GSM · {reel.bf} BF · {reel.size} cm | Supplier: <strong className="text-gray-700">{reel.supplier_name || 'N/A'}</strong>
+                              {reel.quality} · {reel.gsm} GSM · {reel.bf} BF · {reel.size} cm {/* | Supplier: <strong className="text-gray-700">{reel.supplier_name || 'N/A'}</strong> */}
                             </p>
                           </div>
                           <div className="text-right">

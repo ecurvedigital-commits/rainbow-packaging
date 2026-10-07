@@ -332,7 +332,7 @@ export default function OperatorApprovalsPage() {
                           </span>
                         </>
                       )}
-                      {item.payload?.fields?.supplier_name && (
+                      {/* {item.payload?.fields?.supplier_name && (
                         <>
                           <span>•</span>
                           <span>Supplier: <strong className="text-gray-700">{item.payload.fields.supplier_name}</strong></span>
@@ -343,7 +343,7 @@ export default function OperatorApprovalsPage() {
                           <span>•</span>
                           <span>Mill: <strong className="text-gray-700">{item.payload.fields.mill_name}</strong></span>
                         </>
-                      )}
+                      )} */}
                     </div>
 
                     {/* Supervisor Decision Banner */}

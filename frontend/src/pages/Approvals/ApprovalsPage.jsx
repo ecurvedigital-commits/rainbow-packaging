@@ -509,12 +509,12 @@ export default function ApprovalsPage() {
                             Rate: ₹{item.payload.rate_per_kg}/kg
                           </span>
                         )}
-                        {item.payload?.fields?.supplier_name && (
+                        {/* {item.payload?.fields?.supplier_name && (
                           <span className="ml-3 text-xs text-slate-500">Supplier: {item.payload.fields.supplier_name}</span>
                         )}
                         {item.payload?.fields?.mill_name && (
                           <span className="ml-3 text-xs text-slate-500">Mill: {item.payload.fields.mill_name}</span>
-                        )}
+                        )} */}
                       </div>
                     )}
 

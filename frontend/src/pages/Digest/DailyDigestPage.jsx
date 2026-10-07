@@ -490,7 +490,7 @@ export default function DailyDigestPage() {
                           <tr>
                             <th className="px-4 py-3">Reel #</th>
                             <th className="px-4 py-3">Master Code</th>
-                            <th className="px-4 py-3">Supplier</th>
+                            {/* <th className="px-4 py-3">Supplier</th> */}
                             <th className="px-4 py-3">Station</th>
                             <th className="px-4 py-3 text-right">Final Weight Used</th>
                             <th className="px-4 py-3">Operator</th>
@@ -511,7 +511,7 @@ export default function DailyDigestPage() {
                               <td className="px-4 py-3 font-mono font-semibold text-indigo-600 dark:text-indigo-400">
                                 {log.master_code}
                               </td>
-                              <td className="px-4 py-3 font-medium">{log.supplier_name}</td>
+                              {/* <td className="px-4 py-3 font-medium">{log.supplier_name}</td> */}
                               <td className="px-4 py-3">
                                 <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-mono text-[11px]">
                                   {log.station}

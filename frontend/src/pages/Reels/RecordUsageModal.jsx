@@ -208,7 +208,7 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
                   <input
                     type="text"
                     className={inputClass}
-                    placeholder="e.g. 1002, R-7801, or supplier name..."
+                    placeholder="e.g. 1002, R-7801..."
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value);
@@ -253,7 +253,7 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
               {!searching && searchDone && searchResults.length === 0 && (
                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold flex items-center gap-2">
                   <AlertTriangle size={16} className="shrink-0 text-amber-600" />
-                  <span>No active reel found matching "{search}". Please check the reel number or supplier name.</span>
+                  <span>No active reel found matching "{search}". Please check the reel number.</span>
                 </div>
               )}
 
@@ -304,8 +304,8 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
                           </div>
                           <p className="text-xs text-gray-500">
                             Quality: {r.quality || '-'} · Size: {r.size || '-'} · GSM: {r.gsm || '-'}
-                            · Supplier: <strong className="text-gray-700">{r.supplier_name || 'N/A'}</strong>
-                            {r.mill_name ? ` · Mill: ${r.mill_name}` : ''}
+                            {/* · Supplier: <strong className="text-gray-700">{r.supplier_name || 'N/A'}</strong> */}
+                            {/* {r.mill_name ? ` · Mill: ${r.mill_name}` : ''} */}
                           </p>
                         </div>
                         <div className="text-right shrink-0 ml-3">
@@ -341,8 +341,8 @@ export const RecordUsageModal = ({ isOpen = true, onClose, onSuccess, reel }) =>
                   <p className="text-xl font-bold text-blue-950">#{selectedReel.reel_no}</p>
                   <p className="text-xs text-blue-700">
                     Quality: {selectedReel.quality || '-'} · Size: {selectedReel.size || '-'} · GSM: {selectedReel.gsm || '-'}
-                    · Supplier: {selectedReel.supplier_name || 'N/A'}
-                    {selectedReel.mill_name ? ` · Mill: ${selectedReel.mill_name}` : ''}
+                    {/* · Supplier: {selectedReel.supplier_name || 'N/A'} */}
+                    {/* {selectedReel.mill_name ? ` · Mill: ${selectedReel.mill_name}` : ''} */}
                   </p>
                 </div>
                 <div className="text-right">

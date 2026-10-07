@@ -198,7 +198,7 @@ export const MasterCodeDetailsModal = ({ isOpen = true, masterCode, onClose }) =
                     <tr>
                       <th className="px-4 py-3">Reel / Barcode</th>
                       <th className="px-4 py-3">Specifications</th>
-                      <th className="px-4 py-3">Supplier</th>
+                      {/* <th className="px-4 py-3">Supplier</th> */}
                       <th className="px-4 py-3 text-right">Net Weight</th>
                       <th className="px-4 py-3 text-right">Price / KG</th>
                       <th className="px-4 py-3">Status</th>
@@ -225,7 +225,7 @@ export const MasterCodeDetailsModal = ({ isOpen = true, masterCode, onClose }) =
                             <span className="font-bold text-slate-800 dark:text-slate-200">{reel.quality}</span>
                             <span className="text-slate-400 ml-1">({reel.gsm} GSM · {reel.bf} BF · {reel.size} cm)</span>
                           </td>
-                          <td className="px-4 py-3">{reel.supplier_name || 'N/A'}</td>
+                          {/* <td className="px-4 py-3">{reel.supplier_name || 'N/A'}</td> */}
                           <td className="px-4 py-3 text-right font-bold text-slate-900 dark:text-white font-mono">
                             {formatWeight(currentWeight)}
                           </td>

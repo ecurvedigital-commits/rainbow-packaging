@@ -314,18 +314,18 @@ export default function UsageLogsPage() {
                       <span>Logged by: <strong className="text-slate-600 dark:text-slate-300">{item.performed_by_name || 'Operator'}</strong> ({item.performed_by_role || 'OPERATOR'})</span>
                       <span>•</span>
                       <span>Date: {formatDate(item.performed_at)}</span>
-                      {item.supplier_name && (
+                      {/* {item.supplier_name && (
                         <>
                           <span>•</span>
                           <span>Supplier: <strong className="text-slate-700 dark:text-slate-300">{item.supplier_name}</strong></span>
                         </>
-                      )}
-                      {item.mill_name && (
+                      )} */}
+                      {/* {item.mill_name && (
                         <>
                           <span>•</span>
                           <span>Mill: <strong className="text-slate-700 dark:text-slate-300">{item.mill_name}</strong></span>
                         </>
-                      )}
+                      )} */}
                     </div>
 
                     {/* Decline Reason notice */}

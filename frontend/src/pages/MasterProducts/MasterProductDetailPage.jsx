@@ -226,7 +226,7 @@ export default function MasterProductDetailPage() {
                 <tr className="bg-gray-50 border-b border-gray-200 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                   <th className="py-3 px-4">SR NO</th>
                   <th className="py-3 px-4">Reel No</th>
-                  <th className="py-3 px-4">Supplier</th>
+                  {/* <th className="py-3 px-4">Supplier</th> */}
                   <th className="py-3 px-4 text-right">Balance Weight</th>
                   <th className="py-3 px-4 text-right">Max Weight</th>
                   <th className="py-3 px-4 text-center">Status</th>
@@ -242,7 +242,7 @@ export default function MasterProductDetailPage() {
                   >
                     <td className="py-3 px-4 font-mono text-gray-500">#{reel.sr_no}</td>
                     <td className="py-3 px-4 font-bold text-brand-blue">{reel.reel_no}</td>
-                    <td className="py-3 px-4 text-gray-700">{reel.supplier_name}</td>
+                    {/* <td className="py-3 px-4 text-gray-700">{reel.supplier_name}</td> */}
                     <td className="py-3 px-4 text-right font-bold text-emerald-600">{reel.previous_weight} kg</td>
                     <td className="py-3 px-4 text-right text-gray-600">{reel.max_weight} kg</td>
                     <td className="py-3 px-4 text-center">

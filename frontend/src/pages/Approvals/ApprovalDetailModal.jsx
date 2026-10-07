@@ -196,14 +196,14 @@ export default function ApprovalDetailModal({
                 <span className="text-slate-500 dark:text-slate-400">Master Code:</span>
                 <p className="font-mono font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">{masterCode}</p>
               </div>
-              <div>
+              {/* <div>
                 <span className="text-slate-500 dark:text-slate-400">Supplier:</span>
                 <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{supplier}</p>
               </div>
               <div>
                 <span className="text-slate-500 dark:text-slate-400">Mill Name:</span>
                 <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{mill}</p>
-              </div>
+              </div> */}
               <div>
                 <span className="text-slate-500 dark:text-slate-400">Quality / GSM:</span>
                 <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{quality} ({gsm} GSM)</p>

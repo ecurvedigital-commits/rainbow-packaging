@@ -441,7 +441,7 @@ export default function CustomFieldsPage() {
                       {selectedReel.quality} ({selectedReel.gsm} GSM • {selectedReel.bf} BF • {selectedReel.size} cm)
                     </p>
                     <p className="text-[11px] text-indigo-600 font-semibold mt-0.5">
-                      Supplier: {selectedReel.supplier_name || 'N/A'} · Balance: {formatWeight(selectedReel.current_weight ?? selectedReel.previous_weight ?? selectedReel.max_weight)}
+                      {/* Supplier: {selectedReel.supplier_name || 'N/A'} · */} Balance: {formatWeight(selectedReel.current_weight ?? selectedReel.previous_weight ?? selectedReel.max_weight)}
                     </p>
                   </div>
                   <button

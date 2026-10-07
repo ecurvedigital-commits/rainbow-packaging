@@ -571,9 +571,9 @@ export default function ComposeMessageModal({
                   </div>
                   <div className="text-[11px] text-gray-500 flex items-center gap-3 flex-wrap">
                     <span>Balance: <strong className="text-gray-900 dark:text-white font-mono">{formatWeight(attachedReel.previous_weight ?? attachedReel.current_weight)}</strong></span>
-                    <span>•</span>
+                    {/* <span>•</span>
                     <span>Supplier: <strong className="text-gray-800 dark:text-gray-200">{attachedReel.supplier_name || 'N/A'}</strong></span>
-                    {attachedReel.mill_name && <span>({attachedReel.mill_name})</span>}
+                    {attachedReel.mill_name && <span>({attachedReel.mill_name})</span>} */}
                   </div>
                 </div>
                 <div className="text-right shrink-0 flex flex-col items-end gap-1">
@@ -657,8 +657,8 @@ export default function ComposeMessageModal({
                               </div>
                               <div className="text-[11px] text-gray-500 flex items-center gap-2">
                                 <span>Balance: <strong className="text-gray-800 dark:text-gray-200 font-mono">{formatWeight(r.previous_weight ?? r.current_weight)}</strong></span>
-                                <span>•</span>
-                                <span className="truncate">Supplier: {r.supplier_name || 'N/A'} {r.mill_name ? `(${r.mill_name})` : ''}</span>
+                                {/* <span>•</span>
+                                <span className="truncate">Supplier: {r.supplier_name || 'N/A'} {r.mill_name ? `(${r.mill_name})` : ''}</span> */}
                               </div>
                             </div>
                             <button
@@ -706,8 +706,8 @@ export default function ComposeMessageModal({
                               </div>
                               <div className="text-[10px] text-gray-400 flex items-center gap-2">
                                 <span>Balance: <strong className="text-gray-700 dark:text-gray-300 font-mono">{formatWeight(r.previous_weight ?? r.current_weight)}</strong></span>
-                                <span>•</span>
-                                <span className="truncate">{r.supplier_name || 'N/A'}</span>
+                                {/* <span>•</span>
+                                <span className="truncate">{r.supplier_name || 'N/A'}</span> */}
                               </div>
                             </div>
                             <button

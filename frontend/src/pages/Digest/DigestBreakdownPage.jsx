@@ -257,7 +257,7 @@ export default function DigestBreakdownPage() {
                         <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
                           <th className="py-3 px-4 font-bold">Reel #</th>
                           <th className="py-3 px-4 font-bold">Master Code</th>
-                          <th className="py-3 px-4 font-bold">Supplier</th>
+                          {/* <th className="py-3 px-4 font-bold">Supplier</th> */}
                           <th className="py-3 px-4 font-bold">Station</th>
                           <th className="py-3 px-4 font-bold text-right">Used Weight</th>
                           <th className="py-3 px-4 font-bold">Operator</th>
@@ -281,7 +281,7 @@ export default function DigestBreakdownPage() {
                                 {log.master_code}
                               </span>
                             </td>
-                            <td className="py-3 px-4 font-medium">{log.supplier_name}</td>
+                            {/* <td className="py-3 px-4 font-medium">{log.supplier_name}</td> */}
                             <td className="py-3 px-4">
                               <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 font-semibold rounded-md text-[10px]">
                                 {log.station}

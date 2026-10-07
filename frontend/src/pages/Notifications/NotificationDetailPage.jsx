@@ -323,17 +323,17 @@ export default function NotificationDetailPage() {
                           )}
                         </div>
 
-                        {(r.previous_weight !== undefined || r.supplier_name) && (
+                        {(r.previous_weight !== undefined) && (
                           <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-3">
                             {r.previous_weight !== undefined && (
                               <span>Weight Balance: <strong className="text-gray-700 dark:text-gray-200">{formatWeight(r.previous_weight)}</strong></span>
                             )}
-                            {r.supplier_name && (
+                            {/* {r.supplier_name && (
                               <>
                                 <span>•</span>
                                 <span>Supplier: {r.supplier_name} {r.mill_name ? `(${r.mill_name})` : ''}</span>
                               </>
-                            )}
+                            )} */}
                           </div>
                         )}
                       </div>

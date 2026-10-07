@@ -212,7 +212,7 @@ export const MasterCodeDetailPage = () => {
                   <th className="px-6 py-3.5">Reel #</th>
                   <th className="px-6 py-3.5">Master Code</th>
                   <th className="px-6 py-3.5">Specifications</th>
-                  <th className="px-6 py-3.5">Supplier</th>
+                  {/* <th className="px-6 py-3.5">Supplier</th> */}
                   <th className="px-6 py-3.5 text-right">Net Weight</th>
                   <th className="px-6 py-3.5 text-right">Price / KG</th>
                   <th className="px-6 py-3.5">Status</th>
@@ -248,7 +248,7 @@ export const MasterCodeDetailPage = () => {
                           ({reel.gsm} GSM · {reel.bf} BF · {reel.size} cm)
                         </span>
                       </td>
-                      <td className="px-6 py-4">{reel.supplier_name || 'N/A'}</td>
+                      {/* <td className="px-6 py-4">{reel.supplier_name || 'N/A'}</td> */}
                       <td className="px-6 py-4 text-right font-bold text-gray-900 dark:text-white font-mono">
                         {formatWeight(currentWeight)}
                       </td>

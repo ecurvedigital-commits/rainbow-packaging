@@ -478,7 +478,7 @@ const StatusColumn = ({ title, subtitle, items = [], theme, onReelClick }) => {
               <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-full">{reel.quality}</span>
             </div>
             <div className="text-xs text-gray-500 space-y-1">
-              <div className="flex justify-between"><span>Supplier:</span><span className="font-semibold text-gray-800 truncate ml-2">{reel.supplier_name}</span></div>
+              {/* <div className="flex justify-between"><span>Supplier:</span><span className="font-semibold text-gray-800 truncate ml-2">{reel.supplier_name}</span></div> */}
               <div className="flex justify-between"><span>Balance:</span><span className="font-bold text-gray-900">{formatWeight(reel.current_weight ?? reel.previous_weight)}</span></div>
               <div className="flex justify-between"><span>GSM / Size:</span><span className="font-semibold text-gray-800">{reel.gsm} / {reel.size}</span></div>
             </div>

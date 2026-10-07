@@ -254,14 +254,14 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
                 {['VK', 'SPECTRA', 'ULTRA', 'SK', 'IMPORTANT', 'SBS', 'FBB', 'DCB'].map((q) => <option key={q} value={q}>{q}</option>)}
               </select>
             </div>
-            <div>
+            {/* <div>
               <label className={labelClass}>Supplier Name</label>
               <input required type="text" className={inputClass} value={formData.supplier_name} onChange={(e) => setFormData({ ...formData, supplier_name: e.target.value })} />
             </div>
             <div>
               <label className={labelClass}>Mill Name</label>
               <input type="text" className={inputClass} placeholder="e.g. Century Paper Mill" value={formData.mill_name} onChange={(e) => setFormData({ ...formData, mill_name: e.target.value })} />
-            </div>
+            </div> */}
             <div>
               <label className={labelClass}>Max / Initial Weight (kg)</label>
               <input required type="number" min="1" className={inputClass} value={formData.max_weight} onChange={(e) => setFormData({ ...formData, max_weight: e.target.value })} />
