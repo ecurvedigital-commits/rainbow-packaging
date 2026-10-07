@@ -177,7 +177,6 @@ export default function ApprovalsPage() {
     try {
       await approvalApi.approve(approvalId);
       setToast({ type: 'success', message: 'Approval request confirmed successfully!' });
-      setSelectedDetailItem(null);
       fetchPending();
     } catch (err) {
       if (err.message?.toLowerCase().includes('already been decided')) {
@@ -199,7 +198,6 @@ export default function ApprovalsPage() {
       await approvalApi.decline(targetId, reason);
       setToast({ type: 'success', message: 'Approval request declined.' });
       setDeclineTarget(null);
-      setSelectedDetailItem(null);
       fetchPending();
     } catch (err) {
       if (err.message?.toLowerCase().includes('already been decided')) {

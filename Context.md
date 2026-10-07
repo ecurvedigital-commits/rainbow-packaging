@@ -1,116 +1,100 @@
-# Rainbow Packages — Reel Inventory Web App: Project Context
+# Rainbow Packages — Reel Inventory & Management System (Project Context)
 
-## What this is
-A web app for Rainbow Packages to track paper/board **reels** from purchase through use, with a
-three-role approval workflow. Replaces a manual Excel sheet (sample: REELS.xlsx, 79 rows).
+## 1. Project Overview
+A full-stack web application built for **Rainbow Packages** to manage paper & board reel inventory, track real-time reel usage across machine stations, resolve master product codes, process multi-role approvals, and generate inventory stock valuation reports.
 
-## Roles
+- **Frontend Stack**: React 18 (Vite), Tailwind CSS, Lucide React icons, React Router v6.
+- **Backend Stack**: Node.js, Express.js REST API.
+- **Database**: MongoDB Atlas (`reel_inventory_prod`) with Mongoose ODM.
+- **Production Data**: Populated with 409 active reels and 25 master codes (migrated from production Excel sheets).
 
-| Role | Can do |
+---
+
+## 2. Roles & Permissions
+
+| Role | Operational Rights |
 |---|---|
-| **Operator** | Create a new reel (entry). Record usage (update a reel's weight after it's used at a station). View dashboard/filters/journey — **view-only**, to self-check for mistakes. |
-| **Supervisor** | Confirm or decline pending creations and usage entries. View dashboard/filters/journey — **view-only**. |
-| **Admin** | Everything: create, edit any field at any time, confirm/decline (fallback), full dashboard with filters and edit rights, receives daily email digest. |
+| **OPERATOR** | Can create new reels, record reel weight usage (with usage dates), request reel master corrections, and compose internal messages. All modifications create pending approvals. |
+| **SUPERVISOR** | Confirms or declines pending operator entries (creations, usage logs, correction requests). View-only dashboard & inventory access. |
+| **ADMIN** | Full system rights: approve/decline requests, direct reel edits, void reels, manage master codes/products, custom field definitions, daily digests, and PDF reporting. |
 
-## Reel fields (from sample data)
-`SR NO, QUALITY, BF, PURCHASE DATE, SUPPLIER NAME, REEL NO. (unique), REEL WEIGHT, SIZE, GSM
-(Grams per Square Metre), STATUS, CONSUMER STOCK, BALANCE`
+---
 
-- QUALITY is a fixed list seen in sample: VK, SPECTRA, ULTRA, SK, IMPORTANT, SBS, FBB, DCB
-- BF = Bursting Factor, a paper-strength spec number
-- REEL NO. is the unique physical ID given to each reel — critical, used for all search/lookup
-- 3 usage stations exist in the company where reels get consumed
+## 3. Data Architecture & Key Schemas
 
-## STATUS meaning (corrected — derived, not typed by anyone)
-- **REEL** = unused, full reel
-- **CUT** = partially used (a section used)
-- **NILL** = fully used, nothing left
+### A. Reel Model (`reel.model.js`)
+- `reel_no` *(String, unique)*: Physical barcode / reel identifier (e.g. `1002`, `R-7801`). Critical search key.
+- `master_code` *(String, indexed)*: Specification identifier (e.g., `VK-20-20`). Replaces legacy `master_key`.
+- `quality` *(Enum)*: `VK`, `SPECTRA`, `ULTRA`, `SK`, `IMPORTANT`, `SBS`, `FBB`, `DCB`.
+- `gsm` *(Number)*: Grams per Square Metre.
+- `bf` *(String/Number)*: Bursting Factor (paper strength).
+- `size` *(Number)*: Reel width in cm.
+- `max_weight` *(Number)*: Immutable initial reel weight at purchase (kg).
+- `previous_weight` *(Number)*: Running balance weight prior to the latest confirmed usage (kg).
+- `current_weight` *(Number)*: Current balance weight (kg).
+- `status` *(Enum, derived)*:
+  - `REEL`: Full, unused reel (`current_weight == max_weight`).
+  - `CUT`: Partially consumed (`0 < current_weight < max_weight`).
+  - `NILL`: Fully depleted (`current_weight == 0`).
+  - `VOIDED`: Cancelled/retired reel.
+- `supplier_name` *(String)*: Supplier / Party name.
+- `mill_name` *(String)*: Paper mill manufacturer.
+- `rate_per_kg` *(Number)*: Unit price per kg for stock valuation (₹).
+- `approval_status` *(Enum)*: `APPROVED`, `PENDING`, `DECLINED`.
+- `pending_count` *(Number)*: Number of pending approval requests attached to this reel.
 
-Computed from balance: balance = max → REEL; 0 < balance < max → CUT; balance = 0 → NILL.
+> **UI Visibility Constraint**: `supplier_name` and `mill_name` are displayed **ONLY** on:
+> 1. Reel Creation (`CreateReelPage.jsx`, `CreateReelModal.jsx`)
+> 2. Reel List / Inventory Page (`ReelListPage.jsx`)
+> 3. PDF Stock Reports (`ReelStockPdfModal.jsx`)
+> They are hidden/commented out across all other pages (modals, detail views, usage logs, notifications, digest).
 
-## The three weight fields
-| Field | Set | Behaviour |
-|---|---|---|
-| **max_weight** | Once, at creation | Immutable forever (admin-only correction). Permanent "as purchased" record. |
-| **previous_weight** | Starts = max_weight at creation | Running baseline — overwritten with the newly entered current_weight each time a usage entry is confirmed. |
-| **current_weight** | Entered fresh by operator each usage event | Pure input: "what does it weigh now." |
+### B. Master Product Model (`masterProduct.model.js`)
+- `master_code` *(String, unique)*: Main spec identifier.
+- `quality`, `gsm`, `bf`, `size`: Associated standard physical specifications.
 
-Each usage event: `used_this_time = previous_weight − current_weight_entered`, then on
-confirmation `previous_weight = current_weight_entered`. max_weight never changes.
+### C. Usage & Event Logs (`eventLog.model.js` / `usage.service.js`)
+- Records immutable history of reel usage, station consumption, operator actions, and approval decisions.
+- Machine Stations: `E-Flute`, `Narrow-Flute`, `Sheater`, `Sold to Revati`, `Return`, `Others`.
+- Supports explicit usage dates (`usage_date`).
 
-## Approval workflow (important — revised design)
-**Apply immediately, confirm later** — so operations are never blocked by a slow approver.
-- Operator submits (create or usage entry) → change applies immediately (previous_weight updates
-  right away) → entry tagged **"Pending confirmation"** (amber) everywhere.
-- Supervisor/Admin **confirms** → tag flips to **"Confirmed"** (green), `approved_by` /
-  `approved_at` stamped. Confirmation only signs off, it doesn't re-apply the change.
-- Supervisor/Admin **declines** → system auto-reverts `previous_weight` to its value before that
-  entry, tag becomes **"Declined"** (red), and the **operator gets a popup notification**
-  next time they open the app explaining what was declined and that the value was reverted.
+---
 
-## Event log (core architecture — build this first)
-Don't store "current state only." Store every event; current state = latest confirmed state,
-computed by replaying events. Each event stores: reel_id, event_type (CREATED / USAGE_LOGGED /
-CONFIRMED / DECLINED_REVERTED / ADMIN_CORRECTED), performed_by, performed_at, approved_by,
-approved_at, and the payload (station, previous_weight, current_weight_entered, used_this_time,
-etc). This single design gives you: the audit trail, the "reel journey" view, operator/supervisor
-pending-notifications, and admin's daily digest — all as queries over one table.
+## 4. Key Workflows & Features
 
-## Admin dashboard — audience-specific design notes
-Admin is ~50–60 years old, Indian business owner. Design must be:
-- Large fonts, big numbers on summary tiles, minimal text
-- Traffic-light colour coding (green/amber/red) as the primary language, text secondary
-- Plain-language labels, no technical jargon ("Fully used" not "NILL", "Pending confirmation"
-  not "awaiting approval workflow state")
-- Flat, high-contrast, low-clutter layout — not a dense SaaS-style multi-panel dashboard
-- Large touch targets — likely used on a phone as much as desktop
+### 1. Batch / Continuous Reel Usage (`RecordUsageModal.jsx`)
+- Live debounced search input (300ms) with search results list showing matching reels, active balance, and status.
+- Exact reel code entry auto-selects the reel for usage input.
+- Submitting usage updates the database, emits parent data refreshes, and keeps the modal open in search view with a green success message so operators can update multiple reels in sequence.
 
-### Views to build (in order of priority)
-1. Summary tiles — total reels, weight in stock, pending confirmations, unused 30+ days
-2. Status board (3 columns: REEL / CUT / NILL) — shape of inventory at a glance
-3. Filterable table — chip-based filters (see below), sortable
-4. Reel journey / timeline — drill-down per reel, click any row
-5. Supplier/quality breakdown (bar chart)
-6. Aging list — sorted by days since last activity (dead stock finder)
-7. Approval queue view — pending items + how long they've waited
-8. Calendar heatmap of activity (optional, later)
+### 2. Login Quick Actions Launcher (`LoginQuickActionsModal.jsx`)
+- Displays a 3-option modal upon login:
+  1. **Option 1: Create Reel** (Navigates to `/reels/create`).
+  2. **Option 2: Update Weight** (Live search & record usage modal).
+  3. **Option 3: Inventory Details** (Navigates to `/reels`).
+- When returning or closing sub-modals, re-opens to the main menu options.
 
-### Chip-based filters (as specified by user)
-- Row of field chips (Quality, Status, Supplier, GSM, Purchase Date, Station, Confirmation status)
-- Tap a chip → opens the right picker for that field type (multi-select list, range slider, date
-  range, toggle buttons)
-- Selecting a value turns it into an **active filter chip** with two controls: an **✕** to remove
-  it, and tap-to-edit to reopen the picker and change the value
-- Multiple active chips = AND logic across fields
-- "Clear all" once 2+ chips active
+### 3. Reel Inventory & Chip Filters (`ReelListPage.jsx`)
+- Filterable inventory table with status cards (`REEL`, `CUT`, `NILL`).
+- Active filter chips (Quality, Status, Master Code, Station, GSM, Purchase Date).
+- Stock Valuation summary (Total Weight kg, Total Stock Value ₹).
+- Export capabilities: CSV export and Stock Summary PDF export.
 
-## Extra feature: daily email digest to admin
-Scheduled job (end of day), reads the day's events from the event log, sends a short summary
-(counts of creations/usages/confirmations, any still pending) with a link that deep-links into
-the admin dashboard's audit view, pre-filtered to that day.
+### 4. Stock PDF Report Generation (`ReelStockPdfModal.jsx`)
+- Generates formatted PDF inventory reports broken down by Master Code, Quality, Status, and Weight Balance with total stock valuation.
 
-## Prototype built so far
-An HTML dashboard prototype was built showing: summary tiles, the 3-column status board, a chip
-filter bar, a filterable table, and a click-through reel journey/timeline panel — using sample
-data derived from REELS.xlsx. Artifact link: (see chat history — "Rainbow Packages — Reel
-Inventory Dashboard").
+### 5. Multi-Role Approvals (`ApprovalsPage.jsx`, `OperatorApprovalsPage.jsx`)
+- Pending creations, usage reports, and correction requests require confirmation by Supervisor or Admin.
+- Declining a usage report automatically reverts the reel's balance weight to its previous confirmed state (`previous_weight`).
 
-## Decisions (resolved)
-- **Supervisor** sees the **full dashboard, read-only**, plus can confirm/decline pending items.
-- **Supplier Name will be mandatory** in the real app (it was empty in the sample data only
-  because that sheet was temp/sample data for showing field structure, not real records).
-- **Custom parameters:** Admin can define new parameters at any time (label + type); once added,
-  they appear automatically in the reel creation form and in the dashboard table/filters. Modeled
-  as a `fieldDefinitions` list driving dynamic form/table rendering, with values stored per-reel
-  in a nested custom-fields object.
-- **"Unused" threshold: 30 days** since last activity.
-- **Tech stack:** React + Tailwind CSS (frontend), Node.js/Express (backend, later).
-  **Database:** leaning **Postgres via Supabase** (JSONB column + field-definitions table handles
-  the custom-parameter need, relational integrity suits the approval/event-log workflow, built-in
-  auth maps to the 3 roles) — MongoDB remains an acceptable alternative if preferred. Current
-  **demo phase uses in-memory mock data only**, no real backend/database yet; data layer is kept
-  separate so it can be swapped in later.
+---
 
-## Still open (non-blocking, use placeholders for now)
-- Exact wording for operator's "record usage" button/screen
-- Whether supplier name is free-text or a managed supplier list
+## 5. Development & Execution Conventions
+
+- **Frontend Directory**: `frontend/` (Vite, `npm run dev` at `localhost:5173`, `npm run build`).
+- **Backend Directory**: `backend/` (Express API at `localhost:5000`, `npm run dev`).
+- **Build Verification**: Always run `npm run build` in `frontend/` to confirm zero compilation/lint errors before finishing tasks.
+- **Code Rules**:
+  - Maintain docstrings and file header comments.
+  - Do NOT re-introduce `master_key` (use `master_code`).
+  - Honor the `supplier_name` and `mill_name` UI visibility constraint strictly.
