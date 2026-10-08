@@ -9,12 +9,17 @@ import ErrorAlert from '../../components/Common/ErrorAlert';
 import EmptyState from '../../components/Common/EmptyState';
 import Pagination from '../../components/Common/Pagination';
 import { formatWeight, formatDate, formatDateTime, getStatusBadgeStyle } from '../../utils/formatters';
+import { useAuth } from '../../auth/AuthContext';
+import EditReelEventModal from '../Reels/EditReelEventModal';
+import { Edit3 } from 'lucide-react';
 
 export default function ReelJourneyModal({ reelId, reelNo: initialReelNo, onClose }) {
+  const { isRoleAdmin } = useAuth();
   const [reel, setReel] = useState(null);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editingEvent, setEditingEvent] = useState(null);
 
   const [pagination, setPagination] = useState({
     page: 1,
@@ -213,10 +218,28 @@ export default function ReelJourneyModal({ reelId, reelNo: initialReelNo, onClos
                             </span>
                           </div>
 
-                          <div className="text-xs text-slate-400 font-medium">
+                          <div className="text-xs text-slate-400 font-medium flex items-center gap-2">
                             {formatDateTime(ev.performed_at)}
+                            {isRoleAdmin && (
+                              <button
+                                onClick={() => setEditingEvent({ ...ev, reel_no: reel?.reel_no || displayReelNo })}
+                                className="px-2 py-0.5 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900 transition flex items-center gap-1"
+                                title="Edit Entry (Admin)"
+                              >
+                                <Edit3 size={11} />
+                                <span>Edit</span>
+                              </button>
+                            )}
                           </div>
                         </div>
+
+                        {(ev.is_edited || ev.edited_at) && (
+                          <div className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-lg inline-flex items-center gap-1.5">
+                            <span className="font-bold uppercase tracking-wider text-[10px] bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 px-1 py-0.5 rounded">Edited</span>
+                            <span>on {formatDateTime(ev.edited_at)}</span>
+                            {ev.edited_by_name && <span>by {ev.edited_by_name}</span>}
+                          </div>
+                        )}
 
                         {/* Event Details */}
                         <div className="text-xs text-slate-700 dark:text-slate-300 space-y-1">
@@ -295,6 +318,19 @@ export default function ReelJourneyModal({ reelId, reelNo: initialReelNo, onClos
           </button>
         </div>
       </div>
+
+      {/* Edit Reel Event Entry Modal (Admin) */}
+      {editingEvent && (
+        <EditReelEventModal
+          isOpen={!!editingEvent}
+          event={editingEvent}
+          onClose={() => setEditingEvent(null)}
+          onSuccess={() => {
+            setEditingEvent(null);
+            fetchJourney();
+          }}
+        />
+      )}
     </div>
   );
 }

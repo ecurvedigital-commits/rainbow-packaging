@@ -829,6 +829,8 @@ export default function ComposeMessageModal({
                   <label className={labelClass}>Correct Size (cm)</label>
                   <input
                     type="number"
+                    step="any"
+                    min="0.01"
                     value={correctionSpecs.size}
                     onChange={(e) => setCorrectionSpecs({ ...correctionSpecs, size: e.target.value })}
                     className={inputClass}

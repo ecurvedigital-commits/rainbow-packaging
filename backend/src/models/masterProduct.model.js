@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { QUALITIES } from '../constants/qualities.js';
 
+const roundTwoDecimals = (val) => (typeof val === 'number' ? Math.round(val * 100) / 100 : val);
+
 const masterProductSchema = new mongoose.Schema(
   {
     // master_key: {
@@ -38,6 +40,7 @@ const masterProductSchema = new mongoose.Schema(
     size: {
       type: Number,
       required: true,
+      set: roundTwoDecimals,
     },
     parameter_codes: {
       quality: { type: String, required: true },

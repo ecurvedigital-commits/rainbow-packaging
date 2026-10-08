@@ -226,6 +226,7 @@ const Field = ({ definition, value, onChange }) => {
       </label>
       <input
         type={inputType}
+        step={definition.type === 'number' ? 'any' : undefined}
         required={definition.required}
         value={value ?? ''}
         onChange={(e) => onChange(definition.key, e.target.value)}
@@ -262,6 +263,7 @@ const MemoizedBulkRow = React.memo(({
             <div className="relative group/fill">
               <input
                 type={column.type === 'number' ? 'number' : column.type === 'date' ? 'date' : 'text'}
+                step={column.type === 'number' ? 'any' : undefined}
                 required={column.required}
                 value={value}
                 onChange={(e) => {
@@ -900,6 +902,7 @@ export default function CreateReelPage() {
                       </label>
                       <input
                         type={def.type === 'number' ? 'number' : 'text'}
+                        step={def.type === 'number' ? 'any' : undefined}
                         required={def.required}
                         value={singleForm.custom_fields?.[def.key] ?? ''}
                         onChange={(e) => updateSingleCustom(def.key, e.target.value)}

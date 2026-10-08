@@ -14,6 +14,7 @@ import {
   recordUsageSchema,
   updateReelSchema,
   voidReelSchema,
+  updateReelEventSchema,
 } from '../validators/reel.validator.js';
 import {
   listReels,
@@ -28,6 +29,7 @@ import {
   getNextReelNumber,
   getFilterOptions,
   listUsageLogs,
+  updateReelEvent,
 } from '../controllers/reel.controller.js';
 
 const router = Router();
@@ -39,6 +41,7 @@ router.get('/search', validate(searchReelsSchema), searchReels);
 router.get('/next-number', getNextReelNumber);
 router.get('/filter-options', getFilterOptions);
 router.get('/usage/logs', listUsageLogs);
+router.patch('/events/:eventId', authorizeRoles(ROLES.ADMIN), validate(updateReelEventSchema), updateReelEvent);
 router.get('/', validate(listReelsSchema), listReels);
 router.get('/:id', validate(getReelSchema), getReel);
 router.get('/:id/journey', validate(getReelJourneySchema), getReelJourney);

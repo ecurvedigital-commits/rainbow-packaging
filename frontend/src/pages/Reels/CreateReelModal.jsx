@@ -289,7 +289,8 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
               <input
                 required
                 type="number"
-                min="1"
+                step="any"
+                min="0.01"
                 className={inputClass}
                 value={formData.max_weight}
                 onChange={(e) => setFormData({ ...formData, max_weight: e.target.value })}
@@ -330,9 +331,11 @@ export const CreateReelModal = ({ isOpen = true, onClose, onSuccess }) => {
             <div>
               <label className={labelClass}>Size / Width (cm)</label>
               <input
-                type="text"
+                type="number"
+                step="any"
+                min="0.01"
                 className={inputClass}
-                placeholder="e.g. 100, 110, 120"
+                placeholder="e.g. 100, 105.5, 120"
                 value={formData.size}
                 onChange={(e) => setFormData({ ...formData, size: e.target.value })}
               />

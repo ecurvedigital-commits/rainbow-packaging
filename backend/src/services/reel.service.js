@@ -520,6 +520,9 @@ export async function getReelJourney({ id, query = {}, actor }) {
       approved_at: approvedAt,
       decline_reason: declineReason,
       payload: event.payload || {},
+      is_edited: !!event.is_edited,
+      edited_at: event.edited_at || null,
+      edited_by_name: event.edited_by_name || null,
       decision,
     };
   });
@@ -1124,5 +1127,92 @@ export async function getFilterOptions() {
     stations: Array.from(new Set([...STATIONS, ...stations.filter(Boolean)])).sort(),
     custom_fields: fieldDefs.map((f) => ({ key: f.key, name: f.name, type: f.field_type, options: f.options || [] })),
   };
+}
+
+/**
+ * Admin edits any reel event entry (docs/routes/reels.md).
+ * @param {{ eventId: string, input: object, actor: object }} args
+ * @returns {Promise<object>}
+ */
+export async function updateReelEvent({ eventId, input, actor }) {
+  return withTransaction(async (session) => {
+    if (actor.role !== ROLES.ADMIN) {
+      throw createApiError(403, ERROR_CODES.FORBIDDEN, 'Only Admins can edit reel event entries.');
+    }
+
+    const event = await ReelEvent.findById(eventId).session(session);
+    if (!event) {
+      throw createApiError(404, ERROR_CODES.NOT_FOUND, 'Reel event entry not found.');
+    }
+
+    const payload = event.payload || {};
+
+    if (input.station !== undefined && input.station.trim() !== '') {
+      const stationTrim = input.station.trim();
+      payload.station = stationTrim;
+
+      const reel = await Reel.findById(event.reel_id).session(session);
+      if (reel && !reel.stations_used.includes(stationTrim)) {
+        reel.stations_used.push(stationTrim);
+        await reel.save({ session });
+      }
+    }
+
+    if (input.current_weight_entered !== undefined) {
+      payload.current_weight_entered = Number(input.current_weight_entered);
+    }
+
+    if (input.previous_weight !== undefined) {
+      payload.previous_weight = Number(input.previous_weight);
+    }
+
+    if (input.used_this_time !== undefined) {
+      payload.used_this_time = Number(input.used_this_time);
+    } else if (payload.previous_weight !== undefined && payload.current_weight_entered !== undefined) {
+      payload.used_this_time = Math.max(0, payload.previous_weight - payload.current_weight_entered);
+    }
+
+    if (input.max_weight !== undefined) {
+      payload.max_weight = Number(input.max_weight);
+    }
+
+    if (input.performed_at) {
+      event.performed_at = new Date(input.performed_at);
+    }
+
+    if (input.decline_reason !== undefined) {
+      event.decline_reason = input.decline_reason;
+      payload.reason = input.decline_reason;
+    }
+
+    if (input.reason !== undefined) {
+      payload.reason = input.reason;
+    }
+
+    if (input.payload && typeof input.payload === 'object') {
+      Object.assign(payload, input.payload);
+    }
+
+    event.payload = payload;
+    event.is_edited = true;
+    event.edited_at = new Date();
+    event.edited_by = actor.id;
+    event.edited_by_name = actor.name;
+
+    await event.save({ session });
+
+    return {
+      id: event._id.toString(),
+      event_type: event.event_type,
+      approval_status: event.approval_status,
+      performed_by_name: event.performed_by_name,
+      performed_at: event.performed_at,
+      decline_reason: event.decline_reason,
+      payload: event.payload || {},
+      is_edited: true,
+      edited_at: event.edited_at,
+      edited_by_name: event.edited_by_name,
+    };
+  });
 }
 

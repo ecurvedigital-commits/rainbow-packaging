@@ -221,6 +221,9 @@ export async function listUsageLogs({ filters = {}, actor }) {
       previous_weight: event.payload?.previous_weight,
       current_weight_entered: event.payload?.current_weight_entered,
       used_this_time: event.payload?.used_this_time,
+      is_edited: !!event.is_edited,
+      edited_at: event.edited_at || null,
+      edited_by_name: event.edited_by_name || null,
     };
   });
 

@@ -81,3 +81,10 @@ export async function listUsageLogs(req, res) {
   const { items, meta } = await usageService.listUsageLogs({ filters: query, actor: req.user });
   return sendSuccess(res, items, { meta });
 }
+
+export async function updateReelEvent(req, res) {
+  const { params, body } = req.validated;
+  const result = await reelService.updateReelEvent({ eventId: params.eventId, input: body, actor: req.user });
+  return sendSuccess(res, result);
+}
+

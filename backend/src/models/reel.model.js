@@ -13,7 +13,7 @@ const reelSchema = new mongoose.Schema(
     purchase_date: { type: Date, required: true, default: Date.now },
     supplier_name: { type: String, required: true, trim: true },
     mill_name: { type: String, trim: true, default: '' },
-    size: { type: Number, required: true },
+    size: { type: Number, required: true, set: roundTwoDecimals },
     gsm: { type: mongoose.Schema.Types.Mixed, required: true },
     rate_per_kg: { type: Number, default: 0, set: roundTwoDecimals },
     max_weight: { type: Number, required: true, set: roundTwoDecimals },

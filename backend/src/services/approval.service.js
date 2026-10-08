@@ -137,6 +137,9 @@ export async function listPendingApprovals({ filters = {}, actor }) {
             }
           : null,
         payload: event.payload || {},
+        is_edited: !!event.is_edited,
+        edited_at: event.edited_at || null,
+        edited_by_name: event.edited_by_name || null,
       };
     })
   );
@@ -246,6 +249,9 @@ export async function listMyEntries({ filters = {}, actor }) {
       performed_at: event.performed_at,
       decline_reason: event.decline_reason || null,
       payload: event.payload || {},
+      is_edited: !!event.is_edited,
+      edited_at: event.edited_at || null,
+      edited_by_name: event.edited_by_name || null,
       decision: (event.approved_by_name || event.decline_reason)
         ? {
             by_name: event.approved_by_name || 'Supervisor / Admin',

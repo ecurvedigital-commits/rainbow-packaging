@@ -7,11 +7,12 @@ import ErrorAlert from '../../components/Common/ErrorAlert';
 import Pagination from '../../components/Common/Pagination';
 import Toast from '../../components/Common/Toast';
 import { formatDate, formatDateTime, formatWeight, formatCurrency, getStatusBadgeStyle, getApprovalBadgeStyle } from '../../utils/formatters';
-import { ArrowLeft, CheckCircle2, AlertTriangle, PlusCircle, Activity, ShieldAlert, Check, X, XCircle, Wrench, MessageSquarePlus } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, AlertTriangle, PlusCircle, Activity, ShieldAlert, Check, X, XCircle, Wrench, MessageSquarePlus, Edit3 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { RecordUsageModal } from './RecordUsageModal';
 import { MasterCorrectionModal } from './MasterCorrectionModal';
 import { VoidReelModal } from './VoidReelModal';
+import EditReelEventModal from './EditReelEventModal';
 import DeclineReasonModal from '../Approvals/DeclineReasonModal';
 
 export const ReelDetailPage = () => {
@@ -38,6 +39,7 @@ export const ReelDetailPage = () => {
   const [showUsageModal, setShowUsageModal] = useState(false);
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [showVoidModal, setShowVoidModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
 
   const fetchReelDetails = useCallback(async () => {
     setLoading(true);
@@ -314,6 +316,17 @@ export const ReelDetailPage = () => {
                           {status}
                         </span>
 
+                        {isRoleAdmin && (
+                          <button
+                            onClick={() => setEditingEvent(event)}
+                            className="px-2.5 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 rounded-lg transition flex items-center gap-1"
+                            title="Edit Entry (Admin)"
+                          >
+                            <Edit3 size={12} />
+                            <span>Edit Entry</span>
+                          </button>
+                        )}
+
                         {isPending && canApprove && (
                           <div className="flex items-center gap-1.5 ml-2">
                             <button
@@ -337,6 +350,14 @@ export const ReelDetailPage = () => {
                         )}
                       </div>
                     </div>
+
+                    {(event.is_edited || event.edited_at) && (
+                      <div className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5">
+                        <span className="font-bold uppercase tracking-wider text-[10px] bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 px-1.5 py-0.5 rounded">Edited</span>
+                        <span>on {formatDateTime(event.edited_at)}</span>
+                        {event.edited_by_name && <span>by {event.edited_by_name}</span>}
+                      </div>
+                    )}
 
                     {/* Event Payload Details */}
                     {event.payload && (
@@ -451,6 +472,20 @@ export const ReelDetailPage = () => {
           onClose={() => setDeclineTarget(null)}
           onConfirm={handleDeclineSubmit}
           loading={actionLoadingId === (declineTarget.id || declineTarget._id)}
+        />
+      )}
+
+      {/* Edit Reel Event Entry Modal (Admin) */}
+      {editingEvent && (
+        <EditReelEventModal
+          isOpen={!!editingEvent}
+          event={editingEvent}
+          onClose={() => setEditingEvent(null)}
+          onSuccess={(msg) => {
+            setToast({ type: 'success', message: msg });
+            setEditingEvent(null);
+            fetchReelDetails();
+          }}
         />
       )}
     </div>

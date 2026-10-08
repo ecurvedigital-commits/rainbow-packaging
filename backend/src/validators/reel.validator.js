@@ -114,3 +114,20 @@ export const voidReelSchema = z.object({
     reason: z.string().min(1, 'Reason for voiding is required'),
   }),
 });
+
+export const updateReelEventSchema = z.object({
+  params: z.object({
+    eventId: z.string().min(1, 'Event ID is required'),
+  }),
+  body: z.object({
+    station: z.string().trim().optional(),
+    current_weight_entered: z.coerce.number().min(0).optional(),
+    previous_weight: z.coerce.number().min(0).optional(),
+    used_this_time: z.coerce.number().min(0).optional(),
+    max_weight: z.coerce.number().min(0).optional(),
+    performed_at: z.string().optional(),
+    reason: z.string().trim().optional(),
+    decline_reason: z.string().trim().optional(),
+    payload: z.record(z.any()).optional(),
+  }),
+});

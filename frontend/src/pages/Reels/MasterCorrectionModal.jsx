@@ -264,11 +264,11 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
             </div> */}
             <div>
               <label className={labelClass}>Max / Initial Weight (kg)</label>
-              <input required type="number" min="1" className={inputClass} value={formData.max_weight} onChange={(e) => setFormData({ ...formData, max_weight: e.target.value })} />
+              <input required type="number" min="0.01" step="any" className={inputClass} value={formData.max_weight} onChange={(e) => setFormData({ ...formData, max_weight: e.target.value })} />
             </div>
             <div>
               <label className={labelClass}>Current Weight Balance (kg)</label>
-              <input required type="number" min="0" className={inputClass} value={formData.current_weight} onChange={(e) => setFormData({ ...formData, current_weight: e.target.value })} />
+              <input required type="number" min="0" step="any" className={inputClass} value={formData.current_weight} onChange={(e) => setFormData({ ...formData, current_weight: e.target.value })} />
             </div>
             <div>
               <label className={labelClass}>GSM</label>
@@ -276,7 +276,7 @@ export const MasterCorrectionModal = ({ isOpen = true, reel, onClose, onSuccess 
             </div>
             <div>
               <label className={labelClass}>Size / Width</label>
-              <input required type="number" min="1" className={inputClass} value={formData.size} onChange={(e) => setFormData({ ...formData, size: e.target.value })} />
+              <input required type="number" min="0.01" step="any" className={inputClass} value={formData.size} onChange={(e) => setFormData({ ...formData, size: e.target.value })} />
             </div>
             <div>
               <label className={labelClass}>Bursting Factor (BF)</label>

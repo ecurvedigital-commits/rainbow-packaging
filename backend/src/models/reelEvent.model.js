@@ -26,6 +26,10 @@ const reelEventSchema = new mongoose.Schema(
     decline_reason: { type: String, default: null },
     ref_event_id: { type: mongoose.Schema.Types.ObjectId, ref: 'ReelEvent', default: null },
     cascaded_from_event_id: { type: mongoose.Schema.Types.ObjectId, ref: 'ReelEvent', default: null },
+    is_edited: { type: Boolean, default: false },
+    edited_at: { type: Date, default: null },
+    edited_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    edited_by_name: { type: String, default: null },
     payload: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   {

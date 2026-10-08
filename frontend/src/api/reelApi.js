@@ -123,6 +123,13 @@ export const reelApi = {
       body: JSON.stringify({ reason }),
     });
   },
+
+  updateEvent: async (eventId, data) => {
+    return apiFetch(`/reels/events/${eventId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
 };
 
 export default reelApi;
