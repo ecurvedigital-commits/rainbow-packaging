@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 export const AppShell = ({ children }) => {
-  const { user, role, logout } = useAuth();
+  const { user, role, logout, isRoleAdmin, isRoleSupervisor } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -48,10 +48,6 @@ export const AppShell = ({ children }) => {
   // Login popup: show once per session when pending approvals exist
   const [loginPopup, setLoginPopup] = useState(null); // { count: number }
   const hasShownPopup = useRef(false);
-
-  const normalizedRole = (role || '').toUpperCase().replace(/_/g, ' ');
-  const isRoleAdmin = normalizedRole === 'ADMIN' || normalizedRole === 'HEAD ADMIN' || normalizedRole === 'SUPER ADMIN' || normalizedRole === 'ADMINISTRATOR';
-  const isRoleSupervisor = normalizedRole === 'SUPERVISOR' || normalizedRole === 'MIS' || isRoleAdmin;
 
   // Poll notifications and pending count
   useEffect(() => {
@@ -240,8 +236,12 @@ export const AppShell = ({ children }) => {
                   {initials}
                 </div>
                 <div className="hidden sm:block text-left">
-                  <p className="text-xs font-bold text-gray-900 leading-tight">{user?.name || user?.username}</p>
-                  <p className="text-[10px] font-bold leading-tight uppercase text-brand-blue">{role === 'SUPERVISOR' ? 'MIS' : role}</p>
+                  <p className="text-xs font-bold text-gray-900 leading-tight">
+                    {(user?.name || user?.username || '').replace(/\bSupervisor\b/gi, 'MIS').replace(/\(Supervisor\)/gi, '(MIS)')}
+                  </p>
+                  <p className="text-[10px] font-bold leading-tight uppercase text-brand-blue">
+                    {String(user?.role || role || '').toUpperCase().includes('SUPERVISOR') ? 'MIS' : (user?.role || role)}
+                  </p>
                 </div>
                 <ChevronDown size={14} className="text-gray-400 hidden sm:block" />
               </button>
@@ -251,8 +251,15 @@ export const AppShell = ({ children }) => {
                   <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
                   <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-gray-200 py-1.5 z-20 animate-scale-in origin-top-right">
                     <div className="px-4 py-2 border-b border-gray-100">
-                      <p className="text-xs font-bold text-gray-900 truncate">{user?.name || user?.username}</p>
-                      <p className="text-[11px] text-gray-400 truncate">@{user?.username}</p>
+                      <p className="text-xs font-bold text-gray-900 truncate">
+                        {(user?.name || user?.username || '').replace(/\bSupervisor\b/gi, 'MIS').replace(/\(Supervisor\)/gi, '(MIS)')}
+                      </p>
+                      <p className="text-[11px] text-gray-400 truncate flex items-center justify-between">
+                        <span>@{user?.username}</span>
+                        <span className="text-[10px] font-extrabold uppercase text-brand-blue bg-blue-50 px-1.5 py-0.5 rounded">
+                          {String(user?.role || role || '').toUpperCase().includes('SUPERVISOR') ? 'MIS' : (user?.role || role)}
+                        </span>
+                      </p>
                     </div>
                     <button
                       onClick={() => {

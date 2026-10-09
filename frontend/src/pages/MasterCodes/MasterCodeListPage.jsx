@@ -12,10 +12,7 @@ const labelClass = 'block text-xs font-bold text-gray-700 uppercase tracking-wid
 
 export const MasterCodeListPage = () => {
   const navigate = useNavigate();
-  const { role } = useAuth();
-  const normalizedRole = (role || '').toUpperCase().replace(/_/g, ' ');
-  const isRoleAdmin = normalizedRole === 'ADMIN' || normalizedRole === 'HEAD ADMIN' || normalizedRole === 'SUPER ADMIN' || normalizedRole === 'ADMINISTRATOR';
-  const isRoleSupervisor = normalizedRole === 'SUPERVISOR' || isRoleAdmin;
+  const { isRoleAdmin, isRoleSupervisor } = useAuth();
 
   const [codes, setCodes] = useState([]);
   const [loading, setLoading] = useState(true);
