@@ -22,7 +22,7 @@ const router = Router();
 router.use(authenticate, requirePasswordChange);
 
 router.get('/pending', authorizeRoles(ROLES.SUPERVISOR, ROLES.ADMIN), validate(listPendingApprovalsSchema), listPendingApprovals);
-router.get('/mine', authorizeRoles(ROLES.OPERATOR, ROLES.ADMIN), validate(listMyEntriesSchema), listMyEntries);
+router.get('/mine', authorizeRoles(ROLES.OPERATOR, ROLES.SUPERVISOR, ROLES.ADMIN), validate(listMyEntriesSchema), listMyEntries);
 router.post('/:eventId/confirm', authorizeRoles(ROLES.SUPERVISOR, ROLES.ADMIN), validate(confirmEntrySchema), confirmEntry);
 router.post('/:eventId/decline', authorizeRoles(ROLES.SUPERVISOR, ROLES.ADMIN), validate(declineEntrySchema), declineEntry);
 

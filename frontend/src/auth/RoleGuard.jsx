@@ -6,6 +6,8 @@ export const RoleGuard = ({ allowedRoles = [], children }) => {
   const { role } = useAuth();
   const currentRole = (role || '').toUpperCase().replace(/_/g, ' ');
   const allowed = allowedRoles.map((r) => r.toUpperCase().replace(/_/g, ' '));
+  if (allowed.includes('SUPERVISOR') && !allowed.includes('MIS')) allowed.push('MIS');
+  if (allowed.includes('MIS') && !allowed.includes('SUPERVISOR')) allowed.push('SUPERVISOR');
 
   if (allowed.length > 0 && !allowed.includes(currentRole)) {
     return <Navigate to="/403" replace />;

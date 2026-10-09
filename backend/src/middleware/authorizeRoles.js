@@ -7,8 +7,13 @@ import { ERROR_CODES } from '../constants/errorCodes.js';
  * @returns {import('express').RequestHandler}
  */
 export function authorizeRoles(...roles) {
+  const allowed = new Set(roles);
+  if (allowed.has('SUPERVISOR')) allowed.add('MIS');
+  if (allowed.has('MIS')) allowed.add('SUPERVISOR');
+
   return (req, _res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    const userRole = req.user?.role;
+    if (!req.user || !allowed.has(userRole)) {
       return next(createApiError(403, ERROR_CODES.FORBIDDEN, 'You do not have permission to perform this action'));
     }
     next();

@@ -114,7 +114,7 @@ export const AuthProvider = ({ children }) => {
 
   const normalizedRole = (user?.role || '').toUpperCase();
   const isRoleAdmin = normalizedRole === 'ADMIN';
-  const isRoleSupervisor = normalizedRole === 'SUPERVISOR' || isRoleAdmin;
+  const isRoleSupervisor = normalizedRole === 'SUPERVISOR' || normalizedRole === 'MIS' || isRoleAdmin;
   const isRoleOperator = normalizedRole === 'OPERATOR';
 
   const value = {

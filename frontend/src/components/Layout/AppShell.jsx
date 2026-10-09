@@ -51,7 +51,7 @@ export const AppShell = ({ children }) => {
 
   const normalizedRole = (role || '').toUpperCase().replace(/_/g, ' ');
   const isRoleAdmin = normalizedRole === 'ADMIN' || normalizedRole === 'HEAD ADMIN' || normalizedRole === 'SUPER ADMIN' || normalizedRole === 'ADMINISTRATOR';
-  const isRoleSupervisor = normalizedRole === 'MIS' || isRoleAdmin;
+  const isRoleSupervisor = normalizedRole === 'SUPERVISOR' || normalizedRole === 'MIS' || isRoleAdmin;
 
   // Poll notifications and pending count
   useEffect(() => {
