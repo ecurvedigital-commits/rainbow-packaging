@@ -24,3 +24,16 @@ export async function declineEntry(req, res) {
   const result = await approvalService.declineEntry({ eventId: params.eventId, input: body, actor: req.user });
   return sendSuccess(res, result);
 }
+
+export async function bulkConfirmEntries(req, res) {
+  const { body } = req.validated;
+  const result = await approvalService.bulkConfirmEntries({ eventIds: body.event_ids, actor: req.user });
+  return sendSuccess(res, result);
+}
+
+export async function bulkDeclineEntries(req, res) {
+  const { body } = req.validated;
+  const result = await approvalService.bulkDeclineEntries({ eventIds: body.event_ids, reason: body.reason, actor: req.user });
+  return sendSuccess(res, result);
+}
+

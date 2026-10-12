@@ -41,6 +41,8 @@ const BASE_FIELDS = [
 
 const DEFAULT_ROW = {
   reel_no: '',
+  master_code: '',
+  master_code_id: '',
   quality: 'VK',
   supplier_name: 'Self / Stock',
   mill_name: '',
@@ -108,7 +110,8 @@ const parseExcelSheetSmart = (sheet) => {
   const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
   if (!grid.length) return [];
 
-  const KEYWORDS = ['reel', 'quality', 'gsm', 'size', 'bf', 'weight', 'supplier', 'mill', 'master', 'sr'];
+  const KEYWORDS = ['reel', 'quality', 'gsm', 'size', 'bf', 'weight', 'supplier', 'mill', 'master', 'sr', 'head', 'bucket'];
+
   let headerRowIndex = 0;
   let maxMatches = 0;
 
@@ -202,10 +205,18 @@ const buildRowFromExcel = (raw, fieldDefs, fallback) => {
   const parsedDate = excelDateToInput(rawDate);
   row.purchase_date = parsedDate || fallback?.purchase_date || new Date().toISOString().slice(0, 10);
 
-  const rawMasterCode = getCell(raw, ['master_code', 'mastercode', 'code', 'mc', 'master code']);
+  const rawMasterCode = getCell(raw, [
+    'head', 'Head', 'HEAD',
+    'bucket', 'Bucket', 'BUCKET',
+    'master code', 'Master Code', 'MASTER CODE',
+    'master_code', 'mastercode',
+    'code', 'mc',
+    'reel head', 'item head', 'group'
+  ]);
   if (rawMasterCode) {
     row.master_code = String(rawMasterCode).trim();
   }
+
 
   fieldDefs.forEach((def) => {
     const value = getCell(raw, [def.key, def.label]);
@@ -241,6 +252,7 @@ const MemoizedBulkRow = React.memo(({
   row,
   rowIndex,
   allBulkColumns,
+  masterCodes = [],
   updateBulkCustom,
   updateBulkCell,
   deleteBulkRow,
@@ -261,18 +273,76 @@ const MemoizedBulkRow = React.memo(({
         return (
           <td key={column.key} className="px-2 py-2 border-b border-gray-100 align-top">
             <div className="relative group/fill">
-              <input
-                type={column.type === 'number' ? 'number' : column.type === 'date' ? 'date' : 'text'}
-                step={column.type === 'number' ? 'any' : undefined}
-                required={column.required}
-                value={value}
-                onChange={(e) => {
-                  if (column.bulkCustom) updateBulkCustom(rowIndex, column.key, e.target.value);
-                  else updateBulkCell(rowIndex, column.key, e.target.value);
-                }}
-                className={compactInputClass}
-                aria-label={`${column.label} row ${rowIndex + 1}`}
-              />
+              {column.isMasterCode ? (() => {
+                const currentMc = masterCodes.find(
+                  (mc) =>
+                    (row.master_code_id && String(mc.master_code_id || mc.id) === String(row.master_code_id)) ||
+                    (row.master_code && String(mc.master_code) === String(row.master_code)) ||
+                    (row.master_code_name && String(mc.master_code_name).trim().toLowerCase() === String(row.master_code_name).trim().toLowerCase())
+                );
+                const selectValue = currentMc ? (currentMc.master_code_id || currentMc.id || currentMc.master_code) : (row.master_code || '');
+
+                return (
+                  <select
+                    required={column.required}
+                    value={selectValue}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const match = masterCodes.find(
+                        (mc) =>
+                          String(mc.master_code_id || mc.id) === String(val) ||
+                          String(mc.master_code) === String(val) ||
+                          String(mc.master_code_name) === String(val)
+                      );
+                      if (match) {
+                        updateBulkCell(rowIndex, 'master_code', match.master_code);
+                        updateBulkCell(rowIndex, 'master_code_id', match.master_code_id || match.id);
+                        updateBulkCell(rowIndex, 'master_code_name', match.master_code_name);
+                        const specs = extractMasterCodeSpecs(match);
+                        if (specs.quality) updateBulkCell(rowIndex, 'quality', specs.quality);
+                        if (specs.gsm) updateBulkCell(rowIndex, 'gsm', specs.gsm);
+                        if (specs.bf) updateBulkCell(rowIndex, 'bf', specs.bf);
+                        if (specs.size) updateBulkCell(rowIndex, 'size', specs.size);
+                      } else {
+                        updateBulkCell(rowIndex, 'master_code', val);
+                        updateBulkCell(rowIndex, 'master_code_name', val);
+                      }
+                    }}
+                    className={compactInputClass}
+                    style={{ minWidth: '180px' }}
+                    aria-label={`${column.label} row ${rowIndex + 1}`}
+                  >
+                    <option value="">-- Select Master Code / Bucket --</option>
+                    {masterCodes.map((mc) => {
+                      const valKey = mc.master_code_id || mc.id || mc.master_code;
+                      return (
+                        <option key={valKey} value={valKey}>
+                          {mc.master_code_name || mc.master_code}
+                        </option>
+                      );
+                    })}
+                    {row.master_code && !currentMc && (
+                      <option value={row.master_code_id || row.master_code}>
+                        {row.master_code_name || row.master_code}
+                      </option>
+                    )}
+                  </select>
+                );
+              })() : (
+                <input
+                  type={column.type === 'number' ? 'number' : column.type === 'date' ? 'date' : 'text'}
+                  step={column.type === 'number' ? 'any' : undefined}
+                  required={column.required}
+                  value={value}
+                  onChange={(e) => {
+                    if (column.bulkCustom) updateBulkCustom(rowIndex, column.key, e.target.value);
+                    else updateBulkCell(rowIndex, column.key, e.target.value);
+                  }}
+                  className={compactInputClass}
+                  aria-label={`${column.label} row ${rowIndex + 1}`}
+                />
+              )}
+
 
               {/* Excel-style fill handle. Drag downward to copy this cell's
                   current value into the same column on rows below. */}
@@ -312,6 +382,8 @@ const MemoizedBulkRow = React.memo(({
 export default function CreateReelPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState('single');
+  const [bulkModeType, setBulkModeType] = useState('same'); // 'same' | 'different'
+  const [showBulkTypeModal, setShowBulkTypeModal] = useState(false);
   const [fieldDefs, setFieldDefs] = useState([]);
   const [masterCodes, setMasterCodes] = useState([]);
   const [selectedMasterCodeId, setSelectedMasterCodeId] = useState('');
@@ -333,9 +405,16 @@ export default function CreateReelPage() {
   );
 
   const allBulkColumns = useMemo(
-    () => [...BASE_FIELDS, ...fieldDefs.map((def) => ({ ...def, bulkCustom: true }))],
-    [fieldDefs]
+    () => [
+      ...(bulkModeType === 'different'
+        ? [{ key: 'master_code', label: 'Master Code / Bucket', type: 'text', required: true, isMasterCode: true }]
+        : []),
+      ...BASE_FIELDS,
+      ...fieldDefs.map((def) => ({ ...def, bulkCustom: true })),
+    ],
+    [fieldDefs, bulkModeType]
   );
+
 
   const fetchNextReelNumber = async () => {
     setLoadingNextNo(true);
@@ -445,11 +524,13 @@ export default function CreateReelPage() {
     }));
   };
 
-  const createEmptyBulkRows = (count, baseReelNo = '') => {
+  const createEmptyBulkRows = (count, baseReelNo = '', type = bulkModeType) => {
     const safeCount = Math.max(1, Math.min(500, Number(count) || 1));
     return Array.from({ length: safeCount }, (_, index) => ({
       ...cloneRow(DEFAULT_ROW),
       reel_no: baseReelNo ? incrementReelNumber(baseReelNo, index) : '',
+      master_code: type === 'different' ? (selectedMasterCode?.master_code || '') : '',
+      master_code_id: type === 'different' ? (selectedMasterCodeId || '') : '',
       quality: selectedMasterCode?.quality ?? DEFAULT_ROW.quality,
       gsm: selectedMasterCode?.gsm ?? DEFAULT_ROW.gsm,
       bf: selectedMasterCode?.bf ?? DEFAULT_ROW.bf,
@@ -462,8 +543,9 @@ export default function CreateReelPage() {
     setSuccess('');
     setBulkResult(null);
     const firstNo = nextReelNo || (await fetchNextReelNumber());
-    setBulkRows(createEmptyBulkRows(bulkCount, firstNo));
+    setBulkRows(createEmptyBulkRows(bulkCount, firstNo, bulkModeType));
   };
+
 
   const updateBulkCell = React.useCallback((rowIndex, key, value) => {
     setBulkRows((rows) =>
@@ -582,27 +664,54 @@ export default function CreateReelPage() {
     };
   }, [fillSession, stopFill]);
 
-  const buildPayload = (row) => ({
-    reel_no: String(row.reel_no || '').trim(),
-    master_code: row.master_code || selectedMasterCode?.master_code || undefined,
-    master_code_id: selectedMasterCodeId || undefined,
-    quality: String(row.quality || '').trim(),
-    bf: isNaN(Number(row.bf)) || String(row.quality || '').trim().toUpperCase() === 'ULTRA' || String(row.bf).trim().toUpperCase() === 'ULTRA'
-      ? String(row.bf || '').trim()
-      : Number(row.bf),
-    supplier_name: String(row.supplier_name || 'Self / Stock').trim(),
-    mill_name: String(row.mill_name || '').trim(),
-    size: Number(row.size),
-    gsm: Number(row.gsm),
-    rate_per_kg: row.rate_per_kg === '' ? 0 : Number(row.rate_per_kg),
-    max_weight: Number(row.max_weight),
-    purchase_date: row.purchase_date || new Date().toISOString().slice(0, 10),
-    custom_fields: row.custom_fields || {},
-  });
+  const buildPayload = (row) => {
+    let rowMasterCode = undefined;
+    let rowMasterCodeId = undefined;
+
+    if (bulkModeType === 'different') {
+      rowMasterCode = row.master_code ? String(row.master_code).trim() : (selectedMasterCode?.master_code || undefined);
+      if (row.master_code_id) {
+        rowMasterCodeId = row.master_code_id;
+      } else if (rowMasterCode && masterCodes.length) {
+        const norm = normalizeHeader(rowMasterCode);
+        const match = masterCodes.find(
+          (mc) => normalizeHeader(mc.master_code) === norm || normalizeHeader(mc.master_code_name) === norm
+        );
+        if (match) {
+          rowMasterCodeId = match.master_code_id || match.id;
+          rowMasterCode = match.master_code;
+        }
+      }
+    } else {
+      rowMasterCode = selectedMasterCode?.master_code || undefined;
+      rowMasterCodeId = selectedMasterCodeId || undefined;
+    }
+
+    return {
+      reel_no: String(row.reel_no || '').trim(),
+      master_code: rowMasterCode,
+      master_code_id: rowMasterCodeId,
+      quality: String(row.quality || '').trim(),
+      bf: isNaN(Number(row.bf)) || String(row.quality || '').trim().toUpperCase() === 'ULTRA' || String(row.bf).trim().toUpperCase() === 'ULTRA'
+        ? String(row.bf || '').trim()
+        : Number(row.bf),
+      supplier_name: String(row.supplier_name || 'Self / Stock').trim(),
+      mill_name: String(row.mill_name || '').trim(),
+      size: Number(row.size),
+      gsm: Number(row.gsm),
+      rate_per_kg: row.rate_per_kg === '' ? 0 : Number(row.rate_per_kg),
+      max_weight: Number(row.max_weight),
+      purchase_date: row.purchase_date || new Date().toISOString().slice(0, 10),
+      custom_fields: row.custom_fields || {},
+    };
+  };
 
   const validateRow = (row, index) => {
     const missing = [];
     if (!String(row.reel_no || '').trim()) missing.push('Reel Number');
+    if (mode === 'bulk' && bulkModeType === 'different' && !String(row.master_code || '').trim()) {
+      missing.push('Master Code');
+    }
     if (!String(row.quality || '').trim()) missing.push('Quality');
     if (row.max_weight === '' || Number.isNaN(Number(row.max_weight)) || Number(row.max_weight) <= 0) missing.push('Reel Weight');
     if (row.gsm === '' || Number.isNaN(Number(row.gsm))) missing.push('GSM');
@@ -617,6 +726,7 @@ export default function CreateReelPage() {
 
     return missing.length ? `Row ${index + 1}: ${missing.join(', ')}` : '';
   };
+
 
   const handleSingleSubmit = async (e) => {
     e.preventDefault();
@@ -745,8 +855,39 @@ export default function CreateReelPage() {
       });
 
       const imported = rawRows.map((raw) => buildRowFromExcel(raw, fieldDefs, base));
+
+      // Detect if user uploaded sheet with master codes / buckets
+      const hasDistinctMasterCodes = imported.some((r) => Boolean(r.master_code));
+      if (hasDistinctMasterCodes) {
+        setBulkModeType('different');
+      }
+
+      // Link master codes from available list
+      const resolvedImported = imported.map((row) => {
+        if (row.master_code && masterCodes.length) {
+          const norm = normalizeHeader(row.master_code);
+          const matched = masterCodes.find(
+            (mc) =>
+              normalizeHeader(mc.master_code) === norm ||
+              normalizeHeader(mc.master_code_name) === norm ||
+              normalizeHeader(mc.master_code_id || mc.id) === norm
+          );
+          if (matched) {
+            row.master_code = matched.master_code;
+            row.master_code_id = matched.master_code_id || matched.id;
+            row.master_code_name = matched.master_code_name;
+            const specs = extractMasterCodeSpecs(matched);
+            if (!row.quality && specs.quality) row.quality = specs.quality;
+            if (!row.gsm && specs.gsm) row.gsm = specs.gsm;
+            if (!row.bf && specs.bf) row.bf = specs.bf;
+            if (!row.size && specs.size) row.size = specs.size;
+          }
+        }
+        return row;
+      });
+
       const fallbackNumbers = await fetchNextReelNumber();
-      const filled = imported.map((row, index) => ({
+      const filled = resolvedImported.map((row, index) => ({
         ...row,
         reel_no: row.reel_no || (fallbackNumbers ? incrementReelNumber(fallbackNumbers, index) : ''),
       }));
@@ -765,6 +906,7 @@ export default function CreateReelPage() {
   const downloadTemplate = () => {
     const headers = allBulkColumns.map((column) => column.bulkCustom ? column.key : column.key);
     const example = {
+      ...(bulkModeType === 'different' ? { master_code: selectedMasterCode?.master_code || 'MC-101' } : {}),
       reel_no: nextReelNo || 'R-1001',
       quality: selectedMasterCode?.quality || 'VK',
       supplier_name: 'Example Supplier',
@@ -784,8 +926,9 @@ export default function CreateReelPage() {
     const worksheet = XLSX.utils.json_to_sheet([example], { header: headers });
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Reels');
-    XLSX.writeFile(workbook, 'reel_bulk_template.xlsx');
+    XLSX.writeFile(workbook, `reel_bulk_template_${bulkModeType}.xlsx`);
   };
+
 
   return (
     <div className="space-y-6 relative">
@@ -826,13 +969,123 @@ export default function CreateReelPage() {
           </button>
           <button
             type="button"
-            onClick={() => { setMode('bulk'); setError(''); setSuccess(''); if (!bulkRows.length) setBulkRows(createEmptyBulkRows(bulkCount, nextReelNo)); }}
+            onClick={() => {
+              setError('');
+              setSuccess('');
+              setShowBulkTypeModal(true);
+            }}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition ${mode === 'bulk' ? 'bg-brand-blue text-white border-brand-blue' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
           >
             Bulk / Excel
           </button>
         </div>
       </div>
+
+
+      {/* Modal for choosing bulk upload option */}
+      {showBulkTypeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-lg w-full overflow-hidden">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/70">
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-gray-900" style={{ fontFamily: 'var(--font-family-display)' }}>
+                  Choose Bulk Upload Type
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Select how Master Codes (Head / Bucket) are assigned to your bulk reels
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBulkTypeModal(false);
+                  if (mode !== 'bulk') setMode('bulk');
+                }}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3.5">
+              {/* Option 1: Same Master Code */}
+              <button
+                type="button"
+                onClick={() => {
+                  setBulkModeType('same');
+                  setShowBulkTypeModal(false);
+                  setMode('bulk');
+                  if (!bulkRows.length) {
+                    setBulkRows(createEmptyBulkRows(bulkCount, nextReelNo, 'same'));
+                  }
+                }}
+                className={`w-full text-left p-4 sm:p-5 rounded-2xl border-2 transition-all flex items-start gap-4 hover:border-brand-blue hover:bg-blue-50/30 ${
+                  bulkModeType === 'same' ? 'border-brand-blue bg-blue-50/50 shadow-sm' : 'border-gray-200 bg-white'
+                }`}
+              >
+                <div className="p-3 rounded-xl bg-blue-100 text-brand-blue shrink-0">
+                  <Layers size={22} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-gray-900">Same Master Code</h4>
+                    {bulkModeType === 'same' && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-blue text-white">Active</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                    All reels in bulk share the <strong>same Master Code</strong>. Upload or generate rows under a single unified classification.
+                  </p>
+                </div>
+              </button>
+
+              {/* Option 2: Reels with Different Master Codes */}
+              <button
+                type="button"
+                onClick={() => {
+                  setBulkModeType('different');
+                  setShowBulkTypeModal(false);
+                  setMode('bulk');
+                  if (!bulkRows.length) {
+                    setBulkRows(createEmptyBulkRows(bulkCount, nextReelNo, 'different'));
+                  }
+                }}
+                className={`w-full text-left p-4 sm:p-5 rounded-2xl border-2 transition-all flex items-start gap-4 hover:border-indigo-600 hover:bg-indigo-50/30 ${
+                  bulkModeType === 'different' ? 'border-indigo-600 bg-indigo-50/50 shadow-sm' : 'border-gray-200 bg-white'
+                }`}
+              >
+                <div className="p-3 rounded-xl bg-indigo-100 text-indigo-600 shrink-0">
+                  <FileSpreadsheet size={22} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-gray-900">Reels with Different Master Codes</h4>
+                    {bulkModeType === 'different' && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-600 text-white">Active</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                    Reels have <strong>individual Master Codes</strong>. Adds a Master Code column in the grid and auto-detects Excel headers named <strong>'Head'</strong>, <strong>'Bucket'</strong>, or <strong>'Master Code'</strong>.
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBulkTypeModal(false);
+                  if (mode !== 'bulk') setMode('bulk');
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-200 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {(error || success) && (
         <div className={`rounded-xl border px-4 py-3 text-sm font-semibold flex items-start gap-2 ${error ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
@@ -841,38 +1094,79 @@ export default function CreateReelPage() {
         </div>
       )}
 
-      <section className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 sm:p-5">
-        <div className="flex flex-col lg:flex-row lg:items-end gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Layers size={15} className="text-brand-blue" />
-              <label className={labelClass + ' mb-0'}>Master Code (Business Classification)</label>
-            </div>
-            <select
-              value={selectedMasterCodeId}
-              onChange={handleMasterCodeChange}
-              className={inputClass}
-            >
-              {masterCodes.map((mc) => {
-                const specs = [
-                  mc.quality ? `Quality: ${mc.quality}` : null,
-                  mc.bf ? `BF: ${mc.bf}` : null,
-                  mc.gsm ? `GSM: ${mc.gsm}` : null,
-                  mc.size ? `Size: ${mc.size} cm` : null,
-                ].filter(Boolean).join(', ');
-                return (
-                  <option key={mc.master_code_id || mc.id} value={mc.master_code_id || mc.id}>
-                    {mc.master_code} — {mc.master_code_name}{specs ? ` (${specs})` : ''}
-                  </option>
-                );
-              })}
-            </select>
+      {/* Mode Indicator Bar when in Bulk mode */}
+      {mode === 'bulk' && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Bulk Upload Option:</span>
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-extrabold ${
+              bulkModeType === 'different'
+                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                : 'bg-blue-50 text-brand-blue border border-blue-200'
+            }`}>
+              {bulkModeType === 'different' ? 'Reels with Different Master Codes (Per-Reel)' : 'Same Master Code (Unified Batch)'}
+            </span>
           </div>
-          <div className="lg:w-72 text-xs text-gray-600 bg-white border border-indigo-100 rounded-xl px-3.5 py-3">
-            Selecting a Master Code pre-fills Quality, GSM, BF and Size. Imported Excel values can still be edited before submission.
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowBulkTypeModal(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-brand-blue bg-blue-50 hover:bg-blue-100 border border-blue-200 transition"
+          >
+            <Layers size={14} />
+            Switch Option
+          </button>
         </div>
-      </section>
+      )}
+
+      {(mode === 'single' || (mode === 'bulk' && bulkModeType === 'same')) ? (
+        <section className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 sm:p-5">
+          <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Layers size={15} className="text-brand-blue" />
+                <label className={labelClass + ' mb-0'}>Master Code (Business Classification)</label>
+              </div>
+              <select
+                value={selectedMasterCodeId}
+                onChange={handleMasterCodeChange}
+                className={inputClass}
+              >
+                {masterCodes.map((mc) => {
+                  const specs = [
+                    mc.quality ? `Quality: ${mc.quality}` : null,
+                    mc.bf ? `BF: ${mc.bf}` : null,
+                    mc.gsm ? `GSM: ${mc.gsm}` : null,
+                    mc.size ? `Size: ${mc.size} cm` : null,
+                  ].filter(Boolean).join(', ');
+                  return (
+                    <option key={mc.master_code_id || mc.id} value={mc.master_code_id || mc.id}>
+                      {mc.master_code_name || mc.master_code}{specs ? ` (${specs})` : ''}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <div className="lg:w-72 text-xs text-gray-600 bg-white border border-indigo-100 rounded-xl px-3.5 py-3">
+              Selecting a Master Code pre-fills Quality, GSM, BF and Size. Imported Excel values can still be edited before submission.
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-700 shrink-0 mt-0.5">
+              <FileSpreadsheet size={18} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Different Master Codes Mode Active</h3>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Each reel has its own <strong>Master Code / Bucket</strong> column in the table below. When importing Excel, columns named <strong>'Head'</strong>, <strong>'Bucket'</strong>, or <strong>'Master Code'</strong> are automatically read.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
 
       {mode === 'single' ? (
         <form onSubmit={handleSingleSubmit} className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
@@ -1024,11 +1318,13 @@ export default function CreateReelPage() {
                           row={row}
                           rowIndex={rowIndex}
                           allBulkColumns={allBulkColumns}
+                          masterCodes={masterCodes}
                           updateBulkCustom={updateBulkCustom}
                           updateBulkCell={updateBulkCell}
                           deleteBulkRow={deleteBulkRow}
                           onStartFill={startFill}
                         />
+
                       ))}
                     </tbody>
                   </table>
@@ -1036,36 +1332,53 @@ export default function CreateReelPage() {
 
                 <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 space-y-3">
                   {/* Master Code selector inline in bulk footer */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 pb-3 border-b border-gray-200">
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Layers size={14} className="text-brand-blue" />
-                      <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Master Code</span>
+                  {bulkModeType === 'same' ? (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 pb-3 border-b border-gray-200">
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Layers size={14} className="text-brand-blue" />
+                        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Master Code</span>
+                      </div>
+                      <select
+                        value={selectedMasterCodeId}
+                        onChange={handleMasterCodeChange}
+                        className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                      >
+                        {masterCodes.map((mc) => {
+                          const specs = [
+                            mc.quality ? `Q: ${mc.quality}` : null,
+                            mc.bf ? `BF: ${mc.bf}` : null,
+                            mc.gsm ? `GSM: ${mc.gsm}` : null,
+                            mc.size ? `${mc.size} cm` : null,
+                          ].filter(Boolean).join(', ');
+                          return (
+                            <option key={mc.master_code_id || mc.id} value={mc.master_code_id || mc.id}>
+                              {mc.master_code_name || mc.master_code}{specs ? ` (${specs})` : ''}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      {selectedMasterCode && (
+                        <span className="shrink-0 text-[11px] text-gray-500 font-medium">
+                          Will be applied to all {bulkRows.length} rows
+                        </span>
+                      )}
                     </div>
-                    <select
-                      value={selectedMasterCodeId}
-                      onChange={handleMasterCodeChange}
-                      className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                    >
-                      {masterCodes.map((mc) => {
-                        const specs = [
-                          mc.quality ? `Q: ${mc.quality}` : null,
-                          mc.bf ? `BF: ${mc.bf}` : null,
-                          mc.gsm ? `GSM: ${mc.gsm}` : null,
-                          mc.size ? `${mc.size} cm` : null,
-                        ].filter(Boolean).join(', ');
-                        return (
-                          <option key={mc.master_code_id || mc.id} value={mc.master_code_id || mc.id}>
-                            {mc.master_code} — {mc.master_code_name}{specs ? ` (${specs})` : ''}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    {selectedMasterCode && (
-                      <span className="shrink-0 text-[11px] text-gray-500 font-medium">
-                        Will be applied to all {bulkRows.length} rows
-                      </span>
-                    )}
-                  </div>
+                  ) : (
+                    <div className="flex items-center justify-between pb-3 border-b border-gray-200 text-xs text-indigo-700 bg-indigo-50/50 px-3 py-2 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <FileSpreadsheet size={14} className="text-indigo-600" />
+                        <span className="font-semibold">Individual Master Codes / Buckets are assigned per row in the table above.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowBulkTypeModal(true)}
+                        className="text-[11px] font-bold text-indigo-800 hover:underline"
+                      >
+                        Switch Option
+                      </button>
+                    </div>
+                  )}
+
 
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                     <div className="flex items-center gap-2 text-xs text-gray-500">

@@ -14,6 +14,7 @@ import {
   recordUsageSchema,
   updateReelSchema,
   voidReelSchema,
+  bulkVoidReelsSchema,
   updateReelEventSchema,
 } from '../validators/reel.validator.js';
 import {
@@ -26,6 +27,7 @@ import {
   recordUsage,
   updateReel,
   voidReel,
+  bulkVoidReels,
   getNextReelNumber,
   getFilterOptions,
   listUsageLogs,
@@ -42,14 +44,19 @@ router.get('/next-number', getNextReelNumber);
 router.get('/filter-options', getFilterOptions);
 router.get('/usage/logs', listUsageLogs);
 router.patch('/events/:eventId', authorizeRoles(ROLES.ADMIN), validate(updateReelEventSchema), updateReelEvent);
+
+// Bulk actions
+router.post('/bulk', authorizeRoles(ROLES.OPERATOR, ROLES.SUPERVISOR, ROLES.ADMIN), validate(bulkCreateReelSchema), bulkCreateReels);
+router.post('/bulk-void', authorizeRoles(ROLES.ADMIN), validate(bulkVoidReelsSchema), bulkVoidReels);
+
 router.get('/', validate(listReelsSchema), listReels);
 router.get('/:id', validate(getReelSchema), getReel);
 router.get('/:id/journey', validate(getReelJourneySchema), getReelJourney);
 
 router.post('/', authorizeRoles(ROLES.OPERATOR, ROLES.SUPERVISOR, ROLES.ADMIN), validate(createReelSchema), createReel);
-router.post('/bulk', authorizeRoles(ROLES.OPERATOR, ROLES.SUPERVISOR, ROLES.ADMIN), validate(bulkCreateReelSchema), bulkCreateReels);
 router.post('/:id/usage', authorizeRoles(ROLES.OPERATOR, ROLES.SUPERVISOR, ROLES.ADMIN), validate(recordUsageSchema), recordUsage);
 router.patch('/:id', authorizeRoles(ROLES.OPERATOR, ROLES.SUPERVISOR, ROLES.ADMIN), validate(updateReelSchema), updateReel);
 router.post('/:id/void', authorizeRoles(ROLES.ADMIN), validate(voidReelSchema), voidReel);
 
 export const reelRoutes = router;
+

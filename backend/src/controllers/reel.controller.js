@@ -66,6 +66,13 @@ export async function voidReel(req, res) {
   return sendSuccess(res, result);
 }
 
+export async function bulkVoidReels(req, res) {
+  const { body } = req.validated;
+  const result = await reelService.bulkVoidReels({ reelIds: body.reel_ids, reason: body.reason, actor: req.user });
+  return sendSuccess(res, result);
+}
+
+
 export async function getNextReelNumber(req, res) {
   const result = await reelService.getNextReelNumber();
   return sendSuccess(res, result);

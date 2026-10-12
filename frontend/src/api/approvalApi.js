@@ -56,4 +56,20 @@ export const approvalApi = {
       body: JSON.stringify({ reason }),
     });
   },
+
+  bulkConfirm: async (eventIds = []) => {
+    return apiFetch('/approvals/bulk-confirm', {
+      method: 'POST',
+      body: JSON.stringify({ event_ids: eventIds }),
+    });
+  },
+
+  bulkDecline: async (eventIds = [], reasonInput = '') => {
+    const reason = typeof reasonInput === 'object' ? reasonInput.reason || '' : String(reasonInput || '');
+    return apiFetch('/approvals/bulk-decline', {
+      method: 'POST',
+      body: JSON.stringify({ event_ids: eventIds, reason }),
+    });
+  },
 };
+

@@ -13,6 +13,7 @@ import CreateReelModal from './CreateReelModal';
 import RecordUsageModal from './RecordUsageModal';
 import MasterCorrectionModal from './MasterCorrectionModal';
 import VoidReelModal from './VoidReelModal';
+import BulkVoidReelModal from './BulkVoidReelModal';
 import Pagination from '../../components/Common/Pagination';
 import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';
@@ -69,6 +70,8 @@ export default function ReelListPage() {
   const [correctionReel, setCorrectionReel] = useState(null);
   const [messageReel, setMessageReel] = useState(null);
   const [voidReel, setVoidReel] = useState(null);
+  const [selectedReelIds, setSelectedReelIds] = useState(new Set());
+  const [showBulkVoidModal, setShowBulkVoidModal] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [sortConfig, setSortConfig] = useState([]); // [{ key, dir }] in priority order
 
@@ -1192,10 +1195,61 @@ export default function ReelListPage() {
                 </button>
               </div>
             )}
+            {/* Bulk Actions Banner for Admin */}
+            {isRoleAdmin && selectedReelIds.size > 0 && (
+              <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 p-3 px-4 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs mb-3 animate-in fade-in">
+                <div className="flex items-center gap-2 text-red-900 dark:text-red-200 font-bold">
+                  <Trash2 size={16} className="text-red-600" />
+                  <span>{selectedReelIds.size} reel{selectedReelIds.size === 1 ? '' : 's'} selected</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedReelIds(new Set())}
+                    className="px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 font-medium transition"
+                  >
+                    Clear Selection
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkVoidModal(true)}
+                    className="px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold flex items-center gap-1.5 shadow-sm transition"
+                  >
+                    <Trash2 size={14} />
+                    <span>Delete Selected ({selectedReelIds.size})</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1100px] text-left text-sm">
                 <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-700 uppercase tracking-wider text-xs">
                   <tr>
+                    {isRoleAdmin && (
+                      <th className="px-3 py-3 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                          checked={
+                            reels.filter((r) => r.status !== 'VOIDED' && r.record_status !== 'VOIDED').length > 0 &&
+                            reels.filter((r) => r.status !== 'VOIDED' && r.record_status !== 'VOIDED').every((r) => selectedReelIds.has(r.id || r._id))
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const activeIds = reels
+                                .filter((r) => r.status !== 'VOIDED' && r.record_status !== 'VOIDED')
+                                .map((r) => r.id || r._id);
+                              setSelectedReelIds(new Set(activeIds));
+                            } else {
+                              setSelectedReelIds(new Set());
+                            }
+                          }}
+                          aria-label="Select all visible active reels"
+                          title="Select all visible active reels"
+                        />
+                      </th>
+                    )}
                     <th className="px-4 py-3 whitespace-nowrap min-w-[210px]">
                       <button type="button" onClick={() => handleSort('reel')}
                         className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
@@ -1306,6 +1360,29 @@ export default function ReelListPage() {
                       <tr key={reelId || reel.sr_no}
                         className={`group ${rowAccent} transition cursor-pointer`}
                         onClick={() => navigate(`/reels/${reelId}`)}>
+
+                        {isRoleAdmin && (
+                          <td className="px-3 py-3.5 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                            {!isVoided ? (
+                              <input
+                                type="checkbox"
+                                className="rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                                checked={selectedReelIds.has(reelId)}
+                                onChange={() => {
+                                  setSelectedReelIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(reelId)) next.delete(reelId);
+                                    else next.add(reelId);
+                                    return next;
+                                  });
+                                }}
+                                aria-label={`Select reel #${reel.reel_no || reel.reel_number}`}
+                              />
+                            ) : (
+                              <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>
+                            )}
+                          </td>
+                        )}
 
                         <td className="align-middle px-4 py-3.5">
                           <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
@@ -1509,6 +1586,20 @@ export default function ReelListPage() {
           <VoidReelModal isOpen={Boolean(voidReel)} reel={voidReel}
             onClose={() => setVoidReel(null)}
             onSuccess={() => { setVoidReel(null); fetchReels(); }} />
+        )
+      }
+      {
+        showBulkVoidModal && (
+          <BulkVoidReelModal
+            isOpen={showBulkVoidModal}
+            selectedReels={reels.filter((r) => selectedReelIds.has(r.id || r._id))}
+            onClose={() => setShowBulkVoidModal(false)}
+            onSuccess={() => {
+              setShowBulkVoidModal(false);
+              setSelectedReelIds(new Set());
+              fetchReels();
+            }}
+          />
         )
       }
     </div >

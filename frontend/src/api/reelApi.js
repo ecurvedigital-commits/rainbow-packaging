@@ -124,6 +124,14 @@ export const reelApi = {
     });
   },
 
+  bulkVoid: async (reelIds = [], reason = '') => {
+    return apiFetch('/reels/bulk-void', {
+      method: 'POST',
+      body: JSON.stringify({ reel_ids: reelIds, reason }),
+    });
+  },
+
+
   updateEvent: async (eventId, data) => {
     return apiFetch(`/reels/events/${eventId}`, {
       method: 'PATCH',

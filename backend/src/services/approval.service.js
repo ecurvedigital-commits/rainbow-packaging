@@ -528,3 +528,60 @@ export async function declineEntry({ eventId, input = {}, actor }) {
     };
   });
 }
+
+/**
+ * Bulk confirm multiple pending approval entries.
+ * @param {{ eventIds: string[], actor: object }} args
+ */
+export async function bulkConfirmEntries({ eventIds, actor }) {
+  const results = [];
+  let confirmedCount = 0;
+  let failedCount = 0;
+
+  for (const eventId of eventIds) {
+    try {
+      const res = await confirmEntry({ eventId, actor });
+      results.push({ id: eventId, success: true, event: res.event });
+      confirmedCount++;
+    } catch (err) {
+      results.push({ id: eventId, success: false, message: err.message });
+      failedCount++;
+    }
+  }
+
+  return {
+    confirmed_count: confirmedCount,
+    failed_count: failedCount,
+    total: eventIds.length,
+    results,
+  };
+}
+
+/**
+ * Bulk decline multiple pending approval entries.
+ * @param {{ eventIds: string[], reason: string, actor: object }} args
+ */
+export async function bulkDeclineEntries({ eventIds, reason, actor }) {
+  const results = [];
+  let declinedCount = 0;
+  let failedCount = 0;
+
+  for (const eventId of eventIds) {
+    try {
+      const res = await declineEntry({ eventId, input: { reason }, actor });
+      results.push({ id: eventId, success: true, declined: res });
+      declinedCount++;
+    } catch (err) {
+      results.push({ id: eventId, success: false, message: err.message });
+      failedCount++;
+    }
+  }
+
+  return {
+    declined_count: declinedCount,
+    failed_count: failedCount,
+    total: eventIds.length,
+    results,
+  };
+}
+

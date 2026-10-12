@@ -33,3 +33,17 @@ export const declineEntrySchema = z.object({
     reason: z.string().max(300).optional(),
   }).optional().default({}),
 });
+
+export const bulkConfirmSchema = z.object({
+  body: z.object({
+    event_ids: z.array(objectIdSchema).min(1, 'At least one event ID is required'),
+  }),
+});
+
+export const bulkDeclineSchema = z.object({
+  body: z.object({
+    event_ids: z.array(objectIdSchema).min(1, 'At least one event ID is required'),
+    reason: z.string().max(300).optional().default('Bulk declined by supervisor/admin'),
+  }),
+});
+

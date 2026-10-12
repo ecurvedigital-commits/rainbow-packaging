@@ -115,6 +115,14 @@ export const voidReelSchema = z.object({
   }),
 });
 
+export const bulkVoidReelsSchema = z.object({
+  body: z.object({
+    reel_ids: z.array(z.string().min(1)).min(1, 'At least one reel ID is required'),
+    reason: z.string().trim().optional(),
+  }),
+});
+
+
 export const updateReelEventSchema = z.object({
   params: z.object({
     eventId: z.string().min(1, 'Event ID is required'),

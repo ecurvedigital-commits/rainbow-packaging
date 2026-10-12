@@ -1025,6 +1025,35 @@ export async function voidReel({ id, input, actor }) {
 }
 
 /**
+ * Bulk void multiple reels by Admin.
+ * @param {{ reelIds: string[], reason?: string, actor: object }} args
+ */
+export async function bulkVoidReels({ reelIds, reason, actor }) {
+  const results = [];
+  let voidedCount = 0;
+  let failedCount = 0;
+
+  for (const id of reelIds) {
+    try {
+      const res = await voidReel({ id, input: { reason: reason || 'Bulk voided by Admin' }, actor });
+      results.push({ id, reel_no: res.reel?.reel_no, success: true });
+      voidedCount++;
+    } catch (err) {
+      results.push({ id, success: false, message: err.message });
+      failedCount++;
+    }
+  }
+
+  return {
+    voided_count: voidedCount,
+    failed_count: failedCount,
+    total: reelIds.length,
+    results,
+  };
+}
+
+
+/**
  * Automatically determine next reel number based on latest active reel in system.
  * @returns {Promise<{ next_reel_no: string }>}
  */

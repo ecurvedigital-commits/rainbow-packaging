@@ -43,10 +43,16 @@ export default function ApprovalsPage() {
   const [journeyTarget, setJourneyTarget] = useState(null); // { reelId, reelNo }
   const [toast, setToast] = useState(null);
 
-  // Correction specific modal & prompt state
   const [selectedCorrectionForEdit, setSelectedCorrectionForEdit] = useState(null);
   const [correctionRejectTarget, setCorrectionRejectTarget] = useState(null);
   const [correctionRejectReason, setCorrectionRejectReason] = useState('');
+
+  // Multi-select bulk approval state
+  const [selectedApprovalIds, setSelectedApprovalIds] = useState(new Set());
+  const [showBulkApproveModal, setShowBulkApproveModal] = useState(false);
+  const [showBulkDeclineModal, setShowBulkDeclineModal] = useState(false);
+  const [bulkDeclineReason, setBulkDeclineReason] = useState('Bulk declined by Supervisor/Admin');
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   const [pagination, setPagination] = useState({
     page: 1,
@@ -56,6 +62,7 @@ export default function ApprovalsPage() {
   });
 
   const canApprove = isRoleAdmin || isRoleSupervisor;
+
 
   const fetchPending = useCallback(async () => {
     setLoading(true);
@@ -210,6 +217,70 @@ export default function ApprovalsPage() {
       setActionLoadingId(null);
     }
   };
+
+  const toggleSelectApproval = (id) => {
+    setSelectedApprovalIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAllVisible = () => {
+    if (selectedApprovalIds.size === pendingItems.length && pendingItems.length > 0) {
+      setSelectedApprovalIds(new Set());
+    } else {
+      setSelectedApprovalIds(new Set(pendingItems.map((item) => item.id || item._id)));
+    }
+  };
+
+  const handleBulkApproveSubmit = async () => {
+    if (!selectedApprovalIds.size) return;
+    setBulkActionLoading(true);
+    try {
+      const res = await approvalApi.bulkConfirm(Array.from(selectedApprovalIds));
+      const confirmed = res.data?.confirmed_count ?? selectedApprovalIds.size;
+      const failed = res.data?.failed_count ?? 0;
+      setToast({
+        type: 'success',
+        message: failed > 0
+          ? `Approved ${confirmed} request(s). ${failed} could not be approved.`
+          : `Approved ${confirmed} request(s) successfully!`,
+      });
+      setSelectedApprovalIds(new Set());
+      setShowBulkApproveModal(false);
+      fetchPending();
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Bulk approval failed.' });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkDeclineSubmit = async () => {
+    if (!selectedApprovalIds.size) return;
+    setBulkActionLoading(true);
+    try {
+      const res = await approvalApi.bulkDecline(Array.from(selectedApprovalIds), bulkDeclineReason.trim() || 'Bulk declined by Supervisor/Admin');
+      const declined = res.data?.declined_count ?? selectedApprovalIds.size;
+      const failed = res.data?.failed_count ?? 0;
+      setToast({
+        type: 'success',
+        message: failed > 0
+          ? `Declined ${declined} request(s). ${failed} could not be declined.`
+          : `Declined ${declined} request(s) successfully.`,
+      });
+      setSelectedApprovalIds(new Set());
+      setShowBulkDeclineModal(false);
+      fetchPending();
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Bulk decline failed.' });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
 
   const handleApplyCorrectionDirect = async (corrId, messageNote) => {
     if (!isRoleAdmin) return;
@@ -423,32 +494,94 @@ export default function ApprovalsPage() {
             message="All reel entries and weight usages have been reviewed."
           />
         ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {pendingItems.map((item) => {
-              const itemId = item.id || item._id;
-              const reelNo = item.reel_no || item.reel?.reel_no || item.reel_number || 'N/A';
-              const performedBy = item.performed_by_name || item.requested_by?.username || item.requested_by || 'Operator';
-              const dateStr = item.performed_at || item.created_at || item.createdAt;
+          <div className="space-y-4">
+            {canApprove && (
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-800 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs">
+                <label className="flex items-center gap-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={pendingItems.length > 0 && selectedApprovalIds.size === pendingItems.length}
+                    onChange={handleSelectAllVisible}
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"
+                  />
+                  <span>Select All Visible ({pendingItems.length})</span>
+                </label>
 
-              const isUsage = item.event_type === 'USAGE_LOGGED';
-              const prevW = item.payload?.previous_weight ?? item.previous_weight_kg;
-              const currW = item.payload?.current_weight_entered ?? item.requested_weight_kg;
-              const usedW = item.payload?.used_this_time;
+                {selectedApprovalIds.size > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800">
+                      {selectedApprovalIds.size} Selected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowBulkApproveModal(true)}
+                      className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition flex items-center gap-1.5"
+                    >
+                      <CheckCircle2 size={14} />
+                      Approve Selected ({selectedApprovalIds.size})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowBulkDeclineModal(true)}
+                      className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 border border-rose-200 dark:border-rose-800 transition flex items-center gap-1.5"
+                    >
+                      <XCircle size={14} />
+                      Decline Selected ({selectedApprovalIds.size})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedApprovalIds(new Set())}
+                      className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-2 py-1"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
-              return (
-                <div
-                  key={itemId}
-                  className={`bg-white dark:bg-slate-800 rounded-2xl p-5 border shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 transition ${
-                    item.has_pending_correction
-                      ? 'border-amber-400 dark:border-amber-700 bg-amber-50/20'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300'
-                  }`}
-                >
-                  {/* Clickable Content */}
+            <div className="grid grid-cols-1 gap-4">
+              {pendingItems.map((item) => {
+                const itemId = item.id || item._id;
+                const isSelected = selectedApprovalIds.has(itemId);
+                const reelNo = item.reel_no || item.reel?.reel_no || item.reel_number || 'N/A';
+                const performedBy = item.performed_by_name || item.requested_by?.username || item.requested_by || 'Operator';
+                const dateStr = item.performed_at || item.created_at || item.createdAt;
+
+                const isUsage = item.event_type === 'USAGE_LOGGED';
+                const prevW = item.payload?.previous_weight ?? item.previous_weight_kg;
+                const currW = item.payload?.current_weight_entered ?? item.requested_weight_kg;
+                const usedW = item.payload?.used_this_time;
+
+                return (
                   <div
-                    onClick={() => handleOpenReel(item)}
-                    className="space-y-2 flex-1 cursor-pointer group"
+                    key={itemId}
+                    className={`bg-white dark:bg-slate-800 rounded-2xl p-5 border shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 transition ${
+                      isSelected
+                        ? 'border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/20 dark:bg-indigo-950/20'
+                        : item.has_pending_correction
+                          ? 'border-amber-400 dark:border-amber-700 bg-amber-50/20'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+                    }`}
                   >
+                    {canApprove && (
+                      <div className="flex items-center pt-1 md:pt-0 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectApproval(itemId)}
+                          className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"
+                          title="Select for bulk action"
+                        />
+                      </div>
+                    )}
+
+                    {/* Clickable Content */}
+                    <div
+                      onClick={() => handleOpenReel(item)}
+                      className="space-y-2 flex-1 cursor-pointer group"
+                    >
+
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase ${
                         item.event_type === 'CREATED'
@@ -585,7 +718,9 @@ export default function ApprovalsPage() {
               onLimitChange={(l) => setPagination((prev) => ({ ...prev, limit: l, page: 1 }))}
             />
           </div>
+          </div>
         )
+
       ) : activeTab === 'corrections' ? (
         /* CORRECTIONS TAB */
         correctionItems.length === 0 ? (
@@ -943,6 +1078,115 @@ export default function ApprovalsPage() {
           }}
         />
       )}
+
+      {/* Bulk Confirm Approval Modal */}
+      {showBulkApproveModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700 animate-scale-in">
+            <div className="bg-emerald-50 dark:bg-emerald-950/40 px-6 py-4 border-b border-emerald-200 dark:border-emerald-900/50 flex justify-between items-center">
+              <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-300 font-bold text-base">
+                <CheckCircle2 size={20} className="text-emerald-600 dark:text-emerald-400" />
+                <span>Confirm {selectedApprovalIds.size} Approvals</span>
+              </div>
+              <button
+                onClick={() => setShowBulkApproveModal(false)}
+                disabled={bulkActionLoading}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Are you sure you want to approve and confirm <strong>{selectedApprovalIds.size} pending entries</strong>? All selected entries will be applied directly to their reels.
+              </p>
+              <div className="flex justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkApproveModal(false)}
+                  disabled={bulkActionLoading}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkApproveSubmit}
+                  disabled={bulkActionLoading}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition disabled:opacity-50"
+                >
+                  {bulkActionLoading ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                  <span>Confirm All ({selectedApprovalIds.size})</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Decline Modal */}
+      {showBulkDeclineModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700 animate-scale-in">
+            <div className="bg-rose-50 dark:bg-rose-950/40 px-6 py-4 border-b border-rose-200 dark:border-rose-900/50 flex justify-between items-center">
+              <div className="flex items-center gap-2 text-rose-900 dark:text-rose-300 font-bold text-base">
+                <XCircle size={20} className="text-rose-600 dark:text-rose-400" />
+                <span>Decline {selectedApprovalIds.size} Entries</span>
+              </div>
+              <button
+                onClick={() => setShowBulkDeclineModal(false)}
+                disabled={bulkActionLoading}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-900/50"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleBulkDeclineSubmit();
+              }}
+              className="p-6 space-y-4"
+            >
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Declining these <strong>{selectedApprovalIds.size} entries</strong> will cascade revert the values on their respective reels.
+              </p>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-1.5">
+                  Decline Reason *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={bulkDeclineReason}
+                  onChange={(e) => setBulkDeclineReason(e.target.value)}
+                  className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl p-3 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  placeholder="Reason for declining selected entries"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkDeclineModal(false)}
+                  disabled={bulkActionLoading}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={bulkActionLoading}
+                  className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition disabled:opacity-50"
+                >
+                  {bulkActionLoading ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
+                  <span>Decline All ({selectedApprovalIds.size})</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
