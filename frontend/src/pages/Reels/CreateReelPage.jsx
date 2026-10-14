@@ -69,20 +69,91 @@ const getCell = (row, aliases) => {
 };
 
 const excelDateToInput = (value) => {
-  if (!value) return '';
+  if (!value && value !== 0) return '';
+
+  // 1. Already a Date instance
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return value.toISOString().slice(0, 10);
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
+
+  // 2. Numeric Excel serial date code
   if (typeof value === 'number' && XLSX.SSF?.parse_date_code) {
     const parsed = XLSX.SSF.parse_date_code(value);
     if (parsed?.y && parsed?.m && parsed?.d) {
       return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
     }
   }
+
   const raw = String(value).trim();
-  if (!raw) return '';
+  if (!raw || raw === '-' || raw.toUpperCase() === 'N/A' || raw.toUpperCase() === 'NA') return '';
+
+  // 3. String containing a 5-digit number (Excel serial as string)
+  if (/^\d{5}$/.test(raw) && XLSX.SSF?.parse_date_code) {
+    const parsed = XLSX.SSF.parse_date_code(Number(raw));
+    if (parsed?.y && parsed?.m && parsed?.d) {
+      return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
+    }
+  }
+
+  // 4. ISO format (YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD)
+  const isoMatch = raw.match(/^(\d{4})[./\-](\d{1,2})[./\-](\d{1,2})/);
+  if (isoMatch) {
+    const [, y, m, d] = isoMatch;
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+
+  // 5. Day-Month-Year format (DD.MM.YYYY, DD/MM/YYYY, DD-MM-YYYY, DD.MM.YY, etc.)
+  const dmyMatch = raw.match(/^(\d{1,2})[./\-](\d{1,2})[./\-](\d{2,4})/);
+  if (dmyMatch) {
+    let [, d, m, y] = dmyMatch;
+    if (y.length === 2) {
+      y = Number(y) < 50 ? `20${y}` : `19${y}`;
+    }
+    if (Number(m) > 12 && Number(d) <= 12) {
+      const temp = d;
+      d = m;
+      m = temp;
+    }
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+
+  // 6. Textual month format (e.g. 12-Oct-2026, 12 October 2026, Oct 12 2026)
+  const months = {
+    jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+    jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+  };
+  const textMatch = raw.match(/^(\d{1,2})(?:st|nd|rd|th)?[\s./\-]+([a-zA-Z]{3,})[\s./\-]+(\d{2,4})/);
+  if (textMatch) {
+    let [, d, monStr, y] = textMatch;
+    const m = months[monStr.toLowerCase().slice(0, 3)];
+    if (m) {
+      if (y.length === 2) y = Number(y) < 50 ? `20${y}` : `19${y}`;
+      return `${y}-${m}-${d.padStart(2, '0')}`;
+    }
+  }
+  const textMatchRev = raw.match(/^([a-zA-Z]{3,})[\s./\-]+(\d{1,2})(?:st|nd|rd|th)?[\s,./\-]+(\d{2,4})/);
+  if (textMatchRev) {
+    let [, monStr, d, y] = textMatchRev;
+    const m = months[monStr.toLowerCase().slice(0, 3)];
+    if (m) {
+      if (y.length === 2) y = Number(y) < 50 ? `20${y}` : `19${y}`;
+      return `${y}-${m}-${d.padStart(2, '0')}`;
+    }
+  }
+
+  // 7. Standard Date fallback
   const parsed = new Date(raw);
-  return Number.isNaN(parsed.getTime()) ? raw : parsed.toISOString().slice(0, 10);
+  if (!Number.isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  return '';
 };
 
 const toNumberOrBlank = (value) => {
@@ -110,7 +181,7 @@ const parseExcelSheetSmart = (sheet) => {
   const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
   if (!grid.length) return [];
 
-  const KEYWORDS = ['reel', 'quality', 'gsm', 'size', 'bf', 'weight', 'supplier', 'mill', 'master', 'sr', 'head', 'bucket'];
+  const KEYWORDS = ['reel', 'quality', 'gsm', 'size', 'bf', 'weight', 'supplier', 'mill', 'master', 'sr', 'head', 'bucket', 'date', 'purchase'];
 
   let headerRowIndex = 0;
   let maxMatches = 0;
@@ -201,7 +272,12 @@ const buildRowFromExcel = (raw, fieldDefs, fallback) => {
     row.bf = fallback?.bf || 18;
   }
 
-  const rawDate = getCell(raw, ['purchase_date', 'purchasedate', 'date', 'purchased_date', 'purch_date', 'inv_date', 'invoice_date', 'purchase date']);
+  const rawDate = getCell(raw, [
+    'purchase_date', 'purchasedate', 'purchase date',
+    'date', 'purchased_date', 'purch_date',
+    'inv_date', 'invoice_date', 'invoice date',
+    'bill_date', 'bill date', 'p_date', 'pdate', 'purch_dt', 'purchasedt'
+  ]);
   const parsedDate = excelDateToInput(rawDate);
   row.purchase_date = parsedDate || fallback?.purchase_date || new Date().toISOString().slice(0, 10);
 
