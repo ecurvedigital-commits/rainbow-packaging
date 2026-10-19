@@ -345,6 +345,9 @@ export default function ReelListPage() {
       case 'mill': return String(reel.mill_name || '').toLowerCase();
       case 'weight': return Number(reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight ?? 0);
       case 'consumed': {
+        if (consumedFrom || consumedTo) {
+          return Number(reel.consumed_in_range ?? 0);
+        }
         const cur = Number(reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight ?? 0);
         const init = Number(reel.max_weight ?? reel.initial_weight_kg ?? cur);
         return Math.max(0, init - cur);
@@ -419,12 +422,14 @@ export default function ReelListPage() {
     try {
       const reportReels = applySort(await fetchAllReportReels());
 
+      const hasDateFilter = Boolean(consumedFrom || consumedTo);
       let totalWeight = 0;
       let totalConsumedWeight = 0;
       const rows = reportReels.map((reel, index) => {
         const currentWeight = reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight ?? 0;
         const initialWeight = reel.max_weight ?? reel.initial_weight_kg ?? currentWeight;
-        const consumedWeight = Math.max(0, initialWeight - currentWeight);
+        const lifetimeConsumed = Math.max(0, initialWeight - currentWeight);
+        const consumedWeight = hasDateFilter ? (Number(reel.consumed_in_range) || 0) : lifetimeConsumed;
         totalWeight += Number(currentWeight) || 0;
         totalConsumedWeight += Number(consumedWeight) || 0;
         const itemRate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 0;
@@ -551,7 +556,7 @@ export default function ReelListPage() {
               <th>Supplier</th>
               <th>Mill</th>
               <th>Stock Weight</th>
-              <th>Total Consumed</th>
+              <th>${hasDateFilter ? 'Consumed in Period' : 'Total Consumed'}</th>
               <th>Price / KG</th>
               <th>Created</th>
             </tr>
@@ -598,15 +603,17 @@ export default function ReelListPage() {
         return;
       }
 
+      const hasDateFilter = Boolean(consumedFrom || consumedTo);
       const rows = reportReels.map((reel, index) => {
         const currentWeight = Number(reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight ?? 0);
         const initialWeight = Number(reel.max_weight ?? reel.initial_weight_kg ?? currentWeight);
-        const consumedWeight = Math.max(0, initialWeight - currentWeight);
+        const lifetimeConsumed = Math.max(0, initialWeight - currentWeight);
+        const consumedInPeriod = hasDateFilter ? (Number(reel.consumed_in_range) || 0) : lifetimeConsumed;
         const rate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 0;
         const totalValue = currentWeight * rate;
         const purchaseDate = formatDate(reel.purchase_date || reel.created_at || reel.createdAt);
 
-        return {
+        const row = {
           'Sr. No': index + 1,
           'Reel Number': reel.reel_no || reel.reel_number || '',
           'Quality': reel.quality || reel.paper_quality || '',
@@ -618,13 +625,22 @@ export default function ReelListPage() {
           'Mill Name': reel.mill_name || '',
           'Current Stock Weight (kg)': currentWeight,
           'Initial Max Weight (kg)': initialWeight,
-          'Consumed Weight (kg)': consumedWeight,
-          'Rate / KG (Rs)': rate > 0 ? rate : 0,
-          'Total Stock Value (Rs)': totalValue > 0 ? Math.round(totalValue) : 0,
-          'Purchase Date': purchaseDate || '',
-          'Status': reel.status || 'AVAILABLE',
-          'Station': reel.station || '',
         };
+
+        if (hasDateFilter) {
+          row['Consumed in Period (kg)'] = consumedInPeriod;
+          row['Lifetime Consumed (kg)'] = lifetimeConsumed;
+        } else {
+          row['Consumed Weight (kg)'] = lifetimeConsumed;
+        }
+
+        row['Rate / KG (Rs)'] = rate > 0 ? rate : 0;
+        row['Total Stock Value (Rs)'] = totalValue > 0 ? Math.round(totalValue) : 0;
+        row['Purchase Date'] = purchaseDate || '';
+        row['Status'] = reel.status || 'AVAILABLE';
+        row['Station'] = reel.station || '';
+
+        return row;
       });
 
       const worksheet = XLSX.utils.json_to_sheet(rows);
@@ -858,24 +874,20 @@ export default function ReelListPage() {
           </div>
           <div className="h-8 w-px bg-slate-700/60 hidden sm:block" />
           <div>
-            <p className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">Total Consumed Weight</p>
-            <p className="text-2xl font-extrabold text-amber-300" style={{ fontFamily: 'var(--font-family-display)' }}>
-              {formatWeight(displayTotalConsumed)}
+            <p className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">
+              {consumedFrom || consumedTo
+                ? `Consumed ${consumedFrom === consumedTo ? `on ${consumedFrom}` : `${consumedFrom || 'start'} to ${consumedTo || 'today'}`}`
+                : 'Total Consumed Weight'}
             </p>
+            <p className="text-2xl font-extrabold text-amber-300" style={{ fontFamily: 'var(--font-family-display)' }}>
+              {formatWeight(consumedFrom || consumedTo ? displayConsumedInRange : displayTotalConsumed)}
+            </p>
+            {(consumedFrom || consumedTo) && (
+              <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                Lifetime all-time: {formatWeight(summary?.total_lifetime_consumed_weight ?? displayTotalConsumed)}
+              </p>
+            )}
           </div>
-          {(consumedFrom || consumedTo) && (
-            <>
-              <div className="h-8 w-px bg-slate-700/60 hidden sm:block" />
-              <div>
-                <p className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider">
-                  Consumed {consumedFrom === consumedTo ? `on ${consumedFrom}` : `${consumedFrom || 'start'} to ${consumedTo || 'today'}`} ({pagination.total || reels.length} reels{summary?.total_consumed_in_range === undefined && pagination.totalPages > 1 ? ', this page' : ''})
-                </p>
-                <p className="text-2xl font-extrabold text-emerald-300" style={{ fontFamily: 'var(--font-family-display)' }}>
-                  {formatWeight(displayConsumedInRange)}
-                </p>
-              </div>
-            </>
-          )}
           <div className="h-8 w-px bg-slate-700/60 hidden sm:block" />
           <div>
             <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
@@ -1311,8 +1323,8 @@ export default function ReelListPage() {
                     <th className="px-4 py-3 whitespace-nowrap text-right">
                       <button type="button" onClick={() => handleSort('consumed')}
                         className="inline-flex items-center gap-1.5 uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:text-amber-700 transition justify-end"
-                        title="Click to sort by total consumed weight">
-                        {SORT_LABELS.consumed}
+                        title={consumedFrom || consumedTo ? 'Click to sort by consumed in selected period' : 'Click to sort by total consumed weight'}>
+                        {consumedFrom || consumedTo ? 'Consumed in Period' : SORT_LABELS.consumed}
                         {renderSortIcon('consumed')}
                       </button>
                     </th>
@@ -1458,16 +1470,13 @@ export default function ReelListPage() {
 
                         <td className="align-middle px-4 py-3.5 text-right whitespace-nowrap tabular-nums">
                           <div className="font-extrabold text-amber-600 dark:text-amber-400">
-                            {formatWeight(consumedWeight)}
+                            {formatWeight(consumedFrom || consumedTo ? (reel.consumed_in_range ?? 0) : consumedWeight)}
                           </div>
                           <div className="text-[10px] font-semibold text-slate-400">
-                            {consumedPct > 0 ? `${consumedPct}% used` : 'Unused (0%)'}
+                            {consumedFrom || consumedTo
+                              ? `Lifetime: ${formatWeight(consumedWeight)} (${consumedPct}%)`
+                              : (consumedPct > 0 ? `${consumedPct}% used` : 'Unused (0%)')}
                           </div>
-                          {reel.consumed_in_range !== undefined && (
-                            <div className="mt-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                              {formatWeight(reel.consumed_in_range)} in selected dates
-                            </div>
-                          )}
                         </td>
 
                         <td className="align-middle px-4 py-3.5 text-right whitespace-nowrap tabular-nums">

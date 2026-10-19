@@ -212,14 +212,23 @@ export async function listReels({ filters = {}, actor }) {
       toDate.setHours(23, 59, 59, 999);
       range.$lte = toDate;
     }
+    const eventMatch = {
+      event_type: EVENT_TYPES.USAGE_LOGGED,
+      approval_status: { $ne: APPROVAL_STATUS.DECLINED },
+      performed_at: range,
+    };
+    if (filters.station) {
+      const stations = Array.isArray(filters.station)
+        ? filters.station
+        : String(filters.station).split(',').map((s) => s.trim()).filter(Boolean);
+      if (stations.length === 1) {
+        eventMatch['payload.station'] = stations[0];
+      } else if (stations.length > 1) {
+        eventMatch['payload.station'] = { $in: stations };
+      }
+    }
     const agg = await ReelEvent.aggregate([
-      {
-        $match: {
-          event_type: EVENT_TYPES.USAGE_LOGGED,
-          approval_status: { $ne: APPROVAL_STATUS.DECLINED },
-          performed_at: range,
-        },
-      },
+      { $match: eventMatch },
       { $group: { _id: '$reel_id', kg: { $sum: '$payload.used_this_time' } } },
     ]);
     consumedByReel = new Map(agg.map((a) => [String(a._id), Math.round(a.kg * 100) / 100]));
@@ -270,7 +279,7 @@ export async function listReels({ filters = {}, actor }) {
 
   const summaryDoc = summaryAgg && summaryAgg[0] ? summaryAgg[0] : null;
   const totalStockWeight = summaryDoc ? Math.round(summaryDoc.total_stock_weight * 100) / 100 : 0;
-  const totalConsumedWeight = summaryDoc ? Math.round(summaryDoc.total_consumed_weight * 100) / 100 : 0;
+  const lifetimeConsumedWeight = summaryDoc ? Math.round(summaryDoc.total_consumed_weight * 100) / 100 : 0;
   const totalStockValue = summaryDoc ? Math.round(summaryDoc.total_stock_value * 100) / 100 : 0;
   const avgPricePerKg = totalStockWeight > 0 && totalStockValue > 0
     ? Math.round((totalStockValue / totalStockWeight) * 100) / 100
@@ -287,7 +296,8 @@ export async function listReels({ filters = {}, actor }) {
   const summary = {
     total_reels: total,
     total_stock_weight: totalStockWeight,
-    total_consumed_weight: totalConsumedWeight,
+    total_consumed_weight: consumedByReel !== null ? totalConsumedInRange : lifetimeConsumedWeight,
+    total_lifetime_consumed_weight: lifetimeConsumedWeight,
     total_stock_value: totalStockValue,
     avg_price_per_kg: avgPricePerKg,
     ...(consumedByReel !== null ? { total_consumed_in_range: totalConsumedInRange } : {}),
