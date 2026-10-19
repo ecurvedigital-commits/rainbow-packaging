@@ -76,6 +76,7 @@ export default function ReelListPage() {
   const [sortConfig, setSortConfig] = useState([]); // [{ key, dir }] in priority order
 
   const [reels, setReels] = useState([]);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [masterCodeMap, setMasterCodeMap] = useState({});
@@ -282,6 +283,8 @@ export default function ReelListPage() {
           totalPages: meta.totalPages || 1,
         }));
       }
+      const sum = response.meta?.summary || meta?.summary || null;
+      setSummary(sum);
     } catch (err) {
       console.error('[ReelListPage] Error fetching reels:', err);
       setError(err.message || 'Failed to fetch reels.');
@@ -731,20 +734,35 @@ export default function ReelListPage() {
   const totalActiveCount = Object.values(filterValues)
     .reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (consumedFrom ? 1 : 0) + (consumedTo ? 1 : 0);
 
-  const filteredTotalWeight = reels.reduce((sum, r) => sum + (r.previous_weight ?? r.current_weight_kg ?? r.max_weight ?? 0), 0);
-  const filteredTotalConsumed = reels.reduce((sum, r) => {
+  const pageTotalWeight = reels.reduce((sum, r) => sum + (r.previous_weight ?? r.current_weight_kg ?? r.max_weight ?? 0), 0);
+  const pageTotalConsumed = reels.reduce((sum, r) => {
     const cur = r.previous_weight ?? r.current_weight_kg ?? r.max_weight ?? 0;
     const init = r.max_weight ?? r.initial_weight_kg ?? cur;
     return sum + Math.max(0, init - cur);
   }, 0);
-  const filteredTotalPrice = Math.round(
+  const pageTotalPrice = Math.round(
     reels.reduce((sum, r) => {
       const w = r.previous_weight ?? r.current_weight_kg ?? r.max_weight ?? 0;
       const rate = r.rate_per_kg && Number(r.rate_per_kg) > 0 ? Number(r.rate_per_kg) : 0;
       return sum + (w * rate);
     }, 0)
   );
-  const filteredAvgPricePerKg = filteredTotalWeight > 0 && filteredTotalPrice > 0 ? Math.round((filteredTotalPrice / filteredTotalWeight) * 100) / 100 : 0;
+
+  const displayTotalWeight = summary?.total_stock_weight !== undefined
+    ? summary.total_stock_weight
+    : pageTotalWeight;
+  const displayTotalConsumed = summary?.total_consumed_weight !== undefined
+    ? summary.total_consumed_weight
+    : pageTotalConsumed;
+  const displayTotalPrice = summary?.total_stock_value !== undefined
+    ? summary.total_stock_value
+    : pageTotalPrice;
+  const displayAvgPricePerKg = summary?.avg_price_per_kg !== undefined
+    ? summary.avg_price_per_kg
+    : (displayTotalWeight > 0 && displayTotalPrice > 0 ? Math.round((displayTotalPrice / displayTotalWeight) * 100) / 100 : 0);
+  const displayConsumedInRange = summary?.total_consumed_in_range !== undefined
+    ? summary.total_consumed_in_range
+    : reels.reduce((s, r) => s + (Number(r.consumed_in_range) || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -835,14 +853,14 @@ export default function ReelListPage() {
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Stock Weight</p>
             <p className="text-2xl font-extrabold text-indigo-300" style={{ fontFamily: 'var(--font-family-display)' }}>
-              {formatWeight(filteredTotalWeight)}
+              {formatWeight(displayTotalWeight)}
             </p>
           </div>
           <div className="h-8 w-px bg-slate-700/60 hidden sm:block" />
           <div>
             <p className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">Total Consumed Weight</p>
             <p className="text-2xl font-extrabold text-amber-300" style={{ fontFamily: 'var(--font-family-display)' }}>
-              {formatWeight(filteredTotalConsumed)}
+              {formatWeight(displayTotalConsumed)}
             </p>
           </div>
           {(consumedFrom || consumedTo) && (
@@ -850,10 +868,10 @@ export default function ReelListPage() {
               <div className="h-8 w-px bg-slate-700/60 hidden sm:block" />
               <div>
                 <p className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider">
-                  Consumed {consumedFrom === consumedTo ? `on ${consumedFrom}` : `${consumedFrom || 'start'} to ${consumedTo || 'today'}`} ({reels.length} reels{pagination.totalPages > 1 ? ', this page' : ''})
+                  Consumed {consumedFrom === consumedTo ? `on ${consumedFrom}` : `${consumedFrom || 'start'} to ${consumedTo || 'today'}`} ({pagination.total || reels.length} reels{summary?.total_consumed_in_range === undefined && pagination.totalPages > 1 ? ', this page' : ''})
                 </p>
                 <p className="text-2xl font-extrabold text-emerald-300" style={{ fontFamily: 'var(--font-family-display)' }}>
-                  {formatWeight(reels.reduce((s, r) => s + (Number(r.consumed_in_range) || 0), 0))}
+                  {formatWeight(displayConsumedInRange)}
                 </p>
               </div>
             </>
@@ -864,7 +882,7 @@ export default function ReelListPage() {
               <IndianRupee className="w-3.5 h-3.5" /> Total Stock Value
             </p>
             <p className="text-2xl font-extrabold text-emerald-400" style={{ fontFamily: 'var(--font-family-display)' }}>
-              {formatCurrency(filteredTotalPrice)}
+              {formatCurrency(displayTotalPrice)}
             </p>
           </div>
           <div className="h-8 w-px bg-slate-700/60 hidden sm:block" />
@@ -873,7 +891,7 @@ export default function ReelListPage() {
               <IndianRupee className="w-3.5 h-3.5" /> Price / KG (Avg)
             </p>
             <p className="text-2xl font-extrabold text-purple-300" style={{ fontFamily: 'var(--font-family-display)' }}>
-              ₹{filteredAvgPricePerKg.toFixed(2)}/kg
+              ₹{displayAvgPricePerKg.toFixed(2)}/kg
             </p>
           </div>
         </div>

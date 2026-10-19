@@ -228,12 +228,70 @@ export async function listReels({ filters = {}, actor }) {
 
   console.log('[listReels] Executing Mongoose Reel.find with query:', JSON.stringify(query));
 
-  const [reels, total, masterCodeDocs, masterProductDocs] = await Promise.all([
+  const [reels, total, summaryAgg, masterCodeDocs, masterProductDocs] = await Promise.all([
     Reel.find(query).sort(sortOption).skip(skip).limit(limit).lean(),
     Reel.countDocuments(query),
+    Reel.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: null,
+          total_stock_weight: {
+            $sum: { $ifNull: ['$previous_weight', { $ifNull: ['$max_weight', 0] }] },
+          },
+          total_consumed_weight: {
+            $sum: {
+              $max: [
+                0,
+                {
+                  $subtract: [
+                    { $ifNull: ['$max_weight', 0] },
+                    { $ifNull: ['$previous_weight', { $ifNull: ['$max_weight', 0] }] },
+                  ],
+                },
+              ],
+            },
+          },
+          total_stock_value: {
+            $sum: {
+              $multiply: [
+                { $ifNull: ['$previous_weight', { $ifNull: ['$max_weight', 0] }] },
+                { $ifNull: ['$rate_per_kg', 0] },
+              ],
+            },
+          },
+          matching_ids: { $push: '$_id' },
+        },
+      },
+    ]),
     MasterCode.find({ status: 'ACTIVE' }).lean(),
     MasterProduct.find({ is_active: true, master_code: { $ne: null } }).select('master_key master_code quality gsm bf size').lean(),
   ]);
+
+  const summaryDoc = summaryAgg && summaryAgg[0] ? summaryAgg[0] : null;
+  const totalStockWeight = summaryDoc ? Math.round(summaryDoc.total_stock_weight * 100) / 100 : 0;
+  const totalConsumedWeight = summaryDoc ? Math.round(summaryDoc.total_consumed_weight * 100) / 100 : 0;
+  const totalStockValue = summaryDoc ? Math.round(summaryDoc.total_stock_value * 100) / 100 : 0;
+  const avgPricePerKg = totalStockWeight > 0 && totalStockValue > 0
+    ? Math.round((totalStockValue / totalStockWeight) * 100) / 100
+    : 0;
+
+  let totalConsumedInRange = 0;
+  if (consumedByReel && summaryDoc?.matching_ids) {
+    for (const id of summaryDoc.matching_ids) {
+      totalConsumedInRange += consumedByReel.get(String(id)) || 0;
+    }
+    totalConsumedInRange = Math.round(totalConsumedInRange * 100) / 100;
+  }
+
+  const summary = {
+    total_reels: total,
+    total_stock_weight: totalStockWeight,
+    total_consumed_weight: totalConsumedWeight,
+    total_stock_value: totalStockValue,
+    avg_price_per_kg: avgPricePerKg,
+    ...(consumedByReel !== null ? { total_consumed_in_range: totalConsumedInRange } : {}),
+  };
 
   const items = reels.map((reel) => {
     let resolvedMasterCode = null;
@@ -291,7 +349,10 @@ export async function listReels({ filters = {}, actor }) {
 
   return {
     items,
-    meta: buildPaginationMeta({ page, limit, total }),
+    meta: {
+      ...buildPaginationMeta({ page, limit, total }),
+      summary,
+    },
   };
 }
 
