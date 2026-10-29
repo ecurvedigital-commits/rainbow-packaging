@@ -10,18 +10,18 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 import dns from 'dns';
 import { execSync } from 'child_process';
-import { User } from '../src/models/user.model.js';
-import { RefreshToken } from '../src/models/refreshToken.model.js';
-import { Reel } from '../src/models/reel.model.js';
-import { ReelEvent } from '../src/models/reelEvent.model.js';
-import { CorrectionRequest } from '../src/models/correctionRequest.model.js';
-import { Notification } from '../src/models/notification.model.js';
-import { Message } from '../src/models/message.model.js';
-import { Counter } from '../src/models/counter.model.js';
-import { DigestLog } from '../src/models/digestLog.model.js';
-import { Setting } from '../src/models/setting.model.js';
-import { ROLES } from '../src/constants/roles.js';
-import { hashPassword } from '../src/utils/password.js';
+import { User } from '../src/modules/users/models/user.model.js';
+import { RefreshToken } from '../src/modules/auth/models/refreshToken.model.js';
+import { Reel } from '../src/modules/reels/models/reel.model.js';
+import { ReelEvent } from '../src/modules/reels/models/reelEvent.model.js';
+import { CorrectionRequest } from '../src/modules/approvals/models/correctionRequest.model.js';
+import { Notification } from '../src/modules/notifications/models/notification.model.js';
+import { Message } from '../src/modules/notifications/models/message.model.js';
+import { Counter } from '../src/core/database/counter.model.js';
+import { DigestLog } from '../src/modules/digest/models/digestLog.model.js';
+import { Setting } from '../src/modules/settings/models/setting.model.js';
+import { ROLES } from '../src/core/constants/roles.js';
+import { hashPassword } from '../src/core/utils/password.js';
 
 function configureDns() {
   if (process.platform === 'win32') {

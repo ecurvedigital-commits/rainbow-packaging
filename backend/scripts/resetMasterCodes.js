@@ -1,5 +1,5 @@
-import { connectDb, disconnectDb } from '../src/config/db.js';
-import { MasterCode } from '../src/models/masterCode.model.js';
+import { connectDb, disconnectDb } from '../src/core/database/db.js';
+import { MasterCode } from '../src/modules/reels/models/masterCode.model.js';
 
 const NEW_18_MASTER_CODES = [
   { master_code: '1', master_code_name: 'Duplex ultra 220', quality: 'duplex', bf: 'ultra', gsm: 220, size: '', description: 'quality -> duplex, bf -> ultra, gsm -> 220', status: 'ACTIVE' },

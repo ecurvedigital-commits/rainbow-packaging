@@ -1,28 +1,106 @@
-# Rainbow Packages — Reel Inventory & Management System (Project Context)
+# Rainbow Packages — Modular Inventory & Management System (Project Context)
 
-## 1. Project Overview
-A full-stack web application built for **Rainbow Packages** to manage paper & board reel inventory, track real-time reel usage across machine stations, resolve master product codes, process multi-role approvals, and generate inventory stock valuation reports.
-
-- **Frontend Stack**: React 18 (Vite), Tailwind CSS, Lucide React icons, React Router v6.
-- **Backend Stack**: Node.js, Express.js REST API.
-- **Database**: MongoDB Atlas (`reel_inventory_prod`) with Mongoose ODM.
-- **Production Data**: Populated with 409 active reels and 25 master codes (migrated from production Excel sheets).
+**Active Branch:** `rainbow-packaging-testing`  
+**Architecture:** Modular Monolith (Domain Modules + Platform Modules + Shared Core)  
+**Database:** MongoDB Atlas (`reel_inventory_dev` / `reel_inventory_prod`) with Mongoose ODM  
+**Automated Tests:** 37/37 Backend Tests Passing | Production Vite Frontend Bundling Clean  
 
 ---
 
-## 2. Roles & Permissions
+## 1. Project Overview & Multi-Category Evolution
+
+A full-stack enterprise web application built for **Rainbow Packages** to manage packaging inventory, track real-time raw material consumption across machine stations, resolve master product codes, process multi-role approvals, and generate inventory stock valuation reports.
+
+The application has been modularized from a single-product system into a domain-driven modular monolith supporting three core inventory domains:
+1. **Reels Module (`modules/reels`)** — Production baseline managing paper & board reels (inwarding, quality metrics, GSM, BF, size, running weight balance, machine station consumption, master codes, and roll journey event logs).
+2. **Sheets Module (`modules/sheets`)** — Scaffolded domain for sheet-fed paper and corrugated boards (dimensions Length × Width, caliper thickness, GSM, ream conversions, cutting yield, and trim waste).
+3. **Finished Boxes Module (`modules/finished-boxes`)** — Scaffolded domain for finished packaging goods (3D dimensions Length × Width × Height, flute profiles A/B/C/E/3-ply/5-ply, customer purchase orders, pallet bundling, and vehicle dispatch).
+
+- **Frontend Stack**: React 19 / Vite, Tailwind CSS, Lucide React icons, React Router v7.
+- **Backend Stack**: Node.js (>=20), Express.js REST API with Zod validation.
+- **Database**: MongoDB Atlas with 13 collections (`reels`, `reelevents`, `mastercodes`, `masterproducts`, `users`, `approvals`, `audit_logs`, `daily_digests`, `messages`, `notifications`, `counters`, `custom_field_definitions`, `system_settings`).
+
+---
+
+## 2. Directory & Modular Architecture
+
+### Backend (`backend/src/`)
+```
+backend/src/
+├── app.js                          # Express application factory & middleware pipeline
+├── server.js                       # Server entry point, DB bootstrap, and shutdown hooks
+│
+├── core/                           # Shared Platform Infrastructure
+│   ├── config/                     # cors.js, env.js, logger.js, mailer.js, swagger.js
+│   ├── constants/                  # roles.js, errorCodes.js, approvalStatus.js, etc.
+│   ├── database/                   # db.js (Mongoose connection & transactions), counter service
+│   ├── errors/                     # ApiError.js (Standardized operational errors)
+│   ├── middleware/                 # authenticate, authorizeRoles, errorHandler, rateLimiter, validate
+│   ├── services/                   # eventLog.service.js, email.service.js, keepAlive.service.js
+│   ├── utils/                      # apiResponse.js, pagination.js, password.js
+│   ├── validators/                 # common.validator.js
+│   └── index.js                    # Unified core barrel export
+│
+├── modules/                        # Domain & Feature Modules
+│   ├── reels/                      # [Inventory Domain: Production Baseline]
+│   │   ├── constants/              # qualities.js (paper grades), reelStatus.js, stations.js
+│   │   ├── controllers/            # reel, masterCode, masterProduct controllers
+│   │   ├── models/                 # Reel, ReelEvent, MasterCode, MasterProduct models
+│   │   ├── routes/                 # reel, masterCode, masterProduct express routes
+│   │   ├── services/               # reel, usage, masterCode, masterProduct services
+│   │   ├── utils/                  # reelStatus, masterKeyGenerator, buildReelFilter
+│   │   ├── validators/             # reel, masterProduct Zod validators
+│   │   └── index.js                # Public module barrel export
+│   ├── sheets/                     # [Inventory Domain: Future Scaffold]
+│   ├── finished-boxes/             # [Inventory Domain: Future Scaffold]
+│   ├── auth/                       # [Platform Module] Session, JWT refresh, password logic
+│   ├── users/                      # [Platform Module] User management & RBAC
+│   ├── approvals/                  # [Platform Module] Approval workflow & correction review
+│   ├── audit/                      # [Platform Module] Central audit trail
+│   ├── notifications/              # [Platform Module] In-app alerts & internal messaging
+│   ├── settings/                   # [Platform Module] System settings & dynamic custom fields
+│   ├── dashboard/                  # [Platform Module] KPI aggregations & summary tiles
+│   └── digest/                     # [Platform Module] Daily email digest reporting
+│
+├── routes/                         # Central API Routing
+│   ├── health.routes.js            # Infrastructure health probe (/api/v1/health)
+│   └── index.js                    # Central API router mounting all modules
+│
+├── jobs/                           # Background Cron Schedulers (daily digest)
+└── templates/                      # Email & Notification HTML Templates
+```
+
+### Frontend (`frontend/src/`)
+```
+frontend/src/
+├── api/                            # Cross-cutting HTTP API clients (client.js with JWT interceptor)
+├── auth/                           # Authentication context and route guards (AuthContext, RoleGuard, ProtectedRoute)
+├── components/                     # Shared UI components (Common modals, tables, Pagination, AppShell, ReelMark)
+├── modules/                        # Domain-Driven Inventory Modules
+│   ├── reels/                      # Production baseline (16 pages & modals, reelApi, masterCodeApi, masterProductApi)
+│   ├── sheets/                     # Future category scaffold (SheetsPage.jsx, sheetApi.js, index.js)
+│   └── finished-boxes/             # Future category scaffold (FinishedBoxesPage.jsx, boxApi.js, index.js)
+├── pages/                          # Shared Application Pages (Dashboard, Approvals, Users, Audit, Settings, Digest)
+├── utils/                          # formatters.js (currency, weights, dates, badges)
+├── App.jsx                         # Central Application Route Table
+└── main.jsx                        # React root entry point
+```
+
+---
+
+## 3. Roles & Permissions
 
 | Role | Operational Rights |
 |---|---|
-| **OPERATOR** | Can create new reels, record reel weight usage (with usage dates), request reel master corrections, and compose internal messages. All modifications create pending approvals. |
-| **SUPERVISOR** | Confirms or declines pending operator entries (creations, usage logs, correction requests). View-only dashboard & inventory access. |
+| **OPERATOR** | Can inward new reels, record reel weight usage (with usage dates), request reel master corrections, and compose internal messages. All modifications create pending approvals. |
+| **SUPERVISOR** | Confirms or declines pending operator entries (creations, usage logs, correction requests). View-only dashboard & inventory access. Master codes management. |
 | **ADMIN** | Full system rights: approve/decline requests, direct reel edits, void reels, manage master codes/products, custom field definitions, daily digests, and PDF reporting. |
 
 ---
 
-## 3. Data Architecture & Key Schemas
+## 4. Data Architecture & Key Schemas
 
-### A. Reel Model (`reel.model.js`)
+### A. Reel Model (`modules/reels/models/reel.model.js`)
 - `reel_no` *(String, unique)*: Physical barcode / reel identifier (e.g. `1002`, `R-7801`). Critical search key.
 - `master_code` *(String, indexed)*: Specification identifier (e.g., `VK-20-20`). Replaces legacy `master_key`.
 - `quality` *(Enum)*: `VK`, `SPECTRA`, `ULTRA`, `SK`, `IMPORTANT`, `SBS`, `FBB`, `DCB`.
@@ -49,51 +127,54 @@ A full-stack web application built for **Rainbow Packages** to manage paper & bo
 > 3. PDF Stock Reports (`ReelStockPdfModal.jsx`)
 > They are hidden/commented out across all other pages (modals, detail views, usage logs, notifications, digest).
 
-### B. Master Product Model (`masterProduct.model.js`)
+### B. Master Product Model (`modules/reels/models/masterProduct.model.js`)
 - `master_code` *(String, unique)*: Main spec identifier.
 - `quality`, `gsm`, `bf`, `size`: Associated standard physical specifications.
 
-### C. Usage & Event Logs (`eventLog.model.js` / `usage.service.js`)
+### C. Usage & Event Logs (`modules/reels/models/reelEvent.model.js` / `core/services/eventLog.service.js`)
 - Records immutable history of reel usage, station consumption, operator actions, and approval decisions.
 - Machine Stations: `E-Flute`, `Narrow-Flute`, `Sheater`, `Sold to Revati`, `Return`, `Others`.
 - Supports explicit usage dates (`usage_date`).
 
 ---
 
-## 4. Key Workflows & Features
+## 5. Running the Project From the Root Directory
 
-### 1. Batch / Continuous Reel Usage (`RecordUsageModal.jsx`)
-- Live debounced search input (300ms) with search results list showing matching reels, active balance, and status.
-- Exact reel code entry auto-selects the reel for usage input.
-- Submitting usage updates the database, emits parent data refreshes, and keeps the modal open in search view with a green success message so operators can update multiple reels in sequence.
+**YES! You can now run the entire application directly from the root repository directory.**
 
-### 2. Login Quick Actions Launcher (`LoginQuickActionsModal.jsx`)
-- Displays a 3-option modal upon login:
-  1. **Option 1: Create Reel** (Navigates to `/reels/create`).
-  2. **Option 2: Update Weight** (Live search & record usage modal).
-  3. **Option 3: Inventory Details** (Navigates to `/reels`).
-- When returning or closing sub-modals, re-opens to the main menu options.
+The root `package.json` and backend configuration have been configured so that `backend/.env` is automatically resolved regardless of your current working directory.
 
-### 3. Reel Inventory & Chip Filters (`ReelListPage.jsx`)
-- Filterable inventory table with status cards (`REEL`, `CUT`, `NILL`).
-- Active filter chips (Quality, Status, Master Code, Station, GSM, Purchase Date).
-- Stock Valuation summary (Total Weight kg, Total Stock Value ₹).
-- Export capabilities: CSV export and Stock Summary PDF export.
+### Available Root Commands
 
-### 4. Stock PDF Report Generation (`ReelStockPdfModal.jsx`)
-- Generates formatted PDF inventory reports broken down by Master Code, Quality, Status, and Weight Balance with total stock valuation.
+| Action | Root Command | What It Does |
+|---|---|---|
+| **Run Backend API** | `npm run dev:backend` *(or `npm run dev`)* | Starts Express server on `http://localhost:5000` via nodemon |
+| **Run Frontend UI** | `npm run dev:frontend` | Starts Vite React server on `http://localhost:5173` |
+| **Run Full Stack in Prod** | `npm start` | Runs Express server with embedded frontend static build |
+| **Run All Tests** | `npm test` | Runs the full 37-test automated backend test suite |
+| **Build Frontend** | `npm run build:frontend` | Compiles frontend assets into `frontend/dist/` |
+| **Full Project Build** | `npm run build` | Installs dependencies, compiles frontend, and builds DB indexes |
 
-### 5. Multi-Role Approvals (`ApprovalsPage.jsx`, `OperatorApprovalsPage.jsx`)
-- Pending creations, usage reports, and correction requests require confirmation by Supervisor or Admin.
-- Declining a usage report automatically reverts the reel's balance weight to its previous confirmed state (`previous_weight`).
+### Running Both Frontend & Backend in Parallel
+To run both simultaneously in development:
+* **Terminal 1 (Root):**
+  ```bash
+  npm run dev:backend
+  ```
+* **Terminal 2 (Root):**
+  ```bash
+  npm run dev:frontend
+  ```
 
 ---
 
-## 5. Development & Execution Conventions
+## 6. Coding & Development Standards
 
-- **Frontend Directory**: `frontend/` (Vite, `npm run dev` at `localhost:5173`, `npm run build`).
-- **Backend Directory**: `backend/` (Express API at `localhost:5000`, `npm run dev`).
-- **Build Verification**: Always run `npm run build` in `frontend/` to confirm zero compilation/lint errors before finishing tasks.
+- **Maintain Module Boundaries**: Inventory code belongs in `modules/<domain>/`. Shared infrastructure belongs in `core/`.
+- **Zero Monolithic Leakage**: Never place category-specific constants or schemas in `core/`.
+- **Automated Verification**: Before concluding work, always verify:
+  1. `npm test` (All 37 backend tests must pass).
+  2. `npm run build:frontend` (Vite build must bundle with 0 errors).
 - **Code Rules**:
   - Maintain docstrings and file header comments.
   - Do NOT re-introduce `master_key` (use `master_code`).

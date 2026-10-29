@@ -1,13 +1,13 @@
-import { connectDb, disconnectDb } from '../src/config/db.js';
-import { Reel } from '../src/models/reel.model.js';
-import { ReelEvent } from '../src/models/reelEvent.model.js';
-import { Notification } from '../src/models/notification.model.js';
-import { User } from '../src/models/user.model.js';
-import { getNextSequence } from '../src/services/counter.service.js';
-import { QUALITIES } from '../src/constants/qualities.js';
-import { REEL_STATUS, RECORD_STATUS } from '../src/constants/reelStatus.js';
-import { EVENT_TYPES } from '../src/constants/eventTypes.js';
-import { APPROVAL_STATUS } from '../src/constants/approvalStatus.js';
+import { connectDb, disconnectDb } from '../src/core/database/db.js';
+import { Reel } from '../src/modules/reels/models/reel.model.js';
+import { ReelEvent } from '../src/modules/reels/models/reelEvent.model.js';
+import { Notification } from '../src/modules/notifications/models/notification.model.js';
+import { User } from '../src/modules/users/models/user.model.js';
+import { getNextSequence } from '../src/core/database/counter.service.js';
+import { QUALITIES } from '../src/modules/reels/constants/qualities.js';
+import { REEL_STATUS, RECORD_STATUS } from '../src/modules/reels/constants/reelStatus.js';
+import { EVENT_TYPES } from '../src/core/constants/eventTypes.js';
+import { APPROVAL_STATUS } from '../src/core/constants/approvalStatus.js';
 import fs from 'node:fs';
 
 const BASE_URL = 'http://localhost:5000/api/v1';

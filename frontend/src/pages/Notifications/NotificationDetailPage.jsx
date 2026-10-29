@@ -25,7 +25,7 @@ import { notificationApi } from '../../api/notificationApi';
 import { correctionApi } from '../../api/correctionApi';
 import { useAuth } from '../../auth/AuthContext';
 import { formatDate, formatDateTime, formatWeight } from '../../utils/formatters';
-import MasterCorrectionModal from '../Reels/MasterCorrectionModal';
+import MasterCorrectionModal from '../../modules/reels/pages/MasterCorrectionModal';
 import Toast from '../../components/Common/Toast';
 import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';

@@ -1,28 +1,27 @@
 import { Router } from 'express';
 import { healthRoutes } from './health.routes.js';
-import { authRoutes } from './auth.routes.js';
-import { userRoutes } from './user.routes.js';
-import { reelRoutes } from './reel.routes.js';
-import { approvalRoutes } from './approval.routes.js';
-import { notificationRoutes } from './notification.routes.js';
-import { dashboardRoutes } from './dashboard.routes.js';
-import { fieldDefinitionRoutes } from './fieldDefinition.routes.js';
-import { auditRoutes } from './audit.routes.js';
-import { digestRoutes } from './digest.routes.js';
-import { settingRoutes } from './setting.routes.js';
-import masterProductRoutes from './masterProduct.routes.js';
-import masterCodeRoutes from './masterCode.routes.js';
-import { messageRoutes } from './message.routes.js';
-import { correctionRoutes } from './correction.routes.js';
+
+// Platform Feature Modules
+import { authRoutes } from '../modules/auth/index.js';
+import { userRoutes } from '../modules/users/index.js';
+import { approvalRoutes, correctionRoutes } from '../modules/approvals/index.js';
+import { notificationRoutes, messageRoutes } from '../modules/notifications/index.js';
+import { settingRoutes, fieldDefinitionRoutes } from '../modules/settings/index.js';
+import { dashboardRoutes } from '../modules/dashboard/index.js';
+import { auditRoutes } from '../modules/audit/index.js';
+import { digestRoutes } from '../modules/digest/index.js';
+
+// Inventory Domain Modules
+import { reelRoutes, masterCodeRoutes, masterProductRoutes } from '../modules/reels/index.js';
+import { sheetRoutes } from '../modules/sheets/index.js';
+import { boxRoutes } from '../modules/finished-boxes/index.js';
 
 const router = Router();
 
+// 1. Health & Platform Modules
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
-router.use('/reels', reelRoutes);
-router.use('/master-products', masterProductRoutes);
-router.use('/master-codes', masterCodeRoutes);
 router.use('/approvals', approvalRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/messages', messageRoutes);
@@ -33,5 +32,11 @@ router.use('/audit', auditRoutes);
 router.use('/digest', digestRoutes);
 router.use('/settings', settingRoutes);
 
-export const apiRouter = router;
+// 2. Inventory Domain Modules
+router.use('/reels', reelRoutes);
+router.use('/master-products', masterProductRoutes);
+router.use('/master-codes', masterCodeRoutes);
+router.use('/sheets', sheetRoutes);
+router.use('/finished-boxes', boxRoutes);
 
+export const apiRouter = router;

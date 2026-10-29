@@ -6,7 +6,7 @@ import {
   normalizeBf,
   normalizeSize,
   generateMasterKey,
-} from '../src/utils/masterKeyGenerator.js';
+} from '../src/modules/reels/utils/masterKeyGenerator.js';
 
 test('Master Key Unit Tests - Parameter Normalization & Generation', async (t) => {
   await t.test('1. normalizeQuality handles all standard qualities and quality codes', () => {

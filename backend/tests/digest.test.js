@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderDailyDigest } from '../src/templates/dailyDigest.template.js';
-import { previewDigest, sendDigest, listDigestLogs } from '../src/services/digest.service.js';
+import { previewDigest, sendDigest, listDigestLogs } from '../src/modules/digest/services/digest.service.js';
 
 describe('Digest Service & Template Unit Tests', () => {
   test('service functions are defined and exported', () => {

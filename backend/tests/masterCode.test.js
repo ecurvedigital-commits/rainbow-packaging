@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateMasterKey } from '../src/utils/masterKeyGenerator.js';
+import { generateMasterKey } from '../src/modules/reels/utils/masterKeyGenerator.js';
 
 describe('Master Code & Technical Master Key Resolution Unit Tests', () => {
   it('verifies Master Code structure and properties', () => {

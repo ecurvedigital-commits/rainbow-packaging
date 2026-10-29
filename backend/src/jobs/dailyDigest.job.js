@@ -1,5 +1,5 @@
-import { sendDigest } from '../services/digest.service.js';
-import { logger } from '../config/logger.js';
+import { sendDigest } from '../modules/digest/services/digest.service.js';
+import { logger } from '../core/config/logger.js';
 
 /**
  * Runs the daily digest email job.

@@ -1,5 +1,5 @@
-import { logger } from '../config/logger.js';
-import { ensureSettings } from '../services/setting.service.js';
+import { logger } from '../core/config/logger.js';
+import { ensureSettings } from '../modules/settings/services/setting.service.js';
 import { runDailyDigestJob } from './dailyDigest.job.js';
 
 let cronTask = null;

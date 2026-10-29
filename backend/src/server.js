@@ -1,11 +1,11 @@
-import { env } from './config/env.js';
-import { logger } from './config/logger.js';
-import { connectDb, disconnectDb } from './config/db.js';
-import { ensureSettings } from './services/setting.service.js';
-import { ensureAdmin } from './services/user.service.js';
+import { env } from './core/config/env.js';
+import { logger } from './core/config/logger.js';
+import { connectDb, disconnectDb } from './core/database/db.js';
+import { ensureSettings } from './modules/settings/services/setting.service.js';
+import { ensureAdmin } from './modules/users/services/user.service.js';
 import { initJobs } from './jobs/index.js';
 import { createApp } from './app.js';
-import { startKeepAlive, stopKeepAlive } from './services/keepAlive.service.js';
+import { startKeepAlive, stopKeepAlive } from './core/services/keepAlive.service.js';
 
 let server;
 

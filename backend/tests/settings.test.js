@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { ensureSettings, getSettings, updateSettings } from '../src/services/setting.service.js';
+import { ensureSettings, getSettings, updateSettings } from '../src/modules/settings/services/setting.service.js';
 
 describe('Settings Service Unit Tests', () => {
   test('ensureSettings, getSettings and updateSettings function exports exist and are callable', () => {

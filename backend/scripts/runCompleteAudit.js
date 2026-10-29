@@ -1,13 +1,13 @@
-import { connectDb, disconnectDb } from '../src/config/db.js';
-import { User } from '../src/models/user.model.js';
-import { Reel } from '../src/models/reel.model.js';
-import { ReelEvent } from '../src/models/reelEvent.model.js';
-import { Notification } from '../src/models/notification.model.js';
-import { Setting } from '../src/models/setting.model.js';
-import { FieldDefinition } from '../src/models/fieldDefinition.model.js';
-import { DigestLog } from '../src/models/digestLog.model.js';
-import { ROLES } from '../src/constants/roles.js';
-import { hashPassword } from '../src/utils/password.js';
+import { connectDb, disconnectDb } from '../src/core/database/db.js';
+import { User } from '../src/modules/users/models/user.model.js';
+import { Reel } from '../src/modules/reels/models/reel.model.js';
+import { ReelEvent } from '../src/modules/reels/models/reelEvent.model.js';
+import { Notification } from '../src/modules/notifications/models/notification.model.js';
+import { Setting } from '../src/modules/settings/models/setting.model.js';
+import { FieldDefinition } from '../src/modules/settings/models/fieldDefinition.model.js';
+import { DigestLog } from '../src/modules/digest/models/digestLog.model.js';
+import { ROLES } from '../src/core/constants/roles.js';
+import { hashPassword } from '../src/core/utils/password.js';
 
 import { getRegisteredRoutes } from './extractRoutes.js';
 

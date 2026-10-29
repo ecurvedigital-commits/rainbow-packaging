@@ -6,13 +6,13 @@ import swaggerUi from 'swagger-ui-express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { swaggerDocument } from './config/swagger.js';
-import { corsOptions } from './config/cors.js';
-import { requestLogger } from './middleware/requestLogger.js';
-import { apiRateLimiter } from './middleware/rateLimiter.js';
+import { swaggerDocument } from './core/config/swagger.js';
+import { corsOptions } from './core/config/cors.js';
+import { requestLogger } from './core/middleware/requestLogger.js';
+import { apiRateLimiter } from './core/middleware/rateLimiter.js';
 import { apiRouter } from './routes/index.js';
-import { notFound } from './middleware/notFound.js';
-import { errorHandler } from './middleware/errorHandler.js';
+import { notFound } from './core/middleware/notFound.js';
+import { errorHandler } from './core/middleware/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -59,7 +59,7 @@ export function createApp() {
 
   // SPA fallback: Return index.html for non-API routes when frontend build exists (Express 5 compatible)
   app.use((req, res, next) => {
-    if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.startsWith('/docs')) {
+    if ((req.method !== 'GET' && req.method !== 'HEAD') || req.path.startsWith('/api') || req.path.startsWith('/docs')) {
       return next();
     }
     const indexPath = path.join(frontendDistPath, 'index.html');

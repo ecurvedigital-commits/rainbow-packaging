@@ -5,17 +5,11 @@ import ProtectedRoute from './auth/ProtectedRoute';
 import RoleGuard from './auth/RoleGuard';
 import AppShell from './components/Layout/AppShell';
 
-// Pages
+// Common Core Pages
 import LoginPage from './pages/Login/LoginPage';
 import DashboardPage from './pages/Dashboard/DashboardPage';
-import ReelListPage from './pages/Reels/ReelListPage';
-import CreateReelPage from './pages/Reels/CreateReelPage';
-import ReelDetailPage from './pages/Reels/ReelDetailPage';
-import UsageLogsPage from './pages/Reels/UsageLogsPage';
-import MasterProductListPage from './pages/MasterProducts/MasterProductListPage';
-import MasterProductDetailPage from './pages/MasterProducts/MasterProductDetailPage';
-import MasterCodeListPage from './pages/MasterCodes/MasterCodeListPage';
-import MasterCodeDetailPage from './pages/MasterCodes/MasterCodeDetailPage';
+import ModuleSelectPage from './pages/Modules/ModuleSelectPage';
+import SampleDashboardPage from './pages/Modules/SampleDashboardPage';
 import ApprovalsPage from './pages/Approvals/ApprovalsPage';
 import OperatorApprovalsPage from './pages/Approvals/OperatorApprovalsPage';
 import NotificationsPage from './pages/Notifications/NotificationsPage';
@@ -31,6 +25,24 @@ import ComposeMessagePage from './pages/Messages/ComposeMessagePage';
 import ForbiddenPage from './pages/Errors/ForbiddenPage';
 import NotFoundPage from './pages/Errors/NotFoundPage';
 
+// Domain Module: Reels
+import ReelListPage from './modules/reels/pages/ReelListPage';
+import CreateReelPage from './modules/reels/pages/CreateReelPage';
+import ReelDetailPage from './modules/reels/pages/ReelDetailPage';
+import UsageLogsPage from './modules/reels/pages/UsageLogsPage';
+import MasterProductListPage from './modules/reels/pages/MasterProductListPage';
+import MasterProductDetailPage from './modules/reels/pages/MasterProductDetailPage';
+import MasterCodeListPage from './modules/reels/pages/MasterCodeListPage';
+import MasterCodeDetailPage from './modules/reels/pages/MasterCodeDetailPage';
+
+// Domain Module: Sheets (New Category Placeholder)
+import SheetsPage from './modules/sheets/pages/SheetsPage';
+import SheetsDashboardPage from './modules/sheets/pages/SheetsDashboardPage';
+
+// Domain Module: Finished Boxes (New Category Placeholder)
+import FinishedBoxesPage from './modules/finished-boxes/pages/FinishedBoxesPage';
+import FinishedBoxesDashboardPage from './modules/finished-boxes/pages/FinishedBoxesDashboardPage';
+
 export default function App() {
   return (
     <AuthProvider>
@@ -41,7 +53,46 @@ export default function App() {
         {/* 403 Forbidden Route */}
         <Route path="/403" element={<ForbiddenPage />} />
 
-        {/* Authenticated Application Shell Routes */}
+        {/* Root Redirect to Standalone Module Selector */}
+        <Route path="/" element={<Navigate to="/modules" replace />} />
+
+        {/* 1. Standalone Module Selection Screen (Outside AppShell) */}
+        <Route
+          path="/modules"
+          element={
+            <ProtectedRoute>
+              <ModuleSelectPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 2. Blank Dashboard Screens for Unimplemented Modules (Outside AppShell) */}
+        <Route
+          path="/sheets/dashboard"
+          element={
+            <ProtectedRoute>
+              <SheetsDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/finished-boxes/dashboard"
+          element={
+            <ProtectedRoute>
+              <FinishedBoxesDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sample/dashboard"
+          element={
+            <ProtectedRoute>
+              <SampleDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 3. Authenticated Reels Operational Workspace (Inside AppShell) */}
         <Route
           element={
             <ProtectedRoute>
@@ -49,20 +100,21 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          {/* Dashboard */}
+          {/* Proper Operational Reels Dashboard */}
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/reels/dashboard" element={<DashboardPage />} />
 
-          {/* Reel Inventory Routes */}
+          {/* Reels Inventory Routes */}
           <Route path="/reels" element={<ReelListPage />} />
           <Route path="/reels/create" element={<CreateReelPage />} />
           <Route path="/reels/:id" element={<ReelDetailPage />} />
           <Route path="/usage-logs" element={<UsageLogsPage />} />
 
-          {/* Master Product Inventory Routes */}
+          {/* Reel Domain: Master Products */}
           <Route path="/master-products" element={<MasterProductListPage />} />
           <Route path="/master-products/:id" element={<MasterProductDetailPage />} />
 
-          {/* Master Codes Management (Supervisors & Admins) */}
+          {/* Reel Domain: Master Codes Management (Supervisors & Admins) */}
           <Route
             path="/master-codes"
             element={
@@ -79,6 +131,10 @@ export default function App() {
               </RoleGuard>
             }
           />
+
+          {/* Sheets & Finished Boxes Inventory Scaffolds */}
+          <Route path="/sheets" element={<SheetsPage />} />
+          <Route path="/finished-boxes" element={<FinishedBoxesPage />} />
 
           {/* Approvals (Supervisors & Admins) */}
           <Route
@@ -160,9 +216,6 @@ export default function App() {
 
           {/* Change Password */}
           <Route path="/change-password" element={<ChangePasswordPage />} />
-
-          {/* Root Redirect to Dashboard */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>
 
         {/* Catch-all 404 Route */}

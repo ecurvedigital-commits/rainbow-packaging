@@ -1,0 +1,17 @@
+import { z } from 'zod';
+import { paginationQuerySchema, idParamSchema, booleanString } from '../../../core/validators/common.validator.js';
+
+export const listNotificationsSchema = z.object({
+  query: paginationQuerySchema.extend({
+    unread: booleanString,
+  }),
+});
+
+export const markReadSchema = z.object({
+  params: idParamSchema,
+});
+
+export const getNotificationSchema = z.object({
+  params: idParamSchema,
+});
+

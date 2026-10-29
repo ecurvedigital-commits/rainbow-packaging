@@ -1,8 +1,8 @@
-import { connectDb, disconnectDb } from '../src/config/db.js';
-import { Reel } from '../src/models/reel.model.js';
-import { MasterProduct } from '../src/models/masterProduct.model.js';
-import { User } from '../src/models/user.model.js';
-import { generateMasterKey } from '../src/utils/masterKeyGenerator.js';
+import { connectDb, disconnectDb } from '../src/core/database/db.js';
+import { Reel } from '../src/modules/reels/models/reel.model.js';
+import { MasterProduct } from '../src/modules/reels/models/masterProduct.model.js';
+import { User } from '../src/modules/users/models/user.model.js';
+import { generateMasterKey } from '../src/modules/reels/utils/masterKeyGenerator.js';
 import fs from 'node:fs';
 
 const isCommit = process.argv.includes('--commit');

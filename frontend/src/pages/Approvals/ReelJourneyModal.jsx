@@ -3,14 +3,14 @@ import {
   X, History, Clock, ArrowRight, ShieldCheck, User, 
   MapPin, Scale, Layers, Calendar, CheckCircle2, AlertTriangle 
 } from 'lucide-react';
-import { reelApi } from '../../api/reelApi';
+import { reelApi } from '../../modules/reels/api/reelApi';
 import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';
 import EmptyState from '../../components/Common/EmptyState';
 import Pagination from '../../components/Common/Pagination';
 import { formatWeight, formatDate, formatDateTime, getStatusBadgeStyle } from '../../utils/formatters';
 import { useAuth } from '../../auth/AuthContext';
-import EditReelEventModal from '../Reels/EditReelEventModal';
+import EditReelEventModal from '../../modules/reels/pages/EditReelEventModal';
 import { Edit3 } from 'lucide-react';
 
 export default function ReelJourneyModal({ reelId, reelNo: initialReelNo, onClose }) {

@@ -10,7 +10,7 @@ import { correctionApi } from '../../api/correctionApi';
 import { useAuth } from '../../auth/AuthContext';
 import DeclineReasonModal from './DeclineReasonModal';
 import ReelJourneyModal from './ReelJourneyModal';
-import MasterCorrectionModal from '../Reels/MasterCorrectionModal';
+import MasterCorrectionModal from '../../modules/reels/pages/MasterCorrectionModal';
 import Pagination from '../../components/Common/Pagination';
 import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';

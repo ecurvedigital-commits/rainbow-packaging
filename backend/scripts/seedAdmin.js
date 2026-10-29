@@ -1,9 +1,9 @@
-import { connectDb, disconnectDb } from '../src/config/db.js';
-import { User } from '../src/models/user.model.js';
-import { ROLES } from '../src/constants/roles.js';
-import { hashPassword } from '../src/utils/password.js';
-import { env } from '../src/config/env.js';
-import { logger } from '../src/config/logger.js';
+import { connectDb, disconnectDb } from '../src/core/database/db.js';
+import { User } from '../src/modules/users/models/user.model.js';
+import { ROLES } from '../src/core/constants/roles.js';
+import { hashPassword } from '../src/core/utils/password.js';
+import { env } from '../src/core/config/env.js';
+import { logger } from '../src/core/config/logger.js';
 
 async function run() {
   try {

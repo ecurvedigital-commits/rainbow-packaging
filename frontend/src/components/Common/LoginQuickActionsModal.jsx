@@ -5,9 +5,9 @@ import {
   AlertTriangle, Loader2, RefreshCw, Layers
 } from 'lucide-react';
 import ReelMark from '../ReelMark';
-import { reelApi } from '../../api/reelApi';
+import { reelApi } from '../../modules/reels/api/reelApi';
 import { formatWeight } from '../../utils/formatters';
-import RecordUsageModal from '../../pages/Reels/RecordUsageModal';
+import RecordUsageModal from '../../modules/reels/pages/RecordUsageModal';
 
 export default function LoginQuickActionsModal({ isOpen, onClose }) {
   const navigate = useNavigate();

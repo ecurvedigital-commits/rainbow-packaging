@@ -1,15 +1,15 @@
-import { connectDb, disconnectDb } from '../src/config/db.js';
-import { User } from '../src/models/user.model.js';
-import { RefreshToken } from '../src/models/refreshToken.model.js';
-import { Reel } from '../src/models/reel.model.js';
-import { ReelEvent } from '../src/models/reelEvent.model.js';
-import { FieldDefinition } from '../src/models/fieldDefinition.model.js';
-import { Notification } from '../src/models/notification.model.js';
-import { Counter } from '../src/models/counter.model.js';
-import { DigestLog } from '../src/models/digestLog.model.js';
-import { Setting } from '../src/models/setting.model.js';
-import { MasterProduct } from '../src/models/masterProduct.model.js';
-import { logger } from '../src/config/logger.js';
+import { connectDb, disconnectDb } from '../src/core/database/db.js';
+import { User } from '../src/modules/users/models/user.model.js';
+import { RefreshToken } from '../src/modules/auth/models/refreshToken.model.js';
+import { Reel } from '../src/modules/reels/models/reel.model.js';
+import { ReelEvent } from '../src/modules/reels/models/reelEvent.model.js';
+import { FieldDefinition } from '../src/modules/settings/models/fieldDefinition.model.js';
+import { Notification } from '../src/modules/notifications/models/notification.model.js';
+import { Counter } from '../src/core/database/counter.model.js';
+import { DigestLog } from '../src/modules/digest/models/digestLog.model.js';
+import { Setting } from '../src/modules/settings/models/setting.model.js';
+import { MasterProduct } from '../src/modules/reels/models/masterProduct.model.js';
+import { logger } from '../src/core/config/logger.js';
 
 const models = [
   User,

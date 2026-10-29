@@ -19,7 +19,7 @@ export const LoginPage = () => {
   }, []);
 
   if (!loading && isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/modules" replace />;
   }
 
   const handleSubmit = async (e) => {
@@ -35,7 +35,7 @@ export const LoginPage = () => {
       if (loggedUser?.must_change_password) {
         navigate('/change-password', { replace: true });
       } else {
-        navigate('/dashboard', { replace: true });
+        navigate('/modules', { replace: true });
       }
     } catch (err) {
       setSubmitting(false);

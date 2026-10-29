@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { getDbStatus } from '../config/db.js';
-import { sendSuccess } from '../utils/apiResponse.js';
+import { getDbStatus } from '../core/database/db.js';
+import { sendSuccess } from '../core/utils/apiResponse.js';
 
 const router = Router();
 

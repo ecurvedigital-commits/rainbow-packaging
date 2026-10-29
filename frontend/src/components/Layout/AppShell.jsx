@@ -9,7 +9,7 @@ import {
   LayoutDashboard, ClipboardCheck, Boxes, Layers, Users, Settings, LogOut,
   Bell, Menu, ChevronDown, KeyRound, SlidersHorizontal, FileText, Mail, Weight,
   AlertTriangle, ArrowRight, X, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Sparkles,
-  MessageSquarePlus,
+  MessageSquarePlus, Package, LayoutGrid,
 } from 'lucide-react';
 
 export const AppShell = ({ children }) => {
@@ -26,8 +26,8 @@ export const AppShell = ({ children }) => {
   const [showQuickActions, setShowQuickActions] = useState(false);
 
   useEffect(() => {
-    // Show quick actions modal on dashboard main page (on every refresh/visit)
-    if (location.pathname === '/' || location.pathname === '/dashboard') {
+    // Show quick actions modal on reels dashboard main page
+    if (location.pathname === '/dashboard' || location.pathname === '/reels/dashboard') {
       setShowQuickActions(true);
     }
   }, [location.pathname]);
@@ -103,9 +103,16 @@ export const AppShell = ({ children }) => {
   // Dynamic Document Title Branding
   useEffect(() => {
     const routeTitles = {
-      '/dashboard': 'Dashboard',
+      '/modules': 'Select Module',
+      '/dashboard': 'Reels Dashboard',
+      '/reels/dashboard': 'Reels Dashboard',
       '/reels': 'Reel Inventory',
       '/reels/create': 'Create Reel',
+      '/sheets': 'Sheets Inventory',
+      '/sheets/dashboard': 'Sheets Dashboard',
+      '/finished-boxes': 'Finished Boxes',
+      '/finished-boxes/dashboard': 'Finished Boxes Dashboard',
+      '/sample/dashboard': 'Sample Dashboard',
       '/usage-logs': 'Record Reel Usage',
       '/master-products': 'Master Products',
       '/master-codes': 'Master Codes',
@@ -201,7 +208,17 @@ export const AppShell = ({ children }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {/* Switch Module Button */}
+            <button
+              onClick={() => navigate('/modules')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-full border border-gray-200 shadow-xs transition-all"
+              title="Return to Module Selection Screen"
+            >
+              <LayoutGrid size={14} className="text-gray-500 shrink-0" />
+              <span className="hidden md:inline">Switch Module</span>
+            </button>
+
             {/* Quick Actions Trigger Button (Desktop Only) */}
             <button
               onClick={() => setShowQuickActions(true)}
@@ -415,7 +432,8 @@ const SidebarContent = ({
           <div className="h-px bg-gray-200 my-2 mx-1" />
         )}
         <div className="space-y-1">
-          <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" collapsed={collapsed} onClick={onNavigate} />
+          <NavItem to="/modules" icon={LayoutGrid} label="Switch Module" collapsed={collapsed} onClick={onNavigate} />
+          <NavItem to="/dashboard" icon={LayoutDashboard} label="Reels Dashboard" collapsed={collapsed} onClick={onNavigate} />
           <NavItem to="/reels" icon={Boxes} label="Reel Inventory" collapsed={collapsed} onClick={onNavigate} />
           {/* <NavItem to="/master-products" icon={Layers} label="Master Products" collapsed={collapsed} onClick={onNavigate} /> */}
           {isRoleSupervisor && (

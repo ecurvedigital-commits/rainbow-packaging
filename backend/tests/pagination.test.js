@@ -1,9 +1,9 @@
 import { test, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { parsePagination, buildPaginationMeta } from '../src/utils/pagination.js';
-import { paginationQuerySchema, sortQuery } from '../src/validators/common.validator.js';
-import { listReelsSchema } from '../src/validators/reel.validator.js';
-import { buildReelFilter } from '../src/utils/buildReelFilter.js';
+import { parsePagination, buildPaginationMeta } from '../src/core/utils/pagination.js';
+import { paginationQuerySchema, sortQuery } from '../src/core/validators/common.validator.js';
+import { listReelsSchema } from '../src/modules/reels/validators/reel.validator.js';
+import { buildReelFilter } from '../src/modules/reels/utils/buildReelFilter.js';
 
 describe('Pagination Utilities and Contracts', () => {
   it('parses default pagination parameters correctly (page=1, limit=25, skip=0)', () => {

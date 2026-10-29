@@ -5,7 +5,7 @@ import {
   AlertTriangle, Loader2, FileText, Check, Tag, Edit3, Trash2, X, Weight
 } from 'lucide-react';
 import { fieldDefinitionApi } from '../../api/fieldDefinitionApi';
-import { reelApi } from '../../api/reelApi';
+import { reelApi } from '../../modules/reels/api/reelApi';
 import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';
 import EmptyState from '../../components/Common/EmptyState';

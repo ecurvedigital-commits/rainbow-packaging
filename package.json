@@ -8,8 +8,14 @@
   },
   "main": "backend/src/server.js",
   "scripts": {
-    "postinstall": "npm install --prefix backend && npm install --prefix frontend --include=dev && npm run build --prefix frontend && npm run db:indexes --prefix backend",
+    "start": "node backend/src/server.js",
+    "dev": "npm --prefix backend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
     "build": "npm run postinstall",
-    "start": "node backend/src/server.js"
+    "postinstall": "npm install --prefix backend && npm install --prefix frontend --include=dev && npm run build --prefix frontend && npm run db:indexes --prefix backend",
+    "test": "npm --prefix backend test",
+    "test:backend": "npm --prefix backend test"
   }
 }

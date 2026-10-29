@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { History, Search, RefreshCw, Filter, ShieldCheck, User, Calendar, Tag, AlertCircle, CheckCircle2, XCircle, Clock, Eye, X, Code, ExternalLink, ArrowRight } from 'lucide-react';
 import { auditApi } from '../../api/auditApi';
-import { masterCodeApi } from '../../api/masterCodeApi';
+import { masterCodeApi } from '../../modules/reels/api/masterCodeApi';
 import Pagination from '../../components/Common/Pagination';
 import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';

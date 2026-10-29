@@ -22,8 +22,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { userApi } from '../../api/userApi';
-import { reelApi } from '../../api/reelApi';
-import { masterCodeApi } from '../../api/masterCodeApi';
+import { reelApi } from '../../modules/reels/api/reelApi';
+import { masterCodeApi } from '../../modules/reels/api/masterCodeApi';
 import { messageApi } from '../../api/messageApi';
 import { correctionApi } from '../../api/correctionApi';
 import { formatWeight, extractMasterCodeSpecs } from '../../utils/formatters';

@@ -1,4 +1,4 @@
-import { connectDb, disconnectDb } from '../src/config/db.js';
+import { connectDb, disconnectDb } from '../src/core/database/db.js';
 import mongoose from 'mongoose';
 
 async function main() {
