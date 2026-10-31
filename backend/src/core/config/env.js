@@ -11,7 +11,17 @@ dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z
+    .string()
+    .optional()
+    .transform((val) => {
+      const normalized = (val || '').trim().toLowerCase();
+      if (!normalized || normalized === 'dev') return 'development';
+      if (normalized === 'prod') return 'production';
+      return normalized;
+    })
+    .pipe(z.enum(['development', 'production', 'test']))
+    .default('development'),
   PORT: z.coerce.number().default(5000),
   APP_TIMEZONE: z.string().default('Asia/Kolkata'),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
