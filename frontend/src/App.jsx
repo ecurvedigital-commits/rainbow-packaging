@@ -9,6 +9,7 @@ import AppShell from './components/Layout/AppShell';
 import LoginPage from './pages/Login/LoginPage';
 import DashboardPage from './pages/Dashboard/DashboardPage';
 import ModuleSelectPage from './pages/Modules/ModuleSelectPage';
+import OthersDashboardPage from './pages/Modules/OthersDashboardPage';
 import SampleDashboardPage from './pages/Modules/SampleDashboardPage';
 import ApprovalsPage from './pages/Approvals/ApprovalsPage';
 import OperatorApprovalsPage from './pages/Approvals/OperatorApprovalsPage';
@@ -35,9 +36,14 @@ import MasterProductDetailPage from './modules/reels/pages/MasterProductDetailPa
 import MasterCodeListPage from './modules/reels/pages/MasterCodeListPage';
 import MasterCodeDetailPage from './modules/reels/pages/MasterCodeDetailPage';
 
-// Domain Module: Sheets (New Category Placeholder)
-import SheetsPage from './modules/sheets/pages/SheetsPage';
-import SheetsDashboardPage from './modules/sheets/pages/SheetsDashboardPage';
+// Domain Module: Sheets
+import {
+  SheetsAppShell,
+  SheetsDashboardPage,
+  SheetsPage,
+  CreateSheetPage,
+  UpdateSheetPage,
+} from './modules/sheets';
 
 // Domain Module: Finished Boxes (New Category Placeholder)
 import FinishedBoxesPage from './modules/finished-boxes/pages/FinishedBoxesPage';
@@ -66,33 +72,34 @@ export default function App() {
           }
         />
 
-        {/* 2. Blank Dashboard Screens for Unimplemented Modules (Outside AppShell) */}
+        {/* 2. Authenticated Sheets Operational Workspace (Inside SheetsAppShell) */}
         <Route
-          path="/sheets/dashboard"
           element={
             <ProtectedRoute>
-              <SheetsDashboardPage />
+              <SheetsAppShell />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/finished-boxes/dashboard"
-          element={
-            <ProtectedRoute>
-              <FinishedBoxesDashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/sample/dashboard"
-          element={
-            <ProtectedRoute>
-              <SampleDashboardPage />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route path="/sheets" element={<Navigate to="/sheets/dashboard" replace />} />
+          <Route path="/sheets/dashboard" element={<SheetsDashboardPage />} />
+          <Route path="/sheets/inventory" element={<SheetsPage />} />
+          <Route path="/sheets/create" element={<CreateSheetPage />} />
+          <Route path="/sheets/update" element={<UpdateSheetPage />} />
+        </Route>
 
-        {/* 3. Authenticated Reels Operational Workspace (Inside AppShell) */}
+        {/* 3. Placeholder for Future Modules (Outside AppShell) */}
+        <Route
+          path="/others/dashboard"
+          element={
+            <ProtectedRoute>
+              <OthersDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/finished-boxes/dashboard" element={<Navigate to="/others/dashboard" replace />} />
+        <Route path="/sample/dashboard" element={<Navigate to="/others/dashboard" replace />} />
+
+        {/* 4. Authenticated Reels Operational Workspace (Inside AppShell) */}
         <Route
           element={
             <ProtectedRoute>

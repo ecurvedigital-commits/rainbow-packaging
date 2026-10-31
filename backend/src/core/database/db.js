@@ -71,32 +71,4 @@ export function getDbStatus() {
   return mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
 }
 
-/**
- * Executes a callback within a MongoDB transaction.
- * @template T
- * @param {(session: import('mongoose').ClientSession) => Promise<T>} work
- * @returns {Promise<T>}
- */
-export async function withTransaction(work) {
-  const session = await mongoose.startSession();
-  let originalError = null;
-  try {
-    let result;
-    await session.withTransaction(async () => {
-      try {
-        result = await work(session);
-      } catch (err) {
-        originalError = err;
-        throw err;
-      }
-    });
-    return result;
-  } catch (err) {
-    if (originalError) {
-      throw originalError;
-    }
-    throw err;
-  } finally {
-    await session.endSession();
-  }
-}
+export { withTransaction } from './transaction.js';

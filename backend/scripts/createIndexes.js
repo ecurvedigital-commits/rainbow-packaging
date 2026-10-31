@@ -9,6 +9,12 @@ import { Counter } from '../src/core/database/counter.model.js';
 import { DigestLog } from '../src/modules/digest/models/digestLog.model.js';
 import { Setting } from '../src/modules/settings/models/setting.model.js';
 import { MasterProduct } from '../src/modules/reels/models/masterProduct.model.js';
+import { MasterCode } from '../src/modules/reels/models/masterCode.model.js';
+import { CorrectionRequest } from '../src/modules/approvals/models/correctionRequest.model.js';
+import { Message } from '../src/modules/notifications/models/message.model.js';
+import { AuditLog } from '../src/modules/audit/models/auditLog.model.js';
+import { Sheet } from '../src/modules/sheets/models/sheet.model.js';
+import { FinishedBox } from '../src/modules/finished-boxes/models/finishedBox.model.js';
 import { logger } from '../src/core/config/logger.js';
 
 const models = [
@@ -16,12 +22,18 @@ const models = [
   RefreshToken,
   Reel,
   MasterProduct,
+  MasterCode,
   ReelEvent,
   FieldDefinition,
   Notification,
+  CorrectionRequest,
+  Message,
   Counter,
   DigestLog,
   Setting,
+  AuditLog,
+  Sheet,
+  FinishedBox,
 ];
 
 async function run() {

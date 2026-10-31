@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Boxes,
   Layers,
-  Package,
-  Droplet,
+  LayoutGrid,
   ArrowRight,
   LogOut,
   Sparkles,
@@ -44,8 +43,8 @@ export default function ModuleSelectPage() {
       id: 'sheets',
       optionNumber: 'Option 2',
       title: '2. Sheets Module',
-      badge: 'Dashboard In Design',
-      badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+      badge: 'Operational Workspace',
+      badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
       pillClass: 'bg-emerald-100 text-emerald-800',
       icon: Layers,
       iconBg: 'bg-emerald-600 text-white shadow-emerald-500/20',
@@ -54,38 +53,22 @@ export default function ModuleSelectPage() {
       description: 'Sheet-fed paper & corrugated boards, dimensional specs (Length × Width), caliper thickness, ream conversions, and cutting yields.',
       actionText: 'Open Sheets Dashboard',
       route: '/sheets/dashboard',
-      isReady: false,
+      isReady: true,
     },
     {
-      id: 'finished-boxes',
+      id: 'others',
       optionNumber: 'Option 3',
-      title: '3. Finished Boxes',
-      badge: 'Dashboard In Design',
-      badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      pillClass: 'bg-indigo-100 text-indigo-800',
-      icon: Package,
-      iconBg: 'bg-indigo-600 text-white shadow-indigo-500/20',
-      containerBg: 'bg-indigo-50/40 border-indigo-200 hover:border-indigo-600 hover:shadow-xl hover:shadow-indigo-500/10',
-      actionTextClass: 'text-indigo-700 border-indigo-100',
-      description: 'Finished corrugated boxes inventory, 3D dimensions (L × W × H), flute specs (3/5/7-ply), pallet dispatch, and sales orders.',
-      actionText: 'Open Boxes Dashboard',
-      route: '/finished-boxes/dashboard',
-      isReady: false,
-    },
-    {
-      id: 'sample',
-      optionNumber: 'Option 4',
-      title: '4. Inks & Consumables',
-      badge: 'Future Sample',
+      title: '3. Others',
+      badge: 'Coming Soon',
       badgeClass: 'bg-purple-100 text-purple-800 border-purple-200',
       pillClass: 'bg-purple-100 text-purple-800',
-      icon: Droplet,
+      icon: LayoutGrid,
       iconBg: 'bg-purple-600 text-white shadow-purple-500/20',
       containerBg: 'bg-purple-50/40 border-purple-200 hover:border-purple-600 hover:shadow-xl hover:shadow-purple-500/10',
       actionTextClass: 'text-purple-700 border-purple-100',
-      description: 'Printing ink batches, viscosity control, corrugation adhesives, stitching wire, and die-cutting tooling inventory management.',
-      actionText: 'Open Sample Dashboard',
-      route: '/sample/dashboard',
+      description: 'Additional packaging inventory categories, finished boxes, inks, or custom workflows will be added here in future updates.',
+      actionText: 'Planned for Future',
+      route: '/others/dashboard',
       isReady: false,
     },
   ];
@@ -169,7 +152,7 @@ export default function ModuleSelectPage() {
 
           {/* Card Body: Options Grid (Just like Quick Action Modal options) */}
           <div className="p-6 sm:p-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {modules.map((m) => {
                 const Icon = m.icon;
                 return (

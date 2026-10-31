@@ -6,9 +6,10 @@ export { sendMail } from './config/mailer.js';
 export { swaggerDocument } from './config/swagger.js';
 
 // Database
-export { connectDB, disconnectDB, withTransaction } from './database/db.js';
+export { connectDb, disconnectDb, getDbStatus } from './database/db.js';
+export { withTransaction } from './database/transaction.js';
 export { Counter } from './database/counter.model.js';
-export { getNextSequence, getNextCustomFieldSequence, resetCounter } from './database/counter.service.js';
+export { getNextSequence, resetCounter } from './database/counter.service.js';
 
 // Constants
 export { ROLES } from './constants/roles.js';

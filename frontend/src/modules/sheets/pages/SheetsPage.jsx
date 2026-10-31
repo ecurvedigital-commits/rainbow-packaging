@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Layers, FileSpreadsheet, ArrowRight, Clock, ShieldCheck, Box } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Layers, FileSpreadsheet, ArrowRight, Clock, ShieldCheck, Box, PlusCircle } from 'lucide-react';
 import { sheetApi } from '../api/sheetApi';
 
 export default function SheetsPage() {
+  const navigate = useNavigate();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,11 +31,14 @@ export default function SheetsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-200 pb-5">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-100 rounded-xl text-emerald-700">
+            <div className="p-2.5 bg-blue-50 text-brand-blue rounded-xl border border-blue-100 shadow-xs">
               <Layers size={24} />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-gray-900 tracking-tight" style={{ fontFamily: 'var(--font-family-display)' }}>
+              <h1
+                className="text-2xl font-black text-gray-900 tracking-tight"
+                style={{ fontFamily: 'var(--font-family-display)' }}
+              >
                 Sheets Inventory
               </h1>
               <p className="text-sm text-gray-500">
@@ -43,8 +48,15 @@ export default function SheetsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <button
+            onClick={() => navigate('/sheets/create')}
+            className="flex items-center gap-1.5 px-4 py-2 bg-brand-blue hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+          >
+            <PlusCircle size={15} />
+            <span>Create Sheet Lot</span>
+          </button>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-brand-blue border border-blue-200">
+            <span className="w-2 h-2 rounded-full bg-brand-blue animate-pulse" />
             Module Scaffold Active
           </span>
         </div>
@@ -55,7 +67,7 @@ export default function SheetsPage() {
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-lg font-bold text-gray-900">Sheet Domain Module Scaffold</h2>
-            <p className="text-sm text-gray-500 mt-1 max-w-2xl">
+            <p className="text-sm text-gray-500 mt-1 max-w-2xl leading-relaxed">
               This module represents the independent inventory domain for sheet-fed paper and corrugated boards.
               Its architecture is decoupled from reel-specific attributes, supporting dimension-based calculations (Length × Width), GSM, sheet count, ream conversions, and cutting yields.
             </p>
@@ -66,7 +78,7 @@ export default function SheetsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
             <div className="flex items-center gap-2 text-slate-800 font-bold text-sm mb-2">
-              <FileSpreadsheet size={18} className="text-emerald-600" />
+              <FileSpreadsheet size={18} className="text-brand-blue" />
               Dimension Attributes
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
@@ -86,7 +98,7 @@ export default function SheetsPage() {
 
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
             <div className="flex items-center gap-2 text-slate-800 font-bold text-sm mb-2">
-              <ShieldCheck size={18} className="text-blue-600" />
+              <ShieldCheck size={18} className="text-brand-blue-dark" />
               Shared Enterprise Core
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
@@ -98,10 +110,9 @@ export default function SheetsPage() {
         {/* Backend Connectivity Status */}
         <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
           <span>Backend Endpoint: <code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 font-mono">/api/sheets</code></span>
-          <span>Status: {loading ? 'Checking...' : (summary?.status || 'Scaffold Mounted')}</span>
+          <span className="text-brand-blue font-semibold">Decoupled Architecture</span>
         </div>
       </div>
     </div>
   );
 }
-

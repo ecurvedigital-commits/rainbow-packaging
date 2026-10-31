@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import {
@@ -14,6 +14,7 @@ import RecordUsageModal from './RecordUsageModal';
 import MasterCorrectionModal from './MasterCorrectionModal';
 import VoidReelModal from './VoidReelModal';
 import BulkVoidReelModal from './BulkVoidReelModal';
+import PrintReportFieldModal, { AVAILABLE_REPORT_FIELDS } from './PrintReportFieldModal';
 import Pagination from '../../../components/Common/Pagination';
 import LoadingState from '../../../components/Common/LoadingState';
 import ErrorAlert from '../../../components/Common/ErrorAlert';
@@ -72,6 +73,7 @@ export default function ReelListPage() {
   const [voidReel, setVoidReel] = useState(null);
   const [selectedReelIds, setSelectedReelIds] = useState(new Set());
   const [showBulkVoidModal, setShowBulkVoidModal] = useState(false);
+  const [showPrintFieldModal, setShowPrintFieldModal] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [sortConfig, setSortConfig] = useState([]); // [{ key, dir }] in priority order
 
@@ -406,9 +408,16 @@ export default function ReelListPage() {
     return parts;
   };
 
-  const openPrintReport = async () => {
-    // Open synchronously from the click event so browsers do not treat the
-    // report window as an unsolicited popup after the async API requests.
+  const openPrintReport = async (selectedFieldIds = null) => {
+    // If no fields passed, open the field selection modal first
+    if (!selectedFieldIds) {
+      setShowPrintFieldModal(true);
+      return;
+    }
+
+    setShowPrintFieldModal(false);
+
+    // Open synchronously from the user confirm action
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       setError('The report window was blocked. Please allow pop-ups and try again.');
@@ -421,19 +430,47 @@ export default function ReelListPage() {
 
     try {
       const reportReels = applySort(await fetchAllReportReels());
-
       const hasDateFilter = Boolean(consumedFrom || consumedTo);
+
+      // Active columns configuration
+      const fieldConfigMap = {
+        sr_no: { label: 'Sr.', align: 'center', defaultWidth: '4%' },
+        reel_no: { label: 'Reel No.', align: 'left nowrap', defaultWidth: '10%' },
+        specifications: { label: 'Specifications', align: 'left', defaultWidth: '18%' },
+        master_code: { label: 'Master Code', align: 'left nowrap', defaultWidth: '9%' },
+        supplier: { label: 'Supplier', align: 'left', defaultWidth: '14%' },
+        mill: { label: 'Mill', align: 'left', defaultWidth: '10%' },
+        stock_weight: { label: 'Stock Weight', align: 'right nowrap', defaultWidth: '9%' },
+        initial_weight: { label: 'Initial Weight', align: 'right nowrap', defaultWidth: '9%' },
+        consumed_weight: { label: hasDateFilter ? 'Consumed in Period' : 'Total Consumed', align: 'right nowrap', defaultWidth: '9%' },
+        price_per_kg: { label: 'Price / KG', align: 'right nowrap', defaultWidth: '7%' },
+        total_value: { label: 'Total Value', align: 'right nowrap', defaultWidth: '8%' },
+        created_date: { label: 'Created', align: 'center nowrap', defaultWidth: '8%' },
+        status: { label: 'Status', align: 'center nowrap', defaultWidth: '7%' },
+        station: { label: 'Station', align: 'left', defaultWidth: '8%' },
+      };
+
+      const activeColumns = selectedFieldIds
+        .filter((id) => fieldConfigMap[id])
+        .map((id) => ({ id, ...fieldConfigMap[id] }));
+
       let totalWeight = 0;
       let totalConsumedWeight = 0;
+      let grandTotalValue = 0;
+
       const rows = reportReels.map((reel, index) => {
         const currentWeight = reel.previous_weight ?? reel.current_weight_kg ?? reel.max_weight ?? 0;
         const initialWeight = reel.max_weight ?? reel.initial_weight_kg ?? currentWeight;
         const lifetimeConsumed = Math.max(0, initialWeight - currentWeight);
         const consumedWeight = hasDateFilter ? (Number(reel.consumed_in_range) || 0) : lifetimeConsumed;
+        const itemRate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 0;
+        const itemValue = (Number(currentWeight) || 0) * itemRate;
+        const createdDate = formatDate(reel.purchase_date || reel.created_at || reel.createdAt);
+
         totalWeight += Number(currentWeight) || 0;
         totalConsumedWeight += Number(consumedWeight) || 0;
-        const itemRate = reel.rate_per_kg && Number(reel.rate_per_kg) > 0 ? Number(reel.rate_per_kg) : 0;
-        const createdDate = formatDate(reel.purchase_date || reel.created_at || reel.createdAt);
+        grandTotalValue += itemValue;
+
         const specifications = [
           reel.quality || reel.paper_quality || '',
           reel.gsm ? `${reel.gsm} GSM` : '',
@@ -441,20 +478,38 @@ export default function ReelListPage() {
           (reel.size || reel.width_mm) ? `${reel.size || reel.width_mm} cm` : '',
         ].filter(Boolean).join(' | ');
 
-        return `
-          <tr>
-            <td class="center">${index + 1}</td>
-            <td class="nowrap">Reel #${escapeReportHtml(reel.reel_no || reel.reel_number || 'N/A')}</td>
-            <td>${escapeReportHtml(specifications || 'N/A')}</td>
-            <td>${escapeReportHtml(reel.supplier_name || reel.supplier || 'N/A')}</td>
-            <td>${escapeReportHtml(reel.mill_name || '-')}</td>
-            <td class="right nowrap">${escapeReportHtml(formatWeight(currentWeight))}</td>
-            <td class="right nowrap">${escapeReportHtml(formatWeight(consumedWeight))}</td>
-            <td class="right nowrap">${itemRate > 0 ? `Rs ${escapeReportHtml(itemRate.toLocaleString('en-IN'))}/kg` : '-'}</td>
-            <td class="center nowrap">${escapeReportHtml(createdDate || 'N/A')}</td>
-          </tr>
-        `;
+        const masterCodeText = formatMasterCodeBadge(reel.master_code || reel.master_code_id, reel, masterCodeMap);
+        const stationsText = Array.isArray(reel.stations_used) && reel.stations_used.length
+          ? reel.stations_used.join(', ')
+          : (reel.station || '-');
+
+        const cellRenderers = {
+          sr_no: index + 1,
+          reel_no: `Reel #${escapeReportHtml(reel.reel_no || reel.reel_number || 'N/A')}`,
+          specifications: escapeReportHtml(specifications || 'N/A'),
+          master_code: escapeReportHtml(masterCodeText || '-'),
+          supplier: escapeReportHtml(reel.supplier_name || reel.supplier || 'N/A'),
+          mill: escapeReportHtml(reel.mill_name || '-'),
+          stock_weight: escapeReportHtml(formatWeight(currentWeight)),
+          initial_weight: escapeReportHtml(formatWeight(initialWeight)),
+          consumed_weight: escapeReportHtml(formatWeight(consumedWeight)),
+          price_per_kg: itemRate > 0 ? `Rs ${escapeReportHtml(itemRate.toLocaleString('en-IN'))}/kg` : '-',
+          total_value: itemValue > 0 ? `Rs ${escapeReportHtml(Math.round(itemValue).toLocaleString('en-IN'))}` : '-',
+          created_date: escapeReportHtml(createdDate || 'N/A'),
+          status: escapeReportHtml(reel.status || 'AVAILABLE'),
+          station: escapeReportHtml(stationsText),
+        };
+
+        const cellsHtml = activeColumns
+          .map((col) => `<td class="${col.align}">${cellRenderers[col.id] ?? '-'}</td>`)
+          .join('');
+
+        return `<tr>${cellsHtml}</tr>`;
       }).join('');
+
+      const thHeadersHtml = activeColumns
+        .map((col) => `<th class="${col.align}">${col.label}</th>`)
+        .join('');
 
       const filterParts = buildFilterSummary();
       const filterText = filterParts.length
@@ -471,9 +526,6 @@ export default function ReelListPage() {
   <meta charset="UTF-8" />
   <title>Reel Inventory Report</title>
   <style>
-    /* Zero page margin removes the browser's own header/footer text
-       (date, URL, title). Real margins are created by .report padding and
-       the repeating spacer rows below, so every page gets equal space. */
     @page { size: A4 landscape; margin: 0; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
@@ -492,10 +544,10 @@ export default function ReelListPage() {
     .meta .label { font-weight: 700; width: 90px; white-space: nowrap; }
     .meta .right { text-align: right; }
 
-    table.data { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10.5px; }
+    table.data { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10px; }
     table.data thead { display: table-header-group; }
-    table.data th { background: #e5e7eb; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; font-size: 10px; }
-    table.data th, table.data td { border: 1px solid #6b7280; padding: 7px 9px; vertical-align: middle; word-break: break-word; }
+    table.data th { background: #e5e7eb; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; font-size: 9.5px; }
+    table.data th, table.data td { border: 1px solid #6b7280; padding: 6px 7px; vertical-align: middle; word-break: break-word; }
     table.data tbody tr { break-inside: avoid; page-break-inside: avoid; }
     table.data tbody tr:nth-child(even) { background: #f9fafb; }
     table.data tfoot td.total { font-weight: 800; background: #e5e7eb; }
@@ -537,32 +589,13 @@ export default function ReelListPage() {
         </table>
 
         <table class="data">
-          <colgroup>
-            <col style="width:4%" />
-            <col style="width:11%" />
-            <col style="width:20%" />
-            <col style="width:15%" />
-            <col style="width:13%" />
-            <col style="width:10%" />
-            <col style="width:10%" />
-            <col style="width:8%" />
-            <col style="width:9%" />
-          </colgroup>
           <thead>
             <tr>
-              <th>Sr.</th>
-              <th>Reel No.</th>
-              <th>Specifications</th>
-              <th>Supplier</th>
-              <th>Mill</th>
-              <th>Stock Weight</th>
-              <th>${hasDateFilter ? 'Consumed in Period' : 'Total Consumed'}</th>
-              <th>Price / KG</th>
-              <th>Created</th>
+              ${thHeadersHtml}
             </tr>
           </thead>
           <tbody>
-            ${rows || '<tr><td colspan="9" class="center">No reels found for the selected filters.</td></tr>'}
+            ${rows || `<tr><td colspan="${activeColumns.length}" class="center">No reels found for the selected filters.</td></tr>`}
           </tbody>
         </table>
 
@@ -1626,6 +1659,16 @@ export default function ReelListPage() {
               setSelectedReelIds(new Set());
               fetchReels();
             }}
+          />
+        )
+      }
+      {
+        showPrintFieldModal && (
+          <PrintReportFieldModal
+            isOpen={showPrintFieldModal}
+            loading={reportLoading}
+            onClose={() => setShowPrintFieldModal(false)}
+            onConfirm={(selectedFieldIds) => openPrintReport(selectedFieldIds)}
           />
         )
       }
