@@ -14,7 +14,16 @@ import { ERROR_CODES } from '../../../core/constants/errorCodes.js';
  * Creates Message document and dispatches notifications to all recipients.
  */
 export async function sendMessage({ input, actor }) {
-  const { recipient_ids, subject, body, reels = [], kind = 'MESSAGE', correction_request_id = null, reply_to = null } = input;
+  const {
+    recipient_ids,
+    subject,
+    body,
+    reels = [],
+    kind = 'MESSAGE',
+    correction_request_id = null,
+    reply_to = null,
+    module = 'reels',
+  } = input;
 
   if (!Array.isArray(recipient_ids) || recipient_ids.length === 0) {
     throw createApiError(422, ERROR_CODES.VALIDATION_ERROR, 'At least one recipient must be selected.');
@@ -86,6 +95,7 @@ export async function sendMessage({ input, actor }) {
     body: body.trim(),
     reels: resolvedReels,
     kind,
+    module,
     correction_request_id,
     reply_to,
   });
@@ -110,6 +120,7 @@ export async function sendMessage({ input, actor }) {
     reel_id: firstReel ? firstReel.reel_id : null,
     reel_no: firstReel ? firstReel.reel_no : null,
     message_id: messageDoc._id,
+    module,
     correction_request_id,
     sender_id: actor.id,
     sender_name: actor.name,
@@ -120,6 +131,7 @@ export async function sendMessage({ input, actor }) {
       reels: resolvedReels,
       reply_to,
       kind,
+      module,
     },
     is_read: false,
   }));
@@ -138,6 +150,7 @@ export async function sendMessage({ input, actor }) {
     body: messageDoc.body,
     reels: resolvedReels,
     kind: messageDoc.kind,
+    module: messageDoc.module || 'reels',
     created_at: messageDoc.created_at,
   };
 }
@@ -149,9 +162,33 @@ export async function listMessages({ filters = {}, actor }) {
   const { page, limit, skip } = parsePagination(filters);
   const type = filters.box || 'inbox'; // 'inbox' or 'sent'
 
-  const query = type === 'sent'
+  let query = type === 'sent'
     ? { sender_id: actor.id }
     : { 'recipients.user_id': actor.id };
+
+  if (filters.module && filters.module !== 'all') {
+    if (filters.module === 'reels') {
+      query = {
+        $and: [
+          query,
+          {
+            $or: [
+              { module: 'reels' },
+              { module: { $exists: false } },
+              { module: null },
+            ],
+          },
+        ],
+      };
+    } else {
+      query = {
+        $and: [
+          query,
+          { module: filters.module },
+        ],
+      };
+    }
+  }
 
   const [rawMessages, total] = await Promise.all([
     Message.find(query).sort({ created_at: -1, _id: -1 }).skip(skip).limit(limit).lean(),
@@ -168,6 +205,7 @@ export async function listMessages({ filters = {}, actor }) {
     body: m.body,
     reels: m.reels || [],
     kind: m.kind,
+    module: m.module || 'reels',
     correction_request_id: m.correction_request_id ? m.correction_request_id.toString() : null,
     reply_to: m.reply_to ? m.reply_to.toString() : null,
     created_at: m.created_at,
@@ -205,6 +243,7 @@ export async function getMessage({ id, actor }) {
     body: message.body,
     reels: message.reels || [],
     kind: message.kind,
+    module: message.module || 'reels',
     correction_request_id: message.correction_request_id ? message.correction_request_id.toString() : null,
     reply_to: message.reply_to ? message.reply_to.toString() : null,
     created_at: message.created_at,

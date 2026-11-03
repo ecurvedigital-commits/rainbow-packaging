@@ -71,10 +71,10 @@ export const LoginPage = () => {
 
         <div className="max-w-md relative">
           <h1 className="text-4xl font-extrabold leading-tight mb-4" style={{ color: '#0F172A', fontFamily: 'var(--font-family-display)' }}>
-            Every reel, tracked from purchase to the last kilogram.
+            Every job, tracked from start to finish.
           </h1>
           <p className="text-base leading-relaxed mb-10" style={{ color: '#475569' }}>
-            The reel inventory and approval workspace for the shop floor, the supervisor's desk, and the owner's office.
+            The job and roll inventory and approval workspace for the shop floor, the supervisor's desk, and the owner's office.
           </p>
 
           <div className="space-y-6">

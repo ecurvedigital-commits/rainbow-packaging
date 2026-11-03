@@ -20,6 +20,7 @@ export const sendMessageSchema = z.object({
     body: z.string().min(1, 'Message body cannot be empty').trim(),
     reels: z.array(reelAttachmentSchema).optional().default([]),
     kind: z.enum(['MESSAGE', 'CORRECTION']).optional().default('MESSAGE'),
+    module: z.enum(['reels', 'sheets', 'finished-boxes', 'general']).optional().default('reels'),
     correction_request_id: objectIdSchema.optional().nullable(),
     reply_to: objectIdSchema.optional().nullable(),
   }),
@@ -28,6 +29,7 @@ export const sendMessageSchema = z.object({
 export const listMessagesSchema = z.object({
   query: paginationQuerySchema.extend({
     box: z.enum(['inbox', 'sent']).optional().default('inbox'),
+    module: z.enum(['reels', 'sheets', 'finished-boxes', 'general', 'all']).optional(),
   }),
 });
 

@@ -16,6 +16,12 @@ const notificationSchema = new mongoose.Schema(
     reel_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Reel', default: null },
     reel_no: { type: String, default: null },
     message_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', default: null },
+    module: {
+      type: String,
+      enum: ['reels', 'sheets', 'finished-boxes', 'general'],
+      default: 'reels',
+      index: true,
+    },
     correction_request_id: { type: mongoose.Schema.Types.ObjectId, ref: 'CorrectionRequest', default: null },
     sender_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     sender_name: { type: String, default: null },

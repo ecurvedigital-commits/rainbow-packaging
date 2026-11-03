@@ -1,5 +1,6 @@
 import { Counter } from './counter.model.js';
 import { Reel } from '../../modules/reels/models/reel.model.js';
+import { Sheet } from '../../modules/sheets/models/sheet.model.js';
 
 /**
  * Universal Atomic Sequence Generator
@@ -28,6 +29,21 @@ export async function getNextSequence(seqName = 'reel_sr_no', session = null) {
         await Counter.findByIdAndUpdate(
           'reel_sr_no',
           { $set: { seq: maxReel.sr_no } },
+          { upsert: true, session }
+        );
+      }
+    }
+  }
+
+  // Auto-sync sequence with actual maximum sr_no in database for Sheets
+  if (seqName === 'sheet_sr_no') {
+    const maxSheet = await Sheet.findOne({}).sort({ sr_no: -1 }).select('sr_no').lean();
+    if (maxSheet && maxSheet.sr_no) {
+      const counterDoc = await Counter.findById('sheet_sr_no');
+      if (!counterDoc || counterDoc.seq < maxSheet.sr_no) {
+        await Counter.findByIdAndUpdate(
+          'sheet_sr_no',
+          { $set: { seq: maxSheet.sr_no } },
           { upsert: true, session }
         );
       }

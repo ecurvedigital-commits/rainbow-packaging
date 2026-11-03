@@ -294,6 +294,7 @@ export default function ComposeMessagePage() {
           subject: subject.trim(),
           body: body.trim(),
           kind: 'MESSAGE',
+          module: 'reels',
           reels: attachedReels.map((r) => ({
             reel_id: r.id || r._id,
             reel_no: r.reel_no,

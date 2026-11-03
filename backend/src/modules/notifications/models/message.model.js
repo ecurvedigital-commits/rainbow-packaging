@@ -38,6 +38,12 @@ const messageSchema = new mongoose.Schema(
     body: { type: String, required: true, trim: true },
     reels: { type: [reelRefSchema], default: [] },
     kind: { type: String, enum: ['MESSAGE', 'CORRECTION'], default: 'MESSAGE' },
+    module: {
+      type: String,
+      enum: ['reels', 'sheets', 'finished-boxes', 'general'],
+      default: 'reels',
+      index: true,
+    },
     correction_request_id: { type: mongoose.Schema.Types.ObjectId, ref: 'CorrectionRequest', default: null },
     reply_to: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', default: null },
   },
@@ -49,5 +55,6 @@ const messageSchema = new mongoose.Schema(
 
 messageSchema.index({ sender_id: 1, created_at: -1 });
 messageSchema.index({ 'recipients.user_id': 1, created_at: -1 });
+messageSchema.index({ module: 1, created_at: -1 });
 
 export const Message = mongoose.model('Message', messageSchema);

@@ -4,6 +4,7 @@ import { paginationQuerySchema, idParamSchema, booleanString } from '../../../co
 export const listNotificationsSchema = z.object({
   query: paginationQuerySchema.extend({
     unread: booleanString,
+    module: z.enum(['reels', 'sheets', 'finished-boxes', 'general', 'all']).optional(),
   }),
 });
 

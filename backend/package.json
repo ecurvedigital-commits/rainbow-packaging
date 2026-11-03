@@ -17,7 +17,8 @@
     "db:reset": "node scripts/resetDatabase.js",
     "db:reset-all": "node scripts/resetDatabase.js --all",
     "db:reset-users": "node scripts/resetDatabase.js --users-only",
-    "db:reset-reels": "node scripts/resetDatabase.js --reels-only"
+    "db:reset-reels": "node scripts/resetDatabase.js --reels-only",
+    "import:sheets": "node scripts/importSheetsFromExcel.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

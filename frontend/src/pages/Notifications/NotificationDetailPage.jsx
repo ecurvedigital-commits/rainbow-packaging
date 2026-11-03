@@ -198,8 +198,12 @@ export default function NotificationDetailPage() {
           {notification.sender_id && notification.sender_id !== user?.id && (
             <button
               onClick={() => {
-                const reelParam = attachedReels.length > 0 ? `&reel_id=${attachedReels[0].reel_id || attachedReels[0].id || attachedReels[0]._id}` : '';
-                navigate(`/messages/compose?recipient=${notification.sender_id}${reelParam}`);
+                if (notification.module === 'sheets' || notification.data?.module === 'sheets') {
+                  navigate('/sheets/messages');
+                } else {
+                  const reelParam = attachedReels.length > 0 ? `&reel_id=${attachedReels[0].reel_id || attachedReels[0].id || attachedReels[0]._id}` : '';
+                  navigate(`/messages/compose?recipient=${notification.sender_id}${reelParam}`);
+                }
               }}
               className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
             >
@@ -228,6 +232,19 @@ export default function NotificationDetailPage() {
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-gray-100 dark:border-slate-800 pb-5">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2.5 flex-wrap">
+                {/* Product Domain Tag */}
+                {(notification.module === 'sheets' || notification.data?.module === 'sheets') ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
+                    <Layers size={12} />
+                    Sheets Product
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-100 text-brand-blue dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300 dark:border-blue-800 flex items-center gap-1">
+                    <Boxes size={12} />
+                    Reels Product
+                  </span>
+                )}
+
                 <span
                   className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
                     isCorrection

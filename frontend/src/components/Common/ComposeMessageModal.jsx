@@ -275,6 +275,7 @@ export default function ComposeMessageModal({
           subject: subject.trim(),
           body: body.trim(),
           kind: 'MESSAGE',
+          module: 'reels',
           reels: attachedReel
             ? [
                 {

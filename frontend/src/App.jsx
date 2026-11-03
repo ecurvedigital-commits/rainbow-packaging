@@ -41,8 +41,13 @@ import {
   SheetsAppShell,
   SheetsDashboardPage,
   SheetsPage,
+  SheetInwardPage,
+  SheetCutPage,
+  SheetHistoryPage,
+  SheetDetailsPage,
   CreateSheetPage,
   UpdateSheetPage,
+  SheetsMessagesPage,
 } from './modules/sheets';
 
 // Domain Module: Finished Boxes (New Category Placeholder)
@@ -83,8 +88,14 @@ export default function App() {
           <Route path="/sheets" element={<Navigate to="/sheets/dashboard" replace />} />
           <Route path="/sheets/dashboard" element={<SheetsDashboardPage />} />
           <Route path="/sheets/inventory" element={<SheetsPage />} />
-          <Route path="/sheets/create" element={<CreateSheetPage />} />
-          <Route path="/sheets/update" element={<UpdateSheetPage />} />
+          <Route path="/sheets/inward" element={<SheetInwardPage />} />
+          <Route path="/sheets/cut" element={<SheetCutPage />} />
+          <Route path="/sheets/history" element={<SheetHistoryPage />} />
+          <Route path="/sheets/details/:id" element={<SheetDetailsPage />} />
+          {/* Backwards compatibility aliases */}
+          <Route path="/sheets/create" element={<Navigate to="/sheets/inward" replace />} />
+          <Route path="/sheets/update" element={<Navigate to="/sheets/cut" replace />} />
+          <Route path="/sheets/messages" element={<SheetsMessagesPage />} />
         </Route>
 
         {/* 3. Placeholder for Future Modules (Outside AppShell) */}

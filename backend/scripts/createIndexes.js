@@ -14,6 +14,7 @@ import { CorrectionRequest } from '../src/modules/approvals/models/correctionReq
 import { Message } from '../src/modules/notifications/models/message.model.js';
 import { AuditLog } from '../src/modules/audit/models/auditLog.model.js';
 import { Sheet } from '../src/modules/sheets/models/sheet.model.js';
+import { SheetEvent } from '../src/modules/sheets/models/sheetEvent.model.js';
 import { FinishedBox } from '../src/modules/finished-boxes/models/finishedBox.model.js';
 import { logger } from '../src/core/config/logger.js';
 
@@ -33,6 +34,7 @@ const models = [
   Setting,
   AuditLog,
   Sheet,
+  SheetEvent,
   FinishedBox,
 ];
 

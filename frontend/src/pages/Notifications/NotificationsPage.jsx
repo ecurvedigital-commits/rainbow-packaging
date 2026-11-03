@@ -27,6 +27,7 @@ export default function NotificationsPage() {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [moduleFilter, setModuleFilter] = useState('all'); // 'all' | 'reels' | 'sheets'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
@@ -47,6 +48,7 @@ export default function NotificationsPage() {
         limit: pagination.limit,
       };
       if (unreadOnly) params.unread = true;
+      if (moduleFilter !== 'all') params.module = moduleFilter;
 
       const response = await notificationApi.getNotifications(params);
       setNotifications(response.data || response.items || []);
@@ -65,7 +67,7 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, unreadOnly]);
+  }, [pagination.page, pagination.limit, unreadOnly, moduleFilter]);
 
   useEffect(() => {
     fetchNotifications();
@@ -178,15 +180,15 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Filter Toggle */}
-      <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+      {/* Filter Toggles: Status & Product Domain */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
               setUnreadOnly(false);
               setPagination((p) => ({ ...p, page: 1 }));
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
               !unreadOnly
                 ? 'bg-indigo-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -199,13 +201,61 @@ export default function NotificationsPage() {
               setUnreadOnly(true);
               setPagination((p) => ({ ...p, page: 1 }));
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
               unreadOnly
                 ? 'bg-indigo-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
             }`}
           >
             Unread Only
+          </button>
+        </div>
+
+        {/* Product Domain Filters */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-750 rounded-lg">
+          <span className="text-[11px] font-bold text-slate-400 px-2 uppercase tracking-wider">
+            Domain:
+          </span>
+          <button
+            onClick={() => {
+              setModuleFilter('all');
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
+            className={`px-2.5 py-1 rounded-md text-xs font-bold transition cursor-pointer ${
+              moduleFilter === 'all'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-2xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => {
+              setModuleFilter('reels');
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
+            className={`px-2.5 py-1 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+              moduleFilter === 'reels'
+                ? 'bg-blue-600 text-white shadow-2xs'
+                : 'text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40'
+            }`}
+          >
+            <Boxes size={12} />
+            <span>Reels</span>
+          </button>
+          <button
+            onClick={() => {
+              setModuleFilter('sheets');
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
+            className={`px-2.5 py-1 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+              moduleFilter === 'sheets'
+                ? 'bg-emerald-600 text-white shadow-2xs'
+                : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+            }`}
+          >
+            <Layers size={12} />
+            <span>Sheets</span>
           </button>
         </div>
       </div>
@@ -252,6 +302,19 @@ export default function NotificationsPage() {
                   <div className="flex-1 min-w-0 space-y-1.5">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-2 flex-wrap">
+                        {/* Product Domain Tag */}
+                        {(item.module === 'sheets' || item.data?.module === 'sheets') ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                            <Layers size={10} />
+                            Sheets
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-100 text-brand-blue border border-blue-200 flex items-center gap-1">
+                            <Boxes size={10} />
+                            Reels
+                          </span>
+                        )}
+
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${typeInfo.color}`}>
                           {typeInfo.label}
                         </span>

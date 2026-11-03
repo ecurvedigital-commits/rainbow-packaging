@@ -11,10 +11,34 @@ import { ERROR_CODES } from '../../../core/constants/errorCodes.js';
  */
 export async function listNotifications({ filters = {}, actor }) {
   const { page, limit, skip } = parsePagination(filters);
-  const query = { user_id: actor.id };
+  let query = { user_id: actor.id };
 
   if (filters.unread === true) {
     query.is_read = false;
+  }
+
+  if (filters.module && filters.module !== 'all') {
+    if (filters.module === 'reels') {
+      query = {
+        $and: [
+          query,
+          {
+            $or: [
+              { module: 'reels' },
+              { module: { $exists: false } },
+              { module: null },
+            ],
+          },
+        ],
+      };
+    } else {
+      query = {
+        $and: [
+          query,
+          { module: filters.module },
+        ],
+      };
+    }
   }
 
   const [rawNotifications, total] = await Promise.all([
@@ -27,6 +51,7 @@ export async function listNotifications({ filters = {}, actor }) {
     type: n.type,
     title: n.title,
     message: n.message,
+    module: n.module || n.data?.module || 'reels',
     reel_id: n.reel_id ? n.reel_id.toString() : null,
     reel_no: n.reel_no || null,
     event_id: n.event_id ? n.event_id.toString() : null,
@@ -69,6 +94,7 @@ export async function getNotification({ id, actor }) {
     type: notification.type,
     title: notification.title,
     message: notification.message,
+    module: notification.module || notification.data?.module || 'reels',
     reel_id: notification.reel_id ? notification.reel_id.toString() : null,
     reel_no: notification.reel_no || null,
     event_id: notification.event_id ? notification.event_id.toString() : null,
@@ -196,6 +222,7 @@ export async function markRead({ id, actor }) {
     type: notification.type,
     title: notification.title,
     message: notification.message,
+    module: notification.module || notification.data?.module || 'reels',
     reel_id: notification.reel_id ? notification.reel_id.toString() : null,
     reel_no: notification.reel_no || null,
     event_id: notification.event_id ? notification.event_id.toString() : null,
