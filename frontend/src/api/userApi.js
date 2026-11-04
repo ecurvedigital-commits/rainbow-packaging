@@ -83,5 +83,25 @@ export const userApi = {
       method: 'POST',
     });
   },
+
+  getActiveSessions: async (params = {}) => {
+    const query = new URLSearchParams();
+    Object.entries(params || {}).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        query.append(key, val);
+      }
+    });
+    return apiFetch(`/users/sessions/active?${query.toString()}`, { method: 'GET' });
+  },
+
+  getUserSessions: async (userId) => {
+    return apiFetch(`/users/${userId}/sessions`, { method: 'GET' });
+  },
+
+  revokeUserSession: async (userId, sessionId) => {
+    return apiFetch(`/users/${userId}/sessions/${sessionId}/revoke`, {
+      method: 'POST',
+    });
+  },
 };
 

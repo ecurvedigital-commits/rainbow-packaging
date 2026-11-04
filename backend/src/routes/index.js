@@ -15,6 +15,7 @@ import { digestRoutes } from '../modules/digest/index.js';
 import { reelRoutes, masterCodeRoutes, masterProductRoutes } from '../modules/reels/index.js';
 import { sheetRoutes } from '../modules/sheets/index.js';
 import { boxRoutes } from '../modules/finished-boxes/index.js';
+import { purchaseOrderRoutes } from '../modules/purchase-orders/index.js';
 
 const router = Router();
 
@@ -38,5 +39,6 @@ router.use('/master-products', masterProductRoutes);
 router.use('/master-codes', masterCodeRoutes);
 router.use('/sheets', sheetRoutes);
 router.use('/finished-boxes', boxRoutes);
+router.use('/purchase-orders', purchaseOrderRoutes);
 
 export const apiRouter = router;

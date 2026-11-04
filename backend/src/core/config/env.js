@@ -53,6 +53,11 @@ const envSchema = z.object({
   SEED_ADMIN_USERNAME: z.string().optional().default('admin'),
   SEED_ADMIN_EMAIL: z.string().optional().default('admin@rainbowpackages.com'),
   SEED_ADMIN_PASSWORD: z.string().optional().default('Admin@12345'),
+
+  FIREBASE_SERVICE_ACCOUNT_PATH: z
+    .string()
+    .optional()
+    .default('rainbow-packaging-firebase-adminsdk-fbsvc-283613d33c.json'),
 });
 
 const parsed = envSchema.safeParse(process.env);

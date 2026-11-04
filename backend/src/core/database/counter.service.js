@@ -1,6 +1,7 @@
 import { Counter } from './counter.model.js';
 import { Reel } from '../../modules/reels/models/reel.model.js';
 import { Sheet } from '../../modules/sheets/models/sheet.model.js';
+import { PurchaseOrder } from '../../modules/purchase-orders/models/purchaseOrder.model.js';
 
 /**
  * Universal Atomic Sequence Generator
@@ -44,6 +45,21 @@ export async function getNextSequence(seqName = 'reel_sr_no', session = null) {
         await Counter.findByIdAndUpdate(
           'sheet_sr_no',
           { $set: { seq: maxSheet.sr_no } },
+          { upsert: true, session }
+        );
+      }
+    }
+  }
+
+  // Auto-sync sequence with actual maximum sr_no in database for Purchase Orders
+  if (seqName === 'po_sr_no') {
+    const maxPo = await PurchaseOrder.findOne({}).sort({ sr_no: -1 }).select('sr_no').lean();
+    if (maxPo && maxPo.sr_no) {
+      const counterDoc = await Counter.findById('po_sr_no');
+      if (!counterDoc || counterDoc.seq < maxPo.sr_no) {
+        await Counter.findByIdAndUpdate(
+          'po_sr_no',
+          { $set: { seq: maxPo.sr_no } },
           { upsert: true, session }
         );
       }

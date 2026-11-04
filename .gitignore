@@ -1,1 +1,7 @@
 *.xlsx
+node_modules
+.env
+.env.*
+*firebase*.json
+dist
+.DS_Store

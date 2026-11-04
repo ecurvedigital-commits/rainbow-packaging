@@ -31,10 +31,19 @@ export { authenticate } from './middleware/authenticate.js';
 export { authorizeRoles } from './middleware/authorizeRoles.js';
 export { errorHandler } from './middleware/errorHandler.js';
 export { notFound } from './middleware/notFound.js';
-export { apiRateLimiter, authRateLimiter } from './middleware/rateLimiter.js';
+export {
+  apiRateLimiter,
+  authRateLimiter,
+  loginRateLimiter,
+  refreshRateLimiter,
+  sensitiveActionLimiter,
+  stockActionLimiter,
+} from './middleware/rateLimiter.js';
 export { requestLogger } from './middleware/requestLogger.js';
 export { requirePasswordChange } from './middleware/requirePasswordChange.js';
 export { validate } from './middleware/validate.js';
+export { xssSanitizer, sanitizeString, sanitizeData } from './middleware/xssSanitizer.js';
+export { csrfProtection } from './middleware/csrfProtection.js';
 
 // Common Validators
 export {

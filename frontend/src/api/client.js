@@ -38,6 +38,7 @@ export async function apiFetch(endpoint, options = {}) {
   
   const headers = {
     'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
     ...options.headers,
   };
 
@@ -47,6 +48,7 @@ export async function apiFetch(endpoint, options = {}) {
   }
 
   const config = {
+    credentials: 'include',
     ...options,
     headers,
   };
@@ -69,8 +71,9 @@ export async function apiFetch(endpoint, options = {}) {
         try {
           const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh_token: refreshToken }),
+            body: JSON.stringify(refreshToken ? { refresh_token: refreshToken } : {}),
           });
 
           const refreshData = await refreshRes.json();

@@ -19,6 +19,7 @@ import {
   ArrowRight,
   X,
   MessageSquarePlus,
+  ClipboardList,
 } from 'lucide-react';
 
 export default function SheetsAppShell({ children }) {
@@ -72,6 +73,8 @@ export default function SheetsAppShell({ children }) {
       '/sheets/history': 'Sheet Stock History',
       '/sheets/create': 'Sheet Inward',
       '/sheets/update': 'Sheet Cut',
+      '/sheets/purchase-orders': 'Purchase Orders',
+      '/sheets/purchase-orders/create': 'Create Purchase Order',
     };
     const title = routeTitles[location.pathname] || 'Sheets Domain';
     document.title = `Rainbow Packages | ${title}`;
@@ -329,6 +332,13 @@ function SheetsSidebarContent({
               to="/sheets/inventory"
               icon={Boxes}
               label="Inventory"
+              collapsed={collapsed}
+              onClick={onNavigate}
+            />
+            <SheetsNavItem
+              to="/sheets/purchase-orders"
+              icon={ClipboardList}
+              label="Purchase Orders"
               collapsed={collapsed}
               onClick={onNavigate}
             />

@@ -9,11 +9,19 @@ import {
   getUnreadCount,
   markAllRead,
   markRead,
+  registerDeviceToken,
+  unregisterDeviceToken,
+  testPushNotification,
 } from '../controllers/notification.controller.js';
 
 const router = Router();
 
 router.use(authenticate, requirePasswordChange);
+
+// FCM Device Push Registration
+router.post('/device-token', registerDeviceToken);
+router.delete('/device-token', unregisterDeviceToken);
+router.post('/test-push', testPushNotification);
 
 // Specific routes registered before /:id
 router.get('/unread-count', getUnreadCount);

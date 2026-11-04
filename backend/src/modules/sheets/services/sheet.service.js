@@ -7,6 +7,7 @@ import { SHEET_STATUS, SHEET_RECORD_STATUS, SHEET_EVENT_TYPES, SHEET_STATIONS } 
 import { ROLES } from '../../../core/constants/roles.js';
 import { APPROVAL_STATUS } from '../../../core/constants/approvalStatus.js';
 import { ERROR_CODES } from '../../../core/constants/errorCodes.js';
+import { notifyPendingStock } from '../../notifications/services/fcm.service.js';
 import { createApiError } from '../../../core/errors/ApiError.js';
 import { withTransaction } from '../../../core/database/db.js';
 import { getNextSequence } from '../../../core/database/counter.service.js';
@@ -149,6 +150,19 @@ export async function createSheet({ input, actor }) {
       event: event.toJSON(),
     };
   });
+
+  if (result.event?.approval_status === APPROVAL_STATUS.PENDING) {
+    notifyPendingStock({
+      stockType: 'SHEET',
+      itemLabel: `Sheet Lot #${result.sheet.lot_no || result.sheet.sr_no} (${result.sheet.party_name})`,
+      category: `${result.sheet.quality} ${result.sheet.gsm} GSM`,
+      quantity: `${result.sheet.initial_quantity} sheets (${result.sheet.initial_weight} kg)`,
+      requestedByName: actor.name,
+      detailsUrl: '/sheets',
+    }).catch(() => {});
+  }
+
+  return result;
 }
 
 /**

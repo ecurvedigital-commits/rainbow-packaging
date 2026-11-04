@@ -34,4 +34,22 @@ export const notificationApi = {
   markAllAsRead: async () => {
     return notificationApi.markAllRead();
   },
+
+  registerDeviceToken: async (token, deviceName) => {
+    return apiFetch('/notifications/device-token', {
+      method: 'POST',
+      body: JSON.stringify({ token, device_name: deviceName }),
+    });
+  },
+
+  unregisterDeviceToken: async (token) => {
+    return apiFetch('/notifications/device-token', {
+      method: 'DELETE',
+      body: JSON.stringify({ token }),
+    });
+  },
+
+  testPush: async () => {
+    return apiFetch('/notifications/test-push', { method: 'POST' });
+  },
 };

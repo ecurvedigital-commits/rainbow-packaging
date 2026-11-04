@@ -12,6 +12,7 @@ import { parsePagination, buildPaginationMeta } from '../../../core/utils/pagina
 import { withTransaction } from '../../../core/database/db.js';
 import { createApiError } from '../../../core/errors/ApiError.js';
 import { ERROR_CODES } from '../../../core/constants/errorCodes.js';
+import { notifyPendingStock } from '../../notifications/services/fcm.service.js';
 
 /**
  * Record weight usage on a reel (docs/routes/reels.md).
@@ -19,7 +20,7 @@ import { ERROR_CODES } from '../../../core/constants/errorCodes.js';
  * @returns {Promise<{ reel: object, event: object }>}
  */
 export async function recordUsage({ id, input, actor }) {
-  return withTransaction(async (session) => {
+  const result = await withTransaction(async (session) => {
     const reel = await Reel.findById(id).session(session);
 
     if (!reel || reel.record_status === RECORD_STATUS.VOIDED) {
@@ -101,6 +102,19 @@ export async function recordUsage({ id, input, actor }) {
       event: event.toJSON(),
     };
   });
+
+  if (result.event?.approval_status === APPROVAL_STATUS.PENDING) {
+    notifyPendingStock({
+      stockType: 'REEL',
+      itemLabel: `Reel #${result.reel.reel_no} Usage`,
+      category: `${result.reel.quality} ${result.reel.gsm} GSM`,
+      quantity: `${result.event.payload?.used_this_time || 0} kg`,
+      requestedByName: actor.name,
+      detailsUrl: '/approvals',
+    }).catch(() => {});
+  }
+
+  return result;
 }
 
 /**

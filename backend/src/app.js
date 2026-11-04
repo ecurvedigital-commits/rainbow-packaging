@@ -10,6 +10,8 @@ import { swaggerDocument } from './core/config/swagger.js';
 import { corsOptions } from './core/config/cors.js';
 import { requestLogger } from './core/middleware/requestLogger.js';
 import { apiRateLimiter } from './core/middleware/rateLimiter.js';
+import { xssSanitizer } from './core/middleware/xssSanitizer.js';
+import { csrfProtection } from './core/middleware/csrfProtection.js';
 import { apiRouter } from './routes/index.js';
 import { notFound } from './core/middleware/notFound.js';
 import { errorHandler } from './core/middleware/errorHandler.js';
@@ -19,16 +21,60 @@ const __dirname = path.dirname(__filename);
 const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
 
 /**
- * Builds and configures the Express application instance.
+ * Builds and configures the Express application instance with production-grade security headers.
  * @returns {import('express').Express}
  */
 export function createApp() {
   const app = express();
+  app.set('trust proxy', 1);
 
-  // Helmet with relaxed CSP for Swagger UI docs and static frontend assets
+  // Secure HTTP Headers via Helmet with customized Content-Security-Policy
   app.use(
     helmet({
-      contentSecurityPolicy: false,
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            "'unsafe-eval'",
+            'https://apis.google.com',
+            'https://www.gstatic.com',
+            'https://*.firebaseio.com',
+          ],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+          imgSrc: [
+            "'self'",
+            'data:',
+            'blob:',
+            'https://*.googleusercontent.com',
+            'https://fcm.googleapis.com',
+            'https://validator.swagger.io',
+          ],
+          connectSrc: [
+            "'self'",
+            'https://*.googleapis.com',
+            'https://fcm.googleapis.com',
+            'https://*.firebaseio.com',
+            'https://identitytoolkit.googleapis.com',
+          ],
+          frameAncestors: ["'none'"],
+          objectSrc: ["'none'"],
+          upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
+        },
+      },
+      crossOriginEmbedderPolicy: false,
+      crossOriginOpenerPolicy: { policy: 'same-origin' },
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      frameguard: { action: 'deny' },
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+      noSniff: true,
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     })
   );
 
@@ -37,6 +83,10 @@ export function createApp() {
   app.use(express.urlencoded({ extended: true, limit: '100kb' }));
   app.use(cookieParser());
   app.use(requestLogger);
+
+  // XSS Protection (Input Sanitization) & CSRF Protection
+  app.use(xssSanitizer);
+  app.use(csrfProtection);
 
   // Serve static frontend files if built
   if (fs.existsSync(frontendDistPath)) {
@@ -75,4 +125,3 @@ export function createApp() {
 
   return app;
 }
-

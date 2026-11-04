@@ -44,6 +44,7 @@ export async function authenticate(req, _res, next) {
       username: user.username,
       must_change_password: user.must_change_password,
     };
+    req.sessionId = decoded.sid || null;
 
     next();
   } catch (dbError) {

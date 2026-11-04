@@ -43,4 +43,16 @@ export const authApi = {
       }),
     });
   },
+
+  getSessions: async () => {
+    return apiFetch('/auth/sessions', {
+      method: 'GET',
+    });
+  },
+
+  revokeSession: async (sessionId) => {
+    return apiFetch(`/auth/sessions/${sessionId}/revoke`, {
+      method: 'POST',
+    });
+  },
 };

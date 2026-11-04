@@ -19,6 +19,7 @@ import { resolveMasterProduct } from './masterProduct.service.js';
 import { withTransaction } from '../../../core/database/db.js';
 import { createApiError } from '../../../core/errors/ApiError.js';
 import { ERROR_CODES } from '../../../core/constants/errorCodes.js';
+import { notifyPendingStock } from '../../notifications/services/fcm.service.js';
 
 /**
  * Helper to match a reel's physical properties to a MasterCode bucket.
@@ -789,7 +790,7 @@ export const bulkCreateReels = async ({ input, actor }) => withTransaction(async
  * @returns {Promise<{ reel: object, event: object }>}
  */
 export async function createReel({ input, actor }) {
-  return withTransaction(async (session) => {
+  const result = await withTransaction(async (session) => {
     const trimmedReelNo = input.reel_no.trim();
 
     const existing = await Reel.findOne({
@@ -886,6 +887,19 @@ export async function createReel({ input, actor }) {
       event: event.toJSON(),
     };
   });
+
+  if (result.event?.approval_status === APPROVAL_STATUS.PENDING) {
+    notifyPendingStock({
+      stockType: 'REEL',
+      itemLabel: `Reel #${result.reel.reel_no}`,
+      category: `${result.reel.quality} ${result.reel.gsm} GSM`,
+      quantity: `${result.reel.max_weight} kg`,
+      requestedByName: actor.name,
+      detailsUrl: '/approvals',
+    }).catch(() => {});
+  }
+
+  return result;
 }
 
 /**
@@ -894,7 +908,7 @@ export async function createReel({ input, actor }) {
  * @returns {Promise<{ reel: object, event: object }>}
  */
 export async function updateReel({ id, input, actor }) {
-  return withTransaction(async (session) => {
+  const result = await withTransaction(async (session) => {
     const reel = await Reel.findById(id).session(session);
     if (!reel) {
       throw createApiError(404, ERROR_CODES.NOT_FOUND, 'Reel not found.');
@@ -1051,7 +1065,7 @@ export async function updateReel({ id, input, actor }) {
  * @returns {Promise<{ reel: object }>}
  */
 export async function voidReel({ id, input, actor }) {
-  return withTransaction(async (session) => {
+  const result = await withTransaction(async (session) => {
     const reel = await Reel.findById(id).session(session);
     if (!reel) {
       throw createApiError(404, ERROR_CODES.NOT_FOUND, 'Reel not found.');
@@ -1235,7 +1249,7 @@ export async function getFilterOptions() {
  * @returns {Promise<object>}
  */
 export async function updateReelEvent({ eventId, input, actor }) {
-  return withTransaction(async (session) => {
+  const result = await withTransaction(async (session) => {
     if (actor.role !== ROLES.ADMIN) {
       throw createApiError(403, ERROR_CODES.FORBIDDEN, 'Only Admins can edit reel event entries.');
     }

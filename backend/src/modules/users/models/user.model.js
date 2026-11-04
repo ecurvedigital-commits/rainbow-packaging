@@ -31,6 +31,13 @@ const userSchema = new mongoose.Schema(
     locked_until: { type: Date, default: null },
     last_login_at: { type: Date, default: null },
     password_changed_at: { type: Date, default: null },
+    fcm_tokens: [
+      {
+        token: { type: String, required: true },
+        device_name: { type: String, default: null },
+        created_at: { type: Date, default: Date.now },
+      },
+    ],
     created_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   },
   {

@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, UserPlus, Search, Edit3, Trash2, Shield, RefreshCw, AlertCircle, 
-  CheckCircle, XCircle, Eye, EyeOff, Copy, Check, Key, Send
+  CheckCircle, XCircle, Eye, EyeOff, Copy, Check, Key, Send, Laptop
 } from 'lucide-react';
 import { userApi } from '../../api/userApi';
 import { useAuth } from '../../auth/AuthContext';
 import UserFormModal from './UserFormModal';
+import UserSessionsModal from './UserSessionsModal';
 import Pagination from '../../components/Common/Pagination';
 import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';
@@ -30,6 +31,8 @@ export default function UserListPage() {
   const [showFormModal, setShowFormModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [sessionsModalUser, setSessionsModalUser] = useState(null);
+  const [showSessionsModal, setShowSessionsModal] = useState(false);
 
   // Filter & Pagination
   const [search, setSearch] = useState('');
@@ -143,6 +146,17 @@ export default function UserListPage() {
             title="Refresh"
           >
             <RefreshCw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => {
+              setSessionsModalUser(null);
+              setShowSessionsModal(true);
+            }}
+            className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs rounded-xl shadow-xs transition"
+            title="Inspect all active login devices across the system"
+          >
+            <Laptop className="w-4 h-4 text-blue-600" />
+            <span>Active Devices</span>
           </button>
           <button
             onClick={() => {
@@ -310,6 +324,17 @@ export default function UserListPage() {
 
                           <button
                             onClick={() => {
+                              setSessionsModalUser(u);
+                              setShowSessionsModal(true);
+                            }}
+                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            title={`Inspect logged-in devices for ${u.name || u.username}`}
+                          >
+                            <Laptop className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            onClick={() => {
                               setFormModalUser(u);
                               setShowFormModal(true);
                             }}
@@ -380,6 +405,22 @@ export default function UserListPage() {
           onConfirm={handleDeleteConfirm}
         />
       )}
+
+      {/* User Sessions & Active Devices Modal */}
+      <UserSessionsModal
+        isOpen={showSessionsModal}
+        onClose={() => {
+          setShowSessionsModal(false);
+          setSessionsModalUser(null);
+        }}
+        targetUser={sessionsModalUser}
+        onSessionRevoked={() => {
+          setToast({
+            type: 'success',
+            message: 'Device session revoked successfully.',
+          });
+        }}
+      />
     </div>
   );
 }

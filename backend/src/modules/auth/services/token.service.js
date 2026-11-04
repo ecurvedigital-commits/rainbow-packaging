@@ -8,13 +8,15 @@ import { ERROR_CODES } from '../../../core/constants/errorCodes.js';
 /**
  * Signs an access token JWT for an active user.
  * @param {{ id: string, role: string, username: string }} user
+ * @param {string} [sessionId]
  * @returns {string}
  */
-export function signAccessToken(user) {
+export function signAccessToken(user, sessionId) {
   const payload = {
     sub: user.id || user._id.toString(),
     role: user.role,
     username: user.username,
+    sid: sessionId ? sessionId.toString() : null,
   };
   return jwt.sign(payload, env.JWT_ACCESS_SECRET, {
     expiresIn: env.JWT_ACCESS_EXPIRES_IN,
@@ -48,10 +50,10 @@ export function hashToken(raw) {
 
 /**
  * Creates and persists a new refresh token document in MongoDB.
- * @param {{ userId: string | import('mongoose').Types.ObjectId, ip?: string, userAgent?: string }} params
+ * @param {{ userId: string | import('mongoose').Types.ObjectId, sessionId?: string | import('mongoose').Types.ObjectId, ip?: string, userAgent?: string }} params
  * @returns {Promise<{ token: string, expires_at: Date }>}
  */
-export async function createRefreshToken({ userId, ip, userAgent }) {
+export async function createRefreshToken({ userId, sessionId, ip, userAgent }) {
   const rawToken = crypto.randomBytes(40).toString('hex');
   const token_hash = hashToken(rawToken);
   const expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
@@ -60,6 +62,7 @@ export async function createRefreshToken({ userId, ip, userAgent }) {
     user_id: userId,
     token_hash,
     expires_at,
+    session_id: sessionId || null,
     ip: ip || null,
     user_agent: userAgent || null,
     created_at: new Date(),

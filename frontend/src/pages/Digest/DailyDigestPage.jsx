@@ -14,6 +14,7 @@ import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';
 import CustomDatePicker from '../../components/Common/CustomDatePicker';
 import { formatWeight, formatDate } from '../../utils/formatters';
+import { escapeHtml } from '../../utils/sanitize';
 
 export default function DailyDigestPage() {
   const navigate = useNavigate();
@@ -186,7 +187,7 @@ export default function DailyDigestPage() {
 
     const breakdownRows = Object.entries(digestData.quality_breakdown || {}).map(([quality, weight]) => `
       <tr>
-        <td style="padding:10px;border-bottom:1px solid #e2e8f0;font-weight:bold;">${quality}</td>
+        <td style="padding:10px;border-bottom:1px solid #e2e8f0;font-weight:bold;">${escapeHtml(quality)}</td>
         <td style="padding:10px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:bold;color:#4f46e5;">${formatWeight(weight)}</td>
       </tr>
     `).join('');
@@ -194,12 +195,12 @@ export default function DailyDigestPage() {
     const detailLogs = Object.values(digestData.quality_details || {}).flatMap((q) => q.entries || []);
     const detailRows = detailLogs.map((log) => `
       <tr>
-        <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-weight:bold;">#${log.reel_no}</td>
-        <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-family:monospace;color:#4f46e5;">${log.master_code}</td>
-        <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${log.supplier_name}</td>
-        <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${log.station}</td>
+        <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-weight:bold;">#${escapeHtml(log.reel_no)}</td>
+        <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-family:monospace;color:#4f46e5;">${escapeHtml(log.master_code)}</td>
+        <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(log.supplier_name)}</td>
+        <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(log.station)}</td>
         <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:bold;color:#4f46e5;">${formatWeight(log.weight_used)}</td>
-        <td style="padding:8px;border-bottom:1px solid #e2e8f0;color:#64748b;">${log.performed_by}</td>
+        <td style="padding:8px;border-bottom:1px solid #e2e8f0;color:#64748b;">${escapeHtml(log.performed_by)}</td>
       </tr>
     `).join('');
 

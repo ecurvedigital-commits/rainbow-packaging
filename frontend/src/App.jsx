@@ -50,13 +50,22 @@ import {
   SheetsMessagesPage,
 } from './modules/sheets';
 
+// Domain Module: Purchase Orders
+import {
+  PurchaseOrderListPage,
+  CreatePurchaseOrderPage,
+  PurchaseOrderDetailPage,
+} from './modules/purchase-orders';
+
 // Domain Module: Finished Boxes (New Category Placeholder)
 import FinishedBoxesPage from './modules/finished-boxes/pages/FinishedBoxesPage';
 import FinishedBoxesDashboardPage from './modules/finished-boxes/pages/FinishedBoxesDashboardPage';
+import NotificationPermissionModal from './components/Common/NotificationPermissionModal';
 
 export default function App() {
   return (
     <AuthProvider>
+      <NotificationPermissionModal />
       <Routes>
         {/* Public Login Route */}
         <Route path="/login" element={<LoginPage />} />
@@ -92,6 +101,11 @@ export default function App() {
           <Route path="/sheets/cut" element={<SheetCutPage />} />
           <Route path="/sheets/history" element={<SheetHistoryPage />} />
           <Route path="/sheets/details/:id" element={<SheetDetailsPage />} />
+          {/* Purchase Orders Routes */}
+          <Route path="/sheets/purchase-orders" element={<PurchaseOrderListPage />} />
+          <Route path="/sheets/purchase-orders/create" element={<CreatePurchaseOrderPage />} />
+          <Route path="/sheets/purchase-orders/:id" element={<PurchaseOrderDetailPage />} />
+          <Route path="/sheets/purchase-orders/:id/edit" element={<CreatePurchaseOrderPage />} />
           {/* Backwards compatibility aliases */}
           <Route path="/sheets/create" element={<Navigate to="/sheets/inward" replace />} />
           <Route path="/sheets/update" element={<Navigate to="/sheets/cut" replace />} />

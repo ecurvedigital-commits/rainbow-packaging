@@ -25,6 +25,7 @@ export const SHEET_EVENT_TYPES = Object.freeze({
 });
 
 export const SHEET_STATIONS = Object.freeze([
+  'Purfecta',
   'Offset Printing',
   'Die Cutting',
   'Pasting',

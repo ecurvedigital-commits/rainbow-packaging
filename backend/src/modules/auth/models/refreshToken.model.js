@@ -6,6 +6,7 @@ const refreshTokenSchema = new mongoose.Schema(
     token_hash: { type: String, required: true, unique: true },
     expires_at: { type: Date, required: true },
     revoked_at: { type: Date, default: null },
+    session_id: { type: mongoose.Schema.Types.ObjectId, ref: 'UserSession', default: null, index: true },
     user_agent: { type: String, default: null },
     ip: { type: String, default: null },
     created_at: { type: Date, default: Date.now },

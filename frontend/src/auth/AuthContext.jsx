@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../api/authApi';
+import { notificationApi } from '../api/notificationApi';
 import { getAccessToken, setTokens, clearTokens } from '../api/client';
+import { getStoredPushTokenSilently } from '../config/firebase';
 
 const AuthContext = createContext(null);
 
@@ -61,6 +63,23 @@ export const AuthProvider = ({ children }) => {
     window.addEventListener('auth:unauthorized', handleUnauthorized);
     return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
   }, []);
+
+  // If user has already granted push notification permission, silently retrieve & register FCM token
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      getStoredPushTokenSilently()
+        .then((token) => {
+          if (token) {
+            notificationApi.registerDeviceToken(token, navigator.userAgent).catch((e) => {
+              console.warn('Failed to register FCM token with server:', e);
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn('Push notification silent check error:', err);
+        });
+    }
+  }, [isAuthenticated, user?.id]);
 
   const login = async (username, password) => {
     setAuthError('');

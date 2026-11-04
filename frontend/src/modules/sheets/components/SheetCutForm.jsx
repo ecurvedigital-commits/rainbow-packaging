@@ -6,7 +6,7 @@ import { calculateConsumedWeight, calculateRemainingWeight } from '../utils/shee
 export default function SheetCutForm({ selectedLot, onSubmit, submitting = false }) {
   const [cuttingQty, setCuttingQty] = useState('');
   const [cuttingDate, setCuttingDate] = useState(new Date().toISOString().slice(0, 10));
-  const [station, setStation] = useState('Offset Printing');
+  const [station, setStation] = useState('Purfecta');
   const [jobCardNo, setJobCardNo] = useState('');
   const [remarks, setRemarks] = useState('');
   const [error, setError] = useState(null);
@@ -171,12 +171,7 @@ export default function SheetCutForm({ selectedLot, onSubmit, submitting = false
                 onChange={(e) => setStation(e.target.value)}
                 className="w-full px-3 py-2.5 bg-white border border-gray-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 rounded-xl text-xs font-medium text-gray-900 outline-none"
               >
-                <option value="Offset Printing">Offset Printing</option>
-                <option value="Die Cutting">Die Cutting</option>
-                <option value="Pasting">Pasting</option>
-                <option value="Corrugation Liner">Corrugation Liner</option>
-                <option value="Scrap/Trim">Scrap/Trim</option>
-                <option value="Others">Others</option>
+                <option value="Purfecta">Purfecta</option>
               </select>
             </div>
 

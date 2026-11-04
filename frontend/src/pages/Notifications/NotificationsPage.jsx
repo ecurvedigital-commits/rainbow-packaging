@@ -16,6 +16,7 @@ import {
   User,
 } from 'lucide-react';
 import { notificationApi } from '../../api/notificationApi';
+import { requestPushToken } from '../../config/firebase';
 import Pagination from '../../components/Common/Pagination';
 import LoadingState from '../../components/Common/LoadingState';
 import ErrorAlert from '../../components/Common/ErrorAlert';
@@ -170,6 +171,28 @@ export default function NotificationsPage() {
           >
             <RefreshCw className="w-4 h-4" />
           </button>
+          <button
+            onClick={async () => {
+              try {
+                const token = await requestPushToken();
+                if (token) {
+                  await notificationApi.registerDeviceToken(token, navigator.userAgent);
+                  await notificationApi.testPush();
+                  setToast({ type: 'success', message: 'Test pending stock notification dispatched to your device!' });
+                } else {
+                  setToast({ type: 'error', message: 'Notification permission was denied. Please allow notifications in your browser settings.' });
+                }
+              } catch (err) {
+                setToast({ type: 'error', message: err.message || 'Push notification test failed' });
+              }
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl transition shadow-xs"
+            title="Enable push notifications and trigger a test pending stock alert"
+          >
+            <Bell className="w-3.5 h-3.5" />
+            <span>Test Push Alert</span>
+          </button>
+
           <button
             onClick={handleMarkAllAsRead}
             className="flex items-center gap-2 px-3.5 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition"
