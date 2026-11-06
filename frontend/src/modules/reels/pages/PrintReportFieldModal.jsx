@@ -5,16 +5,16 @@ export const AVAILABLE_REPORT_FIELDS = [
   { id: 'sr_no', label: 'Sr. No.', defaultSelected: true, defaultWidth: '5%' },
   { id: 'reel_no', label: 'Reel No.', defaultSelected: true, defaultWidth: '11%' },
   { id: 'specifications', label: 'Specifications (Quality, GSM, BF, Size)', defaultSelected: true, defaultWidth: '20%' },
+  { id: 'stock_weight', label: 'Current Stock Weight', defaultSelected: true, defaultWidth: '10%' },
+  { id: 'status', label: 'Status (REEL / CUT / NILL)', defaultSelected: false, defaultWidth: '8%' },
   { id: 'master_code', label: 'Master Code', defaultSelected: false, defaultWidth: '11%' },
   { id: 'supplier', label: 'Supplier Name', defaultSelected: true, defaultWidth: '14%' },
   { id: 'mill', label: 'Mill Name', defaultSelected: true, defaultWidth: '11%' },
-  { id: 'stock_weight', label: 'Current Stock Weight', defaultSelected: true, defaultWidth: '10%' },
   { id: 'initial_weight', label: 'Initial Received Weight', defaultSelected: false, defaultWidth: '10%' },
   { id: 'consumed_weight', label: 'Consumed Weight', defaultSelected: true, defaultWidth: '10%' },
   { id: 'price_per_kg', label: 'Price / KG', defaultSelected: true, defaultWidth: '8%' },
   { id: 'total_value', label: 'Total Stock Value (Rs)', defaultSelected: false, defaultWidth: '10%' },
   { id: 'created_date', label: 'Purchase / Created Date', defaultSelected: true, defaultWidth: '9%' },
-  { id: 'status', label: 'Status (REEL / CUT / NILL)', defaultSelected: false, defaultWidth: '8%' },
   { id: 'station', label: 'Station Used', defaultSelected: false, defaultWidth: '9%' },
 ];
 

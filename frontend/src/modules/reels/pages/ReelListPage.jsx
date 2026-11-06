@@ -437,16 +437,16 @@ export default function ReelListPage() {
         sr_no: { label: 'Sr.', align: 'center', defaultWidth: '4%' },
         reel_no: { label: 'Reel No.', align: 'left nowrap', defaultWidth: '10%' },
         specifications: { label: 'Specifications', align: 'left', defaultWidth: '18%' },
+        stock_weight: { label: 'Stock Weight', align: 'right nowrap', defaultWidth: '9%' },
+        status: { label: 'Status', align: 'center nowrap', defaultWidth: '7%' },
         master_code: { label: 'Master Code', align: 'left nowrap', defaultWidth: '9%' },
         supplier: { label: 'Supplier', align: 'left', defaultWidth: '14%' },
         mill: { label: 'Mill', align: 'left', defaultWidth: '10%' },
-        stock_weight: { label: 'Stock Weight', align: 'right nowrap', defaultWidth: '9%' },
         initial_weight: { label: 'Initial Weight', align: 'right nowrap', defaultWidth: '9%' },
         consumed_weight: { label: hasDateFilter ? 'Consumed in Period' : 'Total Consumed', align: 'right nowrap', defaultWidth: '9%' },
         price_per_kg: { label: 'Price / KG', align: 'right nowrap', defaultWidth: '7%' },
         total_value: { label: 'Total Value', align: 'right nowrap', defaultWidth: '8%' },
         created_date: { label: 'Created', align: 'center nowrap', defaultWidth: '8%' },
-        status: { label: 'Status', align: 'center nowrap', defaultWidth: '7%' },
         station: { label: 'Station', align: 'left', defaultWidth: '8%' },
       };
 
@@ -1329,6 +1329,22 @@ export default function ReelListPage() {
                         {renderSortIcon('specs')}
                       </button>
                     </th>
+                    <th className="px-4 py-3 whitespace-nowrap text-right">
+                      <button type="button" onClick={() => handleSort('weight')}
+                        className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition justify-end"
+                        title="Click to sort by stock weight">
+                        {SORT_LABELS.weight}
+                        {renderSortIcon('weight')}
+                      </button>
+                    </th>
+                    <th className="px-4 py-3 whitespace-nowrap">
+                      <button type="button" onClick={() => handleSort('status')}
+                        className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
+                        title="Click to sort; click more columns to sort by several fields">
+                        {SORT_LABELS.status}
+                        {renderSortIcon('status')}
+                      </button>
+                    </th>
                     <th className="px-4 py-3 whitespace-nowrap min-w-[170px]">
                       <button type="button" onClick={() => handleSort('supplier')}
                         className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
@@ -1346,14 +1362,6 @@ export default function ReelListPage() {
                       </button>
                     </th>
                     <th className="px-4 py-3 whitespace-nowrap text-right">
-                      <button type="button" onClick={() => handleSort('weight')}
-                        className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition justify-end"
-                        title="Click to sort by stock weight">
-                        {SORT_LABELS.weight}
-                        {renderSortIcon('weight')}
-                      </button>
-                    </th>
-                    <th className="px-4 py-3 whitespace-nowrap text-right">
                       <button type="button" onClick={() => handleSort('consumed')}
                         className="inline-flex items-center gap-1.5 uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:text-amber-700 transition justify-end"
                         title={consumedFrom || consumedTo ? 'Click to sort by consumed in selected period' : 'Click to sort by total consumed weight'}>
@@ -1367,14 +1375,6 @@ export default function ReelListPage() {
                         title="Click to sort; click more columns to sort by several fields">
                         {SORT_LABELS.price}
                         {renderSortIcon('price')}
-                      </button>
-                    </th>
-                    <th className="px-4 py-3 whitespace-nowrap">
-                      <button type="button" onClick={() => handleSort('status')}
-                        className="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-indigo-600 dark:hover:text-indigo-400 transition"
-                        title="Click to sort; click more columns to sort by several fields">
-                        {SORT_LABELS.status}
-                        {renderSortIcon('status')}
                       </button>
                     </th>
                     <th className="px-4 py-3 whitespace-nowrap">
@@ -1477,6 +1477,29 @@ export default function ReelListPage() {
                           </div>
                         </td>
 
+                        <td className="align-middle px-4 py-3.5 text-right whitespace-nowrap tabular-nums">
+                          <div className="font-semibold text-slate-900 dark:text-white">
+                            {formatWeight(currentWeight)}
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            Orig: {formatWeight(initialWeight)}
+                          </div>
+                        </td>
+
+                        <td className="align-middle px-4 py-3.5">
+                          <div className="flex flex-col items-start gap-1">
+                            <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-bold border ${getStatusBadgeClass(reel.status)}`}>
+                              <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-80" />
+                              {reel.status}
+                            </span>
+                            {(reel.pending_count > 0 || reel.approval_status === 'PENDING') && (
+                              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                                Pending Inward
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
                         <td className="align-middle px-4 py-3.5">
                           <div className="text-slate-800 dark:text-slate-200 break-words font-medium">
                             {reel.supplier_name || reel.supplier || 'N/A'}
@@ -1489,15 +1512,6 @@ export default function ReelListPage() {
                         <td className="align-middle px-4 py-3.5">
                           <div className="text-slate-800 dark:text-slate-200 font-medium">
                             {reel.mill_name || '-'}
-                          </div>
-                        </td>
-
-                        <td className="align-middle px-4 py-3.5 text-right whitespace-nowrap tabular-nums">
-                          <div className="font-semibold text-slate-900 dark:text-white">
-                            {formatWeight(currentWeight)}
-                          </div>
-                          <div className="text-xs text-slate-400">
-                            Orig: {formatWeight(initialWeight)}
                           </div>
                         </td>
 
@@ -1518,20 +1532,6 @@ export default function ReelListPage() {
                           </div>
                           <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
                             {itemPrice > 0 ? `Total: ${formatCurrency(itemPrice)}` : 'Total: -'}
-                          </div>
-                        </td>
-
-                        <td className="align-middle px-4 py-3.5">
-                          <div className="flex flex-col items-start gap-1">
-                            <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-bold border ${getStatusBadgeClass(reel.status)}`}>
-                              <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-80" />
-                              {reel.status}
-                            </span>
-                            {(reel.pending_count > 0 || reel.approval_status === 'PENDING') && (
-                              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
-                                Pending Inward
-                              </span>
-                            )}
                           </div>
                         </td>
 
